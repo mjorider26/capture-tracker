@@ -15,13 +15,16 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "^1.6.24",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
+    "better-auth": "^1.6.24",
     "dotenv": "^17.4.2",
     "next": "16.2.11",
     "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "server-only": "^0.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
