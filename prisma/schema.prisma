@@ -1,0 +1,1026 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BusinessRole {
+  OWNER
+  ADVISOR
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  PERSONAL_CARD
+  CASH
+}
+
+enum AccountOwnership {
+  BUSINESS
+  PERSONAL
+}
+
+enum TransactionDirection {
+  INFLOW
+  OUTFLOW
+}
+
+enum TransactionIntent {
+  UNREVIEWED
+  BUSINESS
+  PERSONAL
+  MIXED
+}
+
+enum TransactionStatus {
+  PENDING_REVIEW
+  APPROVED
+  EXCLUDED
+  VOIDED
+}
+
+enum DocumentType {
+  RECEIPT
+  BANK_STATEMENT
+  CREDIT_CARD_STATEMENT
+  PAYROLL_REPORT
+  TAX_FORM
+  REIMBURSEMENT_SUPPORT
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING_VALIDATION
+  ACTIVE
+  QUARANTINED
+  REJECTED
+  SUPERSEDED
+  DELETED
+}
+
+enum MalwareScanStatus {
+  NOT_STARTED
+  PENDING
+  CLEAN
+  INFECTED
+  UNSUPPORTED
+  FAILED
+}
+
+enum RetentionClass {
+  GENERAL_TAX_SEVEN_YEARS
+  EMPLOYMENT_TAX_FOUR_YEARS
+  PERMANENT
+  CUSTOM
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  APPROVE
+  REJECT
+  VOID
+  UPLOAD
+  VALIDATE
+  QUARANTINE
+  SUPERSEDE
+  DELETE
+  RESTORE
+  LOGIN
+  LOGOUT
+}
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum LedgerAccountSubtype {
+  CASH
+  BANK
+  ACCOUNTS_RECEIVABLE
+  OTHER_CURRENT_ASSET
+  FIXED_ASSET
+  CREDIT_CARD
+  ACCOUNTS_PAYABLE
+  PAYROLL_TAX_PAYABLE
+  REIMBURSEMENT_PAYABLE
+  OTHER_CURRENT_LIABILITY
+  LONG_TERM_LIABILITY
+  OWNER_CONTRIBUTION
+  OWNER_DISTRIBUTION
+  RETAINED_EARNINGS
+  COMMISSION_INCOME
+  OTHER_INCOME
+  TRAVEL_EXPENSE
+  MEALS_EXPENSE
+  LODGING_EXPENSE
+  MILEAGE_EXPENSE
+  PHONE_EXPENSE
+  INTERNET_EXPENSE
+  OFFICE_SUPPLIES_EXPENSE
+  PAYROLL_EXPENSE
+  PAYROLL_TAX_EXPENSE
+  PROFESSIONAL_FEES_EXPENSE
+  OTHER_EXPENSE
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  PENDING_APPROVAL
+  POSTED
+  REVERSED
+  VOIDED
+}
+
+enum JournalEntrySourceType {
+  MANUAL
+  BANK_TRANSACTION
+  REIMBURSEMENT_CLAIM
+  REIMBURSEMENT_PAYMENT
+  PAYROLL_RUN
+  OWNER_DISTRIBUTION
+  TAX_PAYMENT
+  OPENING_BALANCE
+  ADJUSTING_ENTRY
+  REVERSING_ENTRY
+}
+
+enum AccountingPeriodStatus {
+  OPEN
+  SOFT_CLOSED
+  LOCKED
+}
+
+enum ReconciliationStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  VOIDED
+}
+
+enum ReconciliationItemStatus {
+  OUTSTANDING
+  CLEARED
+  EXCLUDED
+}
+
+enum PostingRuleStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PostingRuleSourceType {
+  TRANSACTION_INTENT
+  REIMBURSEMENT_EXPENSE
+  PAYROLL_RUN
+  OWNER_DISTRIBUTION
+  TAX_PAYMENT
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  displayName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  version     Int      @default(1)
+
+  memberships BusinessMember[]
+}
+
+model Business {
+  id                   String   @id @default(cuid())
+  legalName            String
+  displayName          String
+  einLastFour          String?
+  taxElection          String   @default("S_CORP")
+  fiscalYearStartMonth Int      @default(1)
+  timezone             String   @default("America/Los_Angeles")
+  currency             String   @default("USD")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  version              Int      @default(1)
+
+  members               BusinessMember[]
+  accounts              FinancialAccount[]
+  transactions          Transaction[]
+  documents             Document[]
+  transactionDocuments  TransactionDocument[]
+  auditEvents           AuditEvent[]
+  reimbursementClaims   ReimbursementClaim[]
+  reimbursementExpenses ReimbursementExpense[]
+  payrollRuns           PayrollRun[]
+  ownerDistributions    OwnerDistribution[]
+  quarterlyTaxEstimates QuarterlyTaxEstimate[]
+  taxPaymentRecords     TaxPaymentRecord[]
+  weeklyReviews         WeeklyReview[]
+  aiRecommendations     AIRecommendation[]
+  approvalDecisions     ApprovalDecision[]
+  ledgerAccounts        LedgerAccount[]
+  journalEntries        JournalEntry[]
+  journalLines          JournalLine[]
+  accountingPeriods     AccountingPeriod[]
+  reconciliations       Reconciliation[]
+  reconciliationItems   ReconciliationItem[]
+  postingRules          PostingRule[]
+
+  @@index([legalName])
+}
+
+model BusinessMember {
+  id         String       @id @default(cuid())
+  businessId String
+  userId     String
+  role       BusinessRole @default(OWNER)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  version    Int          @default(1)
+
+  business             Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedTransactions Transaction[]        @relation("TransactionApproverMembership")
+  uploadedDocuments    Document[]           @relation("DocumentUploaderMembership")
+  auditEvents          AuditEvent[]         @relation("AuditActorMembership")
+  reimbursementClaims  ReimbursementClaim[] @relation("ReimbursementClaimantMembership")
+  approvalDecisions    ApprovalDecision[]   @relation("ApprovalReviewerMembership")
+
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+model FinancialAccount {
+  id              String           @id @default(cuid())
+  businessId      String
+  name            String
+  institutionName String?
+  type            AccountType
+  ownership       AccountOwnership
+  lastFour        String?
+  isTaxReserve    Boolean          @default(false)
+  isActive        Boolean          @default(true)
+  openingBalance  Decimal          @default(0) @db.Decimal(18, 2)
+  openedAt        DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  version         Int              @default(1)
+
+  business                   Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  transactions               Transaction[]
+  reimbursementAccounts      ReimbursementClaim[] @relation("ReimbursementPaymentAccount")
+  distributionSourceAccounts OwnerDistribution[]  @relation("DistributionSourceAccount")
+  ledgerAccount              LedgerAccount?       @relation("FinancialAccountLedgerAccount")
+  reconciliations            Reconciliation[]
+
+  @@unique([businessId, id])
+  @@index([businessId, isActive])
+  @@index([businessId, type])
+}
+
+model Transaction {
+  id                     String               @id @default(cuid())
+  businessId             String
+  accountId              String
+  postedAt               DateTime
+  description            String
+  merchantName           String?
+  amount                 Decimal              @db.Decimal(18, 2)
+  direction              TransactionDirection
+  intent                 TransactionIntent    @default(UNREVIEWED)
+  status                 TransactionStatus    @default(PENDING_REVIEW)
+  sourceReference        String?
+  notes                  String?
+  approvedAt             DateTime?
+  approvedByMembershipId String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  voidedAt               DateTime?
+  version                Int                  @default(1)
+
+  business              Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  account               FinancialAccount       @relation(fields: [businessId, accountId], references: [businessId, id], onDelete: Restrict)
+  approvedByMembership  BusinessMember?        @relation("TransactionApproverMembership", fields: [businessId, approvedByMembershipId], references: [businessId, userId], onDelete: Restrict)
+  splits                TransactionSplit[]
+  documents             TransactionDocument[]
+  reimbursementPayments ReimbursementClaim[]   @relation("ReimbursementPaymentTransaction")
+  reimbursementExpenses ReimbursementExpense[] @relation("ReimbursementExpenseTransaction")
+  distributions         OwnerDistribution[]    @relation("DistributionTransaction")
+  journalEntry          JournalEntry?          @relation("TransactionJournalEntry")
+  reconciliationItems   ReconciliationItem[]
+
+  @@unique([businessId, id])
+  @@unique([accountId, sourceReference])
+  @@index([businessId, postedAt])
+  @@index([businessId, status])
+  @@index([businessId, intent])
+  @@index([businessId, accountId, postedAt])
+}
+
+model TransactionSplit {
+  id            String            @id @default(cuid())
+  businessId    String
+  transactionId String
+  intent        TransactionIntent
+  amount        Decimal           @db.Decimal(18, 2)
+  memo          String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  version       Int               @default(1)
+
+  transaction Transaction @relation(fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, transactionId])
+}
+
+model Document {
+  id                     String            @id @default(cuid())
+  businessId             String
+  uploadedByMembershipId String
+  storageKey             String            @unique
+  originalFilename       String
+  mimeType               String
+  detectedMimeType       String?
+  sizeBytes              BigInt
+  sha256                 String
+  type                   DocumentType
+  status                 DocumentStatus    @default(PENDING_VALIDATION)
+  malwareScanStatus      MalwareScanStatus @default(NOT_STARTED)
+  malwareScanProvider    String?           @default("AWS_GUARDDUTY_S3")
+  malwareScannedAt       DateTime?
+  validationError        String?
+  retentionClass         RetentionClass
+  retentionUntil         DateTime?
+  legalHold              Boolean           @default(false)
+  uploadedAt             DateTime          @default(now())
+  activatedAt            DateTime?
+  supersededAt           DateTime?
+  deletedAt              DateTime?
+  replacedById           String?
+  version                Int               @default(1)
+
+  business              Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  uploadedByMembership  BusinessMember         @relation("DocumentUploaderMembership", fields: [businessId, uploadedByMembershipId], references: [businessId, userId], onDelete: Restrict)
+  replacedBy            Document?              @relation("DocumentVersions", fields: [businessId, replacedById], references: [businessId, id], onDelete: Restrict)
+  previousVersions      Document[]             @relation("DocumentVersions")
+  transactions          TransactionDocument[]
+  reimbursementExpenses ReimbursementExpense[] @relation("ReimbursementExpenseDocument")
+  payrollRuns           PayrollRun[]           @relation("PayrollRunDocument")
+  taxPayments           TaxPaymentRecord[]     @relation("TaxPaymentDocument")
+
+  @@unique([businessId, id])
+  @@unique([businessId, replacedById])
+  @@index([businessId, sha256])
+  @@index([businessId, status])
+  @@index([businessId, type])
+  @@index([retentionUntil])
+  @@index([malwareScanStatus])
+}
+
+model TransactionDocument {
+  businessId    String
+  transactionId String
+  documentId    String
+  attachedAt    DateTime @default(now())
+  version       Int      @default(1)
+
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  transaction Transaction @relation(fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+  document    Document    @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+
+  @@id([businessId, transactionId, documentId])
+  @@index([businessId, documentId])
+}
+
+/// USER events require a membership; SYSTEM events must not reference one.
+model AuditEvent {
+  actorType         AuditActorType @default(USER)
+  id                String         @id @default(cuid())
+  businessId        String
+  actorMembershipId String?
+  action            AuditAction
+  entityType        String
+  entityId          String
+  reason            String?
+  beforeJson        Json?
+  afterJson         Json?
+  metadataJson      Json?
+  occurredAt        DateTime       @default(now())
+
+  business        Business        @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  actorMembership BusinessMember? @relation("AuditActorMembership", fields: [businessId, actorMembershipId], references: [businessId, userId], onDelete: Restrict)
+
+  @@index([businessId, occurredAt])
+  @@index([businessId, entityType, entityId])
+  @@index([actorMembershipId, occurredAt])
+}
+
+enum ReimbursementStatus {
+  DRAFT
+  SUBMITTED
+  NEEDS_INFORMATION
+  APPROVED
+  REJECTED
+  PAID
+  VOIDED
+}
+
+enum ReimbursementExpenseType {
+  MILEAGE
+  AIRFARE
+  LODGING
+  MEALS
+  PARKING
+  TOLLS
+  SUPPLIES
+  PHONE
+  INTERNET
+  EDUCATION
+  OTHER
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PROCESSED
+  VOIDED
+}
+
+enum DistributionStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PAID
+  VOIDED
+}
+
+enum TaxEstimateStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  APPROVED
+  SUPERSEDED
+  VOIDED
+}
+
+enum TaxPaymentStatus {
+  PLANNED
+  RECORDED
+  VOIDED
+}
+
+enum TaxJurisdictionType {
+  FEDERAL
+  STATE
+  LOCAL
+}
+
+enum ReviewStatus {
+  OPEN
+  COMPLETED
+  DISMISSED
+}
+
+enum ReviewTaskCategory {
+  RECEIPT
+  TRANSACTION_REVIEW
+  TAX_RESERVE
+  PAYROLL
+  QUARTERLY_TAX
+  REIMBURSEMENT
+  GENERAL
+}
+
+enum ReviewTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AIRecommendationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  SUPERSEDED
+}
+
+enum AIRecommendationType {
+  TRANSACTION_INTENT
+  TRANSACTION_SPLIT
+  DOCUMENT_MATCH
+  REIMBURSEMENT_ELIGIBILITY
+  TAX_RESERVE
+  QUARTERLY_ESTIMATE
+  PAYROLL_REVIEW
+  DISTRIBUTION_REVIEW
+  GENERAL
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELED
+  SUPERSEDED
+}
+
+model ReimbursementClaim {
+  id                     String              @id @default(cuid())
+  businessId             String
+  claimantMembershipId   String
+  status                 ReimbursementStatus @default(DRAFT)
+  submittedAt            DateTime?
+  approvedAt             DateTime?
+  rejectedAt             DateTime?
+  paidAt                 DateTime?
+  totalAmount            Decimal             @default(0) @db.Decimal(18, 2)
+  reimbursementAccountId String?
+  paymentTransactionId   String?
+  notes                  String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  version                Int                 @default(1)
+
+  business             Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  claimantMembership   BusinessMember         @relation("ReimbursementClaimantMembership", fields: [businessId, claimantMembershipId], references: [businessId, userId], onDelete: Restrict)
+  reimbursementAccount FinancialAccount?      @relation("ReimbursementPaymentAccount", fields: [businessId, reimbursementAccountId], references: [businessId, id], onDelete: Restrict)
+  paymentTransaction   Transaction?           @relation("ReimbursementPaymentTransaction", fields: [businessId, paymentTransactionId], references: [businessId, id], onDelete: Restrict)
+  expenses             ReimbursementExpense[]
+  approvals            ApprovalDecision[]     @relation("ReimbursementApprovals")
+  journalEntry         JournalEntry?          @relation("ReimbursementClaimJournalEntry")
+
+  @@unique([businessId, id])
+  @@index([businessId, status])
+  @@index([businessId, submittedAt])
+}
+
+model ReimbursementExpense {
+  id              String                   @id @default(cuid())
+  businessId      String
+  claimId         String
+  expenseType     ReimbursementExpenseType
+  transactionId   String?
+  documentId      String?
+  incurredAt      DateTime
+  amount          Decimal                  @db.Decimal(18, 2)
+  businessPurpose String
+  merchantName    String?
+  attendees       String?
+  tripOrigin      String?
+  tripDestination String?
+  mileageMiles    Decimal?                 @db.Decimal(10, 2)
+  mileageRate     Decimal?                 @db.Decimal(8, 4)
+  notes           String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  version         Int                      @default(1)
+
+  claim       ReimbursementClaim @relation(fields: [businessId, claimId], references: [businessId, id], onDelete: Restrict)
+  transaction Transaction?       @relation("ReimbursementExpenseTransaction", fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+  document    Document?          @relation("ReimbursementExpenseDocument", fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  business    Business           @relation(fields: [businessId], references: [id])
+
+  @@unique([businessId, id])
+  @@index([businessId, claimId])
+  @@index([businessId, transactionId])
+  @@index([businessId, documentId])
+}
+
+model PayrollRun {
+  id                  String           @id @default(cuid())
+  businessId          String
+  payPeriodStart      DateTime
+  payPeriodEnd        DateTime
+  payDate             DateTime
+  status              PayrollRunStatus @default(DRAFT)
+  grossWages          Decimal          @db.Decimal(18, 2)
+  employeeWithholding Decimal          @db.Decimal(18, 2)
+  employeePayrollTax  Decimal          @db.Decimal(18, 2)
+  otherDeductions     Decimal          @default(0) @db.Decimal(18, 2)
+  employerPayrollTax  Decimal          @db.Decimal(18, 2)
+  netPay              Decimal          @db.Decimal(18, 2)
+  payrollProvider     String?
+  externalReference   String?
+  documentId          String?
+  approvedAt          DateTime?
+  processedAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  version             Int              @default(1)
+
+  business     Business           @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  document     Document?          @relation("PayrollRunDocument", fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  approvals    ApprovalDecision[] @relation("PayrollApprovals")
+  journalEntry JournalEntry?      @relation("PayrollRunJournalEntry")
+
+  @@unique([businessId, id])
+  @@unique([businessId, externalReference])
+  @@index([businessId, payDate])
+  @@index([businessId, status])
+}
+
+model OwnerDistribution {
+  id               String             @id @default(cuid())
+  businessId       String
+  distributionDate DateTime
+  amount           Decimal            @db.Decimal(18, 2)
+  status           DistributionStatus @default(DRAFT)
+  sourceAccountId  String
+  transactionId    String?
+  memo             String?
+  approvedAt       DateTime?
+  paidAt           DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  version          Int                @default(1)
+
+  business      Business           @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  sourceAccount FinancialAccount   @relation("DistributionSourceAccount", fields: [businessId, sourceAccountId], references: [businessId, id], onDelete: Restrict)
+  transaction   Transaction?       @relation("DistributionTransaction", fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+  approvals     ApprovalDecision[] @relation("DistributionApprovals")
+  journalEntry  JournalEntry?      @relation("OwnerDistributionJournalEntry")
+
+  @@unique([businessId, id])
+  @@index([businessId, distributionDate])
+  @@index([businessId, status])
+}
+
+model QuarterlyTaxEstimate {
+  id                    String              @id @default(cuid())
+  businessId            String
+  taxYear               Int
+  quarter               Int
+  jurisdictionType      TaxJurisdictionType
+  jurisdictionCode      String
+  status                TaxEstimateStatus   @default(DRAFT)
+  projectedTaxLiability Decimal             @db.Decimal(18, 2)
+  safeHarborRequired    Decimal?            @db.Decimal(18, 2)
+  withholdingCredits    Decimal             @default(0) @db.Decimal(18, 2)
+  priorPayments         Decimal             @default(0) @db.Decimal(18, 2)
+  recommendedPayment    Decimal             @db.Decimal(18, 2)
+  dueDate               DateTime
+  assumptionsJson       Json
+  explanation           String
+  cpaReviewRecommended  Boolean             @default(false)
+  supersedesEstimateId  String?
+  revisionNumber        Int                 @default(1)
+  approvedAt            DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  version               Int                 @default(1)
+
+  business           Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  supersedesEstimate QuarterlyTaxEstimate?  @relation("TaxEstimateVersions", fields: [businessId, supersedesEstimateId], references: [businessId, id], onDelete: Restrict)
+  supersededBy       QuarterlyTaxEstimate[] @relation("TaxEstimateVersions")
+  payments           TaxPaymentRecord[]
+  approvals          ApprovalDecision[]     @relation("TaxEstimateApprovals")
+
+  @@unique([businessId, id])
+  @@unique([businessId, taxYear, quarter, jurisdictionType, jurisdictionCode, revisionNumber])
+  @@unique([businessId, supersedesEstimateId])
+  @@index([businessId, dueDate])
+  @@index([businessId, status])
+}
+
+model TaxPaymentRecord {
+  id                 String              @id @default(cuid())
+  businessId         String
+  estimateId         String?
+  jurisdictionType   TaxJurisdictionType
+  jurisdictionCode   String
+  taxYear            Int
+  quarter            Int
+  amount             Decimal             @db.Decimal(18, 2)
+  status             TaxPaymentStatus    @default(PLANNED)
+  paidAt             DateTime?
+  confirmationNumber String?
+  documentId         String?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  version            Int                 @default(1)
+
+  business     Business              @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  estimate     QuarterlyTaxEstimate? @relation(fields: [businessId, estimateId], references: [businessId, id], onDelete: Restrict)
+  document     Document?             @relation("TaxPaymentDocument", fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  journalEntry JournalEntry?         @relation("TaxPaymentJournalEntry")
+
+  @@unique([businessId, id])
+  @@index([businessId, taxYear, quarter])
+  @@index([businessId, status])
+}
+
+model WeeklyReview {
+  id                         String       @id @default(cuid())
+  businessId                 String
+  weekStart                  DateTime
+  weekEnd                    DateTime
+  status                     ReviewStatus @default(OPEN)
+  estimatedCompletionMinutes Int          @default(10)
+  completedAt                DateTime?
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
+  version                    Int          @default(1)
+
+  business Business     @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  tasks    ReviewTask[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, weekStart])
+  @@index([businessId, status])
+}
+
+model ReviewTask {
+  id             String             @id @default(cuid())
+  businessId     String
+  weeklyReviewId String
+  title          String
+  explanation    String?
+  category       ReviewTaskCategory
+  status         ReviewStatus       @default(OPEN)
+  priority       ReviewTaskPriority @default(MEDIUM)
+  sourceType     String?
+  sourceEntityId String?
+  sortOrder      Int                @default(0)
+  completedAt    DateTime?
+  dismissedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  version        Int                @default(1)
+
+  weeklyReview WeeklyReview @relation(fields: [businessId, weeklyReviewId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, weeklyReviewId, status])
+  @@index([businessId, priority])
+}
+
+model AIRecommendation {
+  id                  String                 @id @default(cuid())
+  businessId          String
+  type                AIRecommendationType
+  status              AIRecommendationStatus @default(PENDING_REVIEW)
+  sourceEntityType    String?
+  sourceEntityId      String?
+  title               String
+  explanation         String
+  proposedChangeJson  Json
+  supportingFactsJson Json?
+  modelProvider       String
+  modelName           String
+  promptVersion       String
+  expiresAt           DateTime?
+  reviewedAt          DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  version             Int                    @default(1)
+
+  business  Business           @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  approvals ApprovalDecision[] @relation("AIRecommendationApprovals")
+
+  @@unique([businessId, id])
+  @@index([businessId, status])
+  @@index([businessId, type])
+  @@index([businessId, sourceEntityType, sourceEntityId])
+}
+
+model ApprovalDecision {
+  id                    String         @id @default(cuid())
+  businessId            String
+  status                ApprovalStatus @default(PENDING)
+  reviewerMembershipId  String?
+  decidedAt             DateTime?
+  reason                String?
+  expectedEntityVersion Int
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  version               Int            @default(1)
+
+  reimbursementClaimId   String?
+  payrollRunId           String?
+  ownerDistributionId    String?
+  quarterlyTaxEstimateId String?
+  aiRecommendationId     String?
+
+  business             Business              @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  reviewerMembership   BusinessMember?       @relation("ApprovalReviewerMembership", fields: [businessId, reviewerMembershipId], references: [businessId, userId], onDelete: Restrict)
+  reimbursementClaim   ReimbursementClaim?   @relation("ReimbursementApprovals", fields: [businessId, reimbursementClaimId], references: [businessId, id], onDelete: Restrict)
+  payrollRun           PayrollRun?           @relation("PayrollApprovals", fields: [businessId, payrollRunId], references: [businessId, id], onDelete: Restrict)
+  ownerDistribution    OwnerDistribution?    @relation("DistributionApprovals", fields: [businessId, ownerDistributionId], references: [businessId, id], onDelete: Restrict)
+  quarterlyTaxEstimate QuarterlyTaxEstimate? @relation("TaxEstimateApprovals", fields: [businessId, quarterlyTaxEstimateId], references: [businessId, id], onDelete: Restrict)
+  aiRecommendation     AIRecommendation?     @relation("AIRecommendationApprovals", fields: [businessId, aiRecommendationId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, status])
+  @@index([businessId, reviewerMembershipId])
+}
+
+model LedgerAccount {
+  id                 String               @id @default(cuid())
+  businessId         String
+  code               String
+  name               String
+  description        String?
+  type               LedgerAccountType
+  subtype            LedgerAccountSubtype
+  normalBalance      NormalBalance
+  isSystem           Boolean              @default(false)
+  isActive           Boolean              @default(true)
+  financialAccountId String?
+  parentAccountId    String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  version            Int                  @default(1)
+
+  business           Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount   FinancialAccount? @relation("FinancialAccountLedgerAccount", fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  parentAccount      LedgerAccount?    @relation("LedgerAccountHierarchy", fields: [businessId, parentAccountId], references: [businessId, id], onDelete: Restrict)
+  childAccounts      LedgerAccount[]   @relation("LedgerAccountHierarchy")
+  journalLines       JournalLine[]
+  debitPostingRules  PostingRule[]     @relation("PostingRuleDebitAccount")
+  creditPostingRules PostingRule[]     @relation("PostingRuleCreditAccount")
+
+  @@unique([businessId, id])
+  @@unique([businessId, code])
+  @@unique([businessId, financialAccountId])
+  @@index([businessId, type, isActive])
+  @@index([businessId, parentAccountId])
+}
+
+model AccountingPeriod {
+  id                   String                 @id @default(cuid())
+  businessId           String
+  startsAt             DateTime
+  endsAt               DateTime
+  status               AccountingPeriodStatus @default(OPEN)
+  lockedAt             DateTime?
+  lockedByMembershipId String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  version              Int                    @default(1)
+
+  business       Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  journalEntries JournalEntry[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, startsAt, endsAt])
+  @@index([businessId, status])
+}
+
+model JournalEntry {
+  id                     String                 @id @default(cuid())
+  businessId             String
+  accountingPeriodId     String
+  entryNumber            String
+  entryDate              DateTime
+  description            String
+  status                 JournalEntryStatus     @default(DRAFT)
+  sourceType             JournalEntrySourceType
+  sourceEntityId         String?
+  transactionId          String?
+  reimbursementClaimId   String?
+  payrollRunId           String?
+  ownerDistributionId    String?
+  taxPaymentRecordId     String?
+  reversalOfEntryId      String?
+  postedAt               DateTime?
+  reversedAt             DateTime?
+  approvedByMembershipId String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  version                Int                    @default(1)
+
+  business           Business            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  accountingPeriod   AccountingPeriod    @relation(fields: [businessId, accountingPeriodId], references: [businessId, id], onDelete: Restrict)
+  transaction        Transaction?        @relation("TransactionJournalEntry", fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+  reimbursementClaim ReimbursementClaim? @relation("ReimbursementClaimJournalEntry", fields: [businessId, reimbursementClaimId], references: [businessId, id], onDelete: Restrict)
+  payrollRun         PayrollRun?         @relation("PayrollRunJournalEntry", fields: [businessId, payrollRunId], references: [businessId, id], onDelete: Restrict)
+  ownerDistribution  OwnerDistribution?  @relation("OwnerDistributionJournalEntry", fields: [businessId, ownerDistributionId], references: [businessId, id], onDelete: Restrict)
+  taxPaymentRecord   TaxPaymentRecord?   @relation("TaxPaymentJournalEntry", fields: [businessId, taxPaymentRecordId], references: [businessId, id], onDelete: Restrict)
+  reversalOfEntry    JournalEntry?       @relation("JournalEntryReversals", fields: [businessId, reversalOfEntryId], references: [businessId, id], onDelete: Restrict)
+  reversedByEntries  JournalEntry[]      @relation("JournalEntryReversals")
+  lines              JournalLine[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, entryNumber])
+  @@unique([businessId, transactionId])
+  @@unique([businessId, reimbursementClaimId])
+  @@unique([businessId, payrollRunId])
+  @@unique([businessId, ownerDistributionId])
+  @@unique([businessId, taxPaymentRecordId])
+  @@unique([businessId, reversalOfEntryId])
+  @@index([businessId, entryDate])
+  @@index([businessId, status])
+  @@index([businessId, sourceType, sourceEntityId])
+}
+
+model JournalLine {
+  id              String   @id @default(cuid())
+  businessId      String
+  journalEntryId  String
+  ledgerAccountId String
+  lineNumber      Int
+  memo            String?
+  debitAmount     Decimal  @default(0) @db.Decimal(18, 2)
+  creditAmount    Decimal  @default(0) @db.Decimal(18, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  version         Int      @default(1)
+
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  journalEntry  JournalEntry  @relation(fields: [businessId, journalEntryId], references: [businessId, id], onDelete: Restrict)
+  ledgerAccount LedgerAccount @relation(fields: [businessId, ledgerAccountId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@unique([businessId, journalEntryId, lineNumber])
+  @@index([businessId, ledgerAccountId])
+}
+
+model PostingRule {
+  id                    String                @id @default(cuid())
+  businessId            String
+  name                  String
+  status                PostingRuleStatus     @default(ACTIVE)
+  sourceType            PostingRuleSourceType
+  sourceSubtype         String?
+  debitLedgerAccountId  String
+  creditLedgerAccountId String
+  priority              Int                   @default(100)
+  description           String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  version               Int                   @default(1)
+
+  business            Business      @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  debitLedgerAccount  LedgerAccount @relation("PostingRuleDebitAccount", fields: [businessId, debitLedgerAccountId], references: [businessId, id], onDelete: Restrict)
+  creditLedgerAccount LedgerAccount @relation("PostingRuleCreditAccount", fields: [businessId, creditLedgerAccountId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@unique([businessId, sourceType, sourceSubtype, priority])
+  @@index([businessId, status])
+}
+
+model Reconciliation {
+  id                      String               @id @default(cuid())
+  businessId              String
+  financialAccountId      String
+  statementStartDate      DateTime
+  statementEndDate        DateTime
+  statementOpeningBalance Decimal              @db.Decimal(18, 2)
+  statementEndingBalance  Decimal              @db.Decimal(18, 2)
+  status                  ReconciliationStatus @default(DRAFT)
+  completedAt             DateTime?
+  completedByMembershipId String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  version                 Int                  @default(1)
+
+  business         Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  items            ReconciliationItem[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, financialAccountId, statementEndDate])
+  @@index([businessId, status])
+}
+
+model ReconciliationItem {
+  id               String                   @id @default(cuid())
+  businessId       String
+  reconciliationId String
+  transactionId    String
+  status           ReconciliationItemStatus @default(OUTSTANDING)
+  clearedAt        DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  version          Int                      @default(1)
+
+  business       Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  reconciliation Reconciliation @relation(fields: [businessId, reconciliationId], references: [businessId, id], onDelete: Restrict)
+  transaction    Transaction    @relation(fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@unique([businessId, reconciliationId, transactionId])
+  @@index([businessId, status])
+}
