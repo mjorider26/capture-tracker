@@ -17,7 +17,10 @@
     "postinstall": "prisma generate",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:local": "node scripts/run-local-integration-tests.mjs",
+    "today:verify": "tsx scripts/verify-today-dashboard.ts",
+    "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run lint && npm run build"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.24",

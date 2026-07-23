@@ -9,12 +9,11 @@ if (!connectionString) {
 const prisma = createPrismaClient(connectionString);
 
 async function main(): Promise<void> {
-  const [businesses, transactions, journalEntries] =
-    await Promise.all([
-      prisma.business.count(),
-      prisma.transaction.count(),
-      prisma.journalEntry.count(),
-    ]);
+  const [businesses, transactions, journalEntries] = await Promise.all([
+    prisma.business.count(),
+    prisma.transaction.count(),
+    prisma.journalEntry.count(),
+  ]);
 
   console.log("DATABASE CONNECTION VERIFIED");
   console.log(`Businesses: ${businesses}`);
@@ -31,4 +30,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

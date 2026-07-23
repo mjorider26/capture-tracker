@@ -4,11 +4,7 @@ const requiredConfirmation = "CAPTURE_TRACKER_DEMO_ONLY";
 function isLocalDatabaseHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/\.$/, "");
 
-  return (
-    host === "localhost" ||
-    host === "::1" ||
-    host === "127.0.0.1"
-  );
+  return host === "localhost" || host === "::1" || host === "127.0.0.1";
 }
 
 export function requireSafeDemoDatabase(): string {
@@ -50,7 +46,10 @@ export function requireSafeDemoDatabase(): string {
     );
   }
 
-  const databaseName = decodeURIComponent(parsedUrl.pathname).replace(/^\//, "");
+  const databaseName = decodeURIComponent(parsedUrl.pathname).replace(
+    /^\//,
+    "",
+  );
   if (!databaseName || /(?:test|integration|shadow)/i.test(databaseName)) {
     throw new Error(
       "Demo data is blocked because DATABASE_URL must name the normal local development database.",

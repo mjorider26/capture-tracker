@@ -14,7 +14,7 @@ import { findTransactionForBusiness } from "../../src/lib/data/transaction-acces
 
 config({
   path: ".env.test.local",
-  override: true,
+  override: false,
 });
 
 const connectionString =

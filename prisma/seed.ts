@@ -83,7 +83,11 @@ async function existingDemoRecordCount(): Promise<number> {
     prisma.user.count({ where: { id: ids.user } }),
     prisma.business.count({ where: { id: ids.business } }),
     prisma.journalEntry.count({
-      where: { id: { in: Object.values(ids).filter((id) => id.includes("journal-entry")) } },
+      where: {
+        id: {
+          in: Object.values(ids).filter((id) => id.includes("journal-entry")),
+        },
+      },
     }),
   ]);
 
@@ -108,7 +112,9 @@ async function seed(): Promise<void> {
   const existingCount = await existingDemoRecordCount();
   if (existingCount > 0) {
     await verifyDemoSeed(prisma);
-    console.log("Verified existing deterministic demo data without updating records.");
+    console.log(
+      "Verified existing deterministic demo data without updating records.",
+    );
     return;
   }
 
@@ -135,101 +141,603 @@ async function seed(): Promise<void> {
     });
 
     await tx.businessMember.create({
-      data: { id: ids.membership, businessId: ids.business, userId: ids.user, role: "OWNER" },
+      data: {
+        id: ids.membership,
+        businessId: ids.business,
+        userId: ids.user,
+        role: "OWNER",
+      },
     });
 
     await tx.financialAccount.createMany({
       data: [
-        { id: ids.checking, businessId: ids.business, name: "Business checking", institutionName: "Northstar Community Bank", type: "CHECKING", ownership: "BUSINESS", lastFour: "1001", openingBalance: "0.00", openedAt: date("2026-07-01") },
-        { id: ids.creditCard, businessId: ids.business, name: "Business credit card", institutionName: "Northstar Community Bank", type: "CREDIT_CARD", ownership: "BUSINESS", lastFour: "2002", openingBalance: "0.00", openedAt: date("2026-07-01") },
-        { id: ids.personalCard, businessId: ids.business, name: "Personally owned card", institutionName: "Fictional Card Services", type: "PERSONAL_CARD", ownership: "PERSONAL", lastFour: "3003", openingBalance: "0.00", openedAt: date("2026-07-01") },
+        {
+          id: ids.checking,
+          businessId: ids.business,
+          name: "Business checking",
+          institutionName: "Northstar Community Bank",
+          type: "CHECKING",
+          ownership: "BUSINESS",
+          lastFour: "1001",
+          openingBalance: "0.00",
+          openedAt: date("2026-07-01"),
+        },
+        {
+          id: ids.creditCard,
+          businessId: ids.business,
+          name: "Business credit card",
+          institutionName: "Northstar Community Bank",
+          type: "CREDIT_CARD",
+          ownership: "BUSINESS",
+          lastFour: "2002",
+          openingBalance: "0.00",
+          openedAt: date("2026-07-01"),
+        },
+        {
+          id: ids.personalCard,
+          businessId: ids.business,
+          name: "Personally owned card",
+          institutionName: "Fictional Card Services",
+          type: "PERSONAL_CARD",
+          ownership: "PERSONAL",
+          lastFour: "3003",
+          openingBalance: "0.00",
+          openedAt: date("2026-07-01"),
+        },
       ],
     });
 
     await tx.transaction.createMany({
       data: [
-        { id: ids.commission, businessId: ids.business, accountId: ids.checking, postedAt: date("2026-07-03"), description: "July field-services commission", merchantName: "Fictional Marketplace", amount: "5000.00", direction: "INFLOW", intent: "BUSINESS", status: "APPROVED", sourceReference: "demo-commission-2026-07", approvedAt: date("2026-07-03"), approvedByMembershipId: ids.user },
-        { id: ids.office, businessId: ids.business, accountId: ids.creditCard, postedAt: date("2026-07-05"), description: "Field office supplies", merchantName: "Fictional Office Supply", amount: "240.00", direction: "OUTFLOW", intent: "BUSINESS", status: "APPROVED", sourceReference: "demo-office-2026-07", approvedAt: date("2026-07-05"), approvedByMembershipId: ids.user },
-        { id: ids.personal, businessId: ids.business, accountId: ids.personalCard, postedAt: date("2026-07-06"), description: "Personal household purchase", merchantName: "Fictional Home Store", amount: "85.00", direction: "OUTFLOW", intent: "PERSONAL", status: "EXCLUDED", sourceReference: "demo-personal-2026-07" },
-        { id: ids.mixed, businessId: ids.business, accountId: ids.personalCard, postedAt: date("2026-07-08"), description: "Mixed field and personal supplies", merchantName: "Fictional General Store", amount: "150.00", direction: "OUTFLOW", intent: "MIXED", status: "APPROVED", sourceReference: "demo-mixed-2026-07", approvedAt: date("2026-07-08"), approvedByMembershipId: ids.user },
-        { id: ids.personallyPaid, businessId: ids.business, accountId: ids.personalCard, postedAt: date("2026-07-10"), description: "Personally paid client-site expense", merchantName: "Fictional Travel Services", amount: "300.00", direction: "OUTFLOW", intent: "BUSINESS", status: "APPROVED", sourceReference: "demo-personally-paid-2026-07", approvedAt: date("2026-07-10"), approvedByMembershipId: ids.user },
-        { id: ids.internet, businessId: ids.business, accountId: ids.checking, postedAt: date("2026-07-12"), description: "Field operations internet service", merchantName: "Fictional Internet", amount: "450.00", direction: "OUTFLOW", intent: "BUSINESS", status: "APPROVED", sourceReference: "demo-internet-2026-07", approvedAt: date("2026-07-12"), approvedByMembershipId: ids.user },
-        { id: ids.reimbursementPayment, businessId: ids.business, accountId: ids.checking, postedAt: date("2026-07-15"), description: "Accountable-plan reimbursement payment", merchantName: "Jordan Ellis", amount: "300.00", direction: "OUTFLOW", intent: "BUSINESS", status: "APPROVED", sourceReference: "demo-reimbursement-payment-2026-07", approvedAt: date("2026-07-15"), approvedByMembershipId: ids.user },
-        { id: ids.distribution, businessId: ids.business, accountId: ids.checking, postedAt: date("2026-07-18"), description: "Owner distribution", merchantName: "Jordan Ellis", amount: "700.00", direction: "OUTFLOW", intent: "BUSINESS", status: "APPROVED", sourceReference: "demo-distribution-2026-07", approvedAt: date("2026-07-18"), approvedByMembershipId: ids.user },
+        {
+          id: ids.commission,
+          businessId: ids.business,
+          accountId: ids.checking,
+          postedAt: date("2026-07-03"),
+          description: "July field-services commission",
+          merchantName: "Fictional Marketplace",
+          amount: "5000.00",
+          direction: "INFLOW",
+          intent: "BUSINESS",
+          status: "APPROVED",
+          sourceReference: "demo-commission-2026-07",
+          approvedAt: date("2026-07-03"),
+          approvedByMembershipId: ids.user,
+        },
+        {
+          id: ids.office,
+          businessId: ids.business,
+          accountId: ids.creditCard,
+          postedAt: date("2026-07-05"),
+          description: "Field office supplies",
+          merchantName: "Fictional Office Supply",
+          amount: "240.00",
+          direction: "OUTFLOW",
+          intent: "BUSINESS",
+          status: "APPROVED",
+          sourceReference: "demo-office-2026-07",
+          approvedAt: date("2026-07-05"),
+          approvedByMembershipId: ids.user,
+        },
+        {
+          id: ids.personal,
+          businessId: ids.business,
+          accountId: ids.personalCard,
+          postedAt: date("2026-07-06"),
+          description: "Personal household purchase",
+          merchantName: "Fictional Home Store",
+          amount: "85.00",
+          direction: "OUTFLOW",
+          intent: "PERSONAL",
+          status: "EXCLUDED",
+          sourceReference: "demo-personal-2026-07",
+        },
+        {
+          id: ids.mixed,
+          businessId: ids.business,
+          accountId: ids.personalCard,
+          postedAt: date("2026-07-08"),
+          description: "Mixed field and personal supplies",
+          merchantName: "Fictional General Store",
+          amount: "150.00",
+          direction: "OUTFLOW",
+          intent: "MIXED",
+          status: "APPROVED",
+          sourceReference: "demo-mixed-2026-07",
+          approvedAt: date("2026-07-08"),
+          approvedByMembershipId: ids.user,
+        },
+        {
+          id: ids.personallyPaid,
+          businessId: ids.business,
+          accountId: ids.personalCard,
+          postedAt: date("2026-07-10"),
+          description: "Personally paid client-site expense",
+          merchantName: "Fictional Travel Services",
+          amount: "300.00",
+          direction: "OUTFLOW",
+          intent: "BUSINESS",
+          status: "APPROVED",
+          sourceReference: "demo-personally-paid-2026-07",
+          approvedAt: date("2026-07-10"),
+          approvedByMembershipId: ids.user,
+        },
+        {
+          id: ids.internet,
+          businessId: ids.business,
+          accountId: ids.checking,
+          postedAt: date("2026-07-12"),
+          description: "Field operations internet service",
+          merchantName: "Fictional Internet",
+          amount: "450.00",
+          direction: "OUTFLOW",
+          intent: "BUSINESS",
+          status: "APPROVED",
+          sourceReference: "demo-internet-2026-07",
+          approvedAt: date("2026-07-12"),
+          approvedByMembershipId: ids.user,
+        },
+        {
+          id: ids.reimbursementPayment,
+          businessId: ids.business,
+          accountId: ids.checking,
+          postedAt: date("2026-07-15"),
+          description: "Accountable-plan reimbursement payment",
+          merchantName: "Jordan Ellis",
+          amount: "300.00",
+          direction: "OUTFLOW",
+          intent: "BUSINESS",
+          status: "APPROVED",
+          sourceReference: "demo-reimbursement-payment-2026-07",
+          approvedAt: date("2026-07-15"),
+          approvedByMembershipId: ids.user,
+        },
+        {
+          id: ids.distribution,
+          businessId: ids.business,
+          accountId: ids.checking,
+          postedAt: date("2026-07-18"),
+          description: "Owner distribution",
+          merchantName: "Jordan Ellis",
+          amount: "700.00",
+          direction: "OUTFLOW",
+          intent: "BUSINESS",
+          status: "APPROVED",
+          sourceReference: "demo-distribution-2026-07",
+          approvedAt: date("2026-07-18"),
+          approvedByMembershipId: ids.user,
+        },
       ],
     });
 
     await tx.transactionSplit.createMany({
       data: [
-        { id: ids.mixedBusinessSplit, businessId: ids.business, transactionId: ids.mixed, intent: "BUSINESS", amount: "120.00", memo: "Field-use supplies" },
-        { id: ids.mixedPersonalSplit, businessId: ids.business, transactionId: ids.mixed, intent: "PERSONAL", amount: "30.00", memo: "Personal-use supplies" },
+        {
+          id: ids.mixedBusinessSplit,
+          businessId: ids.business,
+          transactionId: ids.mixed,
+          intent: "BUSINESS",
+          amount: "120.00",
+          memo: "Field-use supplies",
+        },
+        {
+          id: ids.mixedPersonalSplit,
+          businessId: ids.business,
+          transactionId: ids.mixed,
+          intent: "PERSONAL",
+          amount: "30.00",
+          memo: "Personal-use supplies",
+        },
       ],
     });
 
     await tx.reimbursementClaim.create({
-      data: { id: ids.claim, businessId: ids.business, claimantMembershipId: ids.user, status: "PAID", submittedAt: date("2026-07-11"), approvedAt: date("2026-07-12"), paidAt: date("2026-07-15"), totalAmount: "300.00", reimbursementAccountId: ids.checking, paymentTransactionId: ids.reimbursementPayment, notes: "Fictional accountable-plan reimbursement for client-site expense." },
+      data: {
+        id: ids.claim,
+        businessId: ids.business,
+        claimantMembershipId: ids.user,
+        status: "PAID",
+        submittedAt: date("2026-07-11"),
+        approvedAt: date("2026-07-12"),
+        paidAt: date("2026-07-15"),
+        totalAmount: "300.00",
+        reimbursementAccountId: ids.checking,
+        paymentTransactionId: ids.reimbursementPayment,
+        notes:
+          "Fictional accountable-plan reimbursement for client-site expense.",
+      },
     });
     await tx.reimbursementExpense.create({
-      data: { id: ids.reimbursementExpense, businessId: ids.business, claimId: ids.claim, expenseType: "OTHER", transactionId: ids.personallyPaid, incurredAt: date("2026-07-10"), amount: "300.00", businessPurpose: "Client-site travel and supplies for a fictional field-services engagement.", merchantName: "Fictional Travel Services" },
+      data: {
+        id: ids.reimbursementExpense,
+        businessId: ids.business,
+        claimId: ids.claim,
+        expenseType: "OTHER",
+        transactionId: ids.personallyPaid,
+        incurredAt: date("2026-07-10"),
+        amount: "300.00",
+        businessPurpose:
+          "Client-site travel and supplies for a fictional field-services engagement.",
+        merchantName: "Fictional Travel Services",
+      },
     });
 
     await tx.payrollRun.create({
-      data: { id: ids.payroll, businessId: ids.business, payPeriodStart: date("2026-07-01"), payPeriodEnd: date("2026-07-15"), payDate: date("2026-07-16"), status: "PROCESSED", grossWages: "2000.00", employeeWithholding: "300.00", employeePayrollTax: "153.00", otherDeductions: "0.00", employerPayrollTax: "153.00", netPay: "1547.00", payrollProvider: "Fictional Payroll Service", externalReference: "demo-payroll-2026-07-16", processedAt: date("2026-07-16") },
+      data: {
+        id: ids.payroll,
+        businessId: ids.business,
+        payPeriodStart: date("2026-07-01"),
+        payPeriodEnd: date("2026-07-15"),
+        payDate: date("2026-07-16"),
+        status: "PROCESSED",
+        grossWages: "2000.00",
+        employeeWithholding: "300.00",
+        employeePayrollTax: "153.00",
+        otherDeductions: "0.00",
+        employerPayrollTax: "153.00",
+        netPay: "1547.00",
+        payrollProvider: "Fictional Payroll Service",
+        externalReference: "demo-payroll-2026-07-16",
+        processedAt: date("2026-07-16"),
+      },
     });
     await tx.ownerDistribution.create({
-      data: { id: ids.ownerDistribution, businessId: ids.business, distributionDate: date("2026-07-18"), amount: "700.00", status: "PAID", sourceAccountId: ids.checking, transactionId: ids.distribution, memo: "Fictional July owner distribution", approvedAt: date("2026-07-18"), paidAt: date("2026-07-18") },
+      data: {
+        id: ids.ownerDistribution,
+        businessId: ids.business,
+        distributionDate: date("2026-07-18"),
+        amount: "700.00",
+        status: "PAID",
+        sourceAccountId: ids.checking,
+        transactionId: ids.distribution,
+        memo: "Fictional July owner distribution",
+        approvedAt: date("2026-07-18"),
+        paidAt: date("2026-07-18"),
+      },
     });
     await tx.quarterlyTaxEstimate.create({
-      data: { id: ids.taxEstimate, businessId: ids.business, taxYear: 2026, quarter: 3, jurisdictionType: "FEDERAL", jurisdictionCode: "US-IRS", status: "READY_FOR_REVIEW", projectedTaxLiability: "1800.00", safeHarborRequired: "1500.00", withholdingCredits: "300.00", priorPayments: "0.00", recommendedPayment: "1500.00", dueDate: date("2026-09-15"), assumptionsJson: { scenario: "fictional-demo", projectedQuarterlyCommission: "5000.00" }, explanation: "Fictional Q3 planning estimate using a conservative safe-harbor target.", cpaReviewRecommended: true },
+      data: {
+        id: ids.taxEstimate,
+        businessId: ids.business,
+        taxYear: 2026,
+        quarter: 3,
+        jurisdictionType: "FEDERAL",
+        jurisdictionCode: "US-IRS",
+        status: "READY_FOR_REVIEW",
+        projectedTaxLiability: "1800.00",
+        safeHarborRequired: "1500.00",
+        withholdingCredits: "300.00",
+        priorPayments: "0.00",
+        recommendedPayment: "1500.00",
+        dueDate: date("2026-09-15"),
+        assumptionsJson: {
+          scenario: "fictional-demo",
+          projectedQuarterlyCommission: "5000.00",
+        },
+        explanation:
+          "Fictional Q3 planning estimate using a conservative safe-harbor target.",
+        cpaReviewRecommended: true,
+      },
     });
     await tx.weeklyReview.create({
-      data: { id: ids.weeklyReview, businessId: ids.business, weekStart: date("2026-07-20"), weekEnd: date("2026-07-26"), status: "OPEN", estimatedCompletionMinutes: 25 },
+      data: {
+        id: ids.weeklyReview,
+        businessId: ids.business,
+        weekStart: date("2026-07-20"),
+        weekEnd: date("2026-07-26"),
+        status: "OPEN",
+        estimatedCompletionMinutes: 25,
+      },
     });
     await tx.reviewTask.createMany({
       data: [
-        { id: reviewTaskIds[0], businessId: ids.business, weeklyReviewId: ids.weeklyReview, title: "Reconcile business checking activity", explanation: "Match July deposits and payments to the checking account.", category: "TRANSACTION_REVIEW", priority: "HIGH", sortOrder: 1 },
-        { id: reviewTaskIds[1], businessId: ids.business, weeklyReviewId: ids.weeklyReview, title: "Review mixed-purpose split", explanation: "Confirm the $120 business and $30 personal allocation.", category: "TRANSACTION_REVIEW", priority: "HIGH", sortOrder: 2 },
-        { id: reviewTaskIds[2], businessId: ids.business, weeklyReviewId: ids.weeklyReview, title: "Set aside the Q3 tax reserve", explanation: "Review the fictional federal estimated-tax recommendation.", category: "TAX_RESERVE", priority: "HIGH", sortOrder: 3 },
-        { id: reviewTaskIds[3], businessId: ids.business, weeklyReviewId: ids.weeklyReview, title: "Schedule payroll-tax remittance", explanation: "Confirm the separately tracked payroll tax payable balance.", category: "PAYROLL", priority: "MEDIUM", sortOrder: 4 },
-        { id: reviewTaskIds[4], businessId: ids.business, weeklyReviewId: ids.weeklyReview, title: "File reimbursement support", explanation: "Retain the fictional client-site expense support with the claim.", category: "REIMBURSEMENT", priority: "MEDIUM", sortOrder: 5 },
+        {
+          id: reviewTaskIds[0],
+          businessId: ids.business,
+          weeklyReviewId: ids.weeklyReview,
+          title: "Reconcile business checking activity",
+          explanation:
+            "Match July deposits and payments to the checking account.",
+          category: "TRANSACTION_REVIEW",
+          priority: "HIGH",
+          sortOrder: 1,
+        },
+        {
+          id: reviewTaskIds[1],
+          businessId: ids.business,
+          weeklyReviewId: ids.weeklyReview,
+          title: "Review mixed-purpose split",
+          explanation: "Confirm the $120 business and $30 personal allocation.",
+          category: "TRANSACTION_REVIEW",
+          priority: "HIGH",
+          sortOrder: 2,
+        },
+        {
+          id: reviewTaskIds[2],
+          businessId: ids.business,
+          weeklyReviewId: ids.weeklyReview,
+          title: "Set aside the Q3 tax reserve",
+          explanation:
+            "Review the fictional federal estimated-tax recommendation.",
+          category: "TAX_RESERVE",
+          priority: "HIGH",
+          sortOrder: 3,
+        },
+        {
+          id: reviewTaskIds[3],
+          businessId: ids.business,
+          weeklyReviewId: ids.weeklyReview,
+          title: "Schedule payroll-tax remittance",
+          explanation:
+            "Confirm the separately tracked payroll tax payable balance.",
+          category: "PAYROLL",
+          priority: "MEDIUM",
+          sortOrder: 4,
+        },
+        {
+          id: reviewTaskIds[4],
+          businessId: ids.business,
+          weeklyReviewId: ids.weeklyReview,
+          title: "File reimbursement support",
+          explanation:
+            "Retain the fictional client-site expense support with the claim.",
+          category: "REIMBURSEMENT",
+          priority: "MEDIUM",
+          sortOrder: 5,
+        },
       ],
     });
 
     await tx.ledgerAccount.createMany({
       data: [
-        { id: ledger.checking, businessId: ids.business, code: "1000", name: "Business Checking", type: "ASSET", subtype: "BANK", normalBalance: "DEBIT", isSystem: true, financialAccountId: ids.checking },
-        { id: ledger.creditCard, businessId: ids.business, code: "2000", name: "Business Credit Card", type: "LIABILITY", subtype: "CREDIT_CARD", normalBalance: "CREDIT", isSystem: true, financialAccountId: ids.creditCard },
-        { id: ledger.reimbursementPayable, businessId: ids.business, code: "2100", name: "Owner Reimbursement Payable", type: "LIABILITY", subtype: "REIMBURSEMENT_PAYABLE", normalBalance: "CREDIT", isSystem: true },
-        { id: ledger.payrollTaxPayable, businessId: ids.business, code: "2200", name: "Payroll Tax Payable", type: "LIABILITY", subtype: "PAYROLL_TAX_PAYABLE", normalBalance: "CREDIT", isSystem: true },
-        { id: ledger.ownerDistributions, businessId: ids.business, code: "3100", name: "Owner Distributions", type: "EQUITY", subtype: "OWNER_DISTRIBUTION", normalBalance: "DEBIT", isSystem: true },
-        { id: ledger.commissionIncome, businessId: ids.business, code: "4000", name: "Commission Income", type: "INCOME", subtype: "COMMISSION_INCOME", normalBalance: "CREDIT", isSystem: true },
-        { id: ledger.officeSupplies, businessId: ids.business, code: "5100", name: "Office Supplies Expense", type: "EXPENSE", subtype: "OFFICE_SUPPLIES_EXPENSE", normalBalance: "DEBIT", isSystem: true },
-        { id: ledger.internet, businessId: ids.business, code: "5200", name: "Internet Expense", type: "EXPENSE", subtype: "INTERNET_EXPENSE", normalBalance: "DEBIT", isSystem: true },
-        { id: ledger.professionalFees, businessId: ids.business, code: "5300", name: "Professional Fees Expense", type: "EXPENSE", subtype: "PROFESSIONAL_FEES_EXPENSE", normalBalance: "DEBIT", isSystem: true },
-        { id: ledger.payrollExpense, businessId: ids.business, code: "5400", name: "Payroll Expense", type: "EXPENSE", subtype: "PAYROLL_EXPENSE", normalBalance: "DEBIT", isSystem: true },
-        { id: ledger.payrollTaxExpense, businessId: ids.business, code: "5500", name: "Payroll Tax Expense", type: "EXPENSE", subtype: "PAYROLL_TAX_EXPENSE", normalBalance: "DEBIT", isSystem: true },
+        {
+          id: ledger.checking,
+          businessId: ids.business,
+          code: "1000",
+          name: "Business Checking",
+          type: "ASSET",
+          subtype: "BANK",
+          normalBalance: "DEBIT",
+          isSystem: true,
+          financialAccountId: ids.checking,
+        },
+        {
+          id: ledger.creditCard,
+          businessId: ids.business,
+          code: "2000",
+          name: "Business Credit Card",
+          type: "LIABILITY",
+          subtype: "CREDIT_CARD",
+          normalBalance: "CREDIT",
+          isSystem: true,
+          financialAccountId: ids.creditCard,
+        },
+        {
+          id: ledger.reimbursementPayable,
+          businessId: ids.business,
+          code: "2100",
+          name: "Owner Reimbursement Payable",
+          type: "LIABILITY",
+          subtype: "REIMBURSEMENT_PAYABLE",
+          normalBalance: "CREDIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.payrollTaxPayable,
+          businessId: ids.business,
+          code: "2200",
+          name: "Payroll Tax Payable",
+          type: "LIABILITY",
+          subtype: "PAYROLL_TAX_PAYABLE",
+          normalBalance: "CREDIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.ownerDistributions,
+          businessId: ids.business,
+          code: "3100",
+          name: "Owner Distributions",
+          type: "EQUITY",
+          subtype: "OWNER_DISTRIBUTION",
+          normalBalance: "DEBIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.commissionIncome,
+          businessId: ids.business,
+          code: "4000",
+          name: "Commission Income",
+          type: "INCOME",
+          subtype: "COMMISSION_INCOME",
+          normalBalance: "CREDIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.officeSupplies,
+          businessId: ids.business,
+          code: "5100",
+          name: "Office Supplies Expense",
+          type: "EXPENSE",
+          subtype: "OFFICE_SUPPLIES_EXPENSE",
+          normalBalance: "DEBIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.internet,
+          businessId: ids.business,
+          code: "5200",
+          name: "Internet Expense",
+          type: "EXPENSE",
+          subtype: "INTERNET_EXPENSE",
+          normalBalance: "DEBIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.professionalFees,
+          businessId: ids.business,
+          code: "5300",
+          name: "Professional Fees Expense",
+          type: "EXPENSE",
+          subtype: "PROFESSIONAL_FEES_EXPENSE",
+          normalBalance: "DEBIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.payrollExpense,
+          businessId: ids.business,
+          code: "5400",
+          name: "Payroll Expense",
+          type: "EXPENSE",
+          subtype: "PAYROLL_EXPENSE",
+          normalBalance: "DEBIT",
+          isSystem: true,
+        },
+        {
+          id: ledger.payrollTaxExpense,
+          businessId: ids.business,
+          code: "5500",
+          name: "Payroll Tax Expense",
+          type: "EXPENSE",
+          subtype: "PAYROLL_TAX_EXPENSE",
+          normalBalance: "DEBIT",
+          isSystem: true,
+        },
       ],
     });
-    await tx.accountingPeriod.create({ data: { id: ids.period, businessId: ids.business, startsAt: date("2026-07-01"), endsAt: new Date("2026-07-31T23:59:59.999Z"), status: "OPEN" } });
+    await tx.accountingPeriod.create({
+      data: {
+        id: ids.period,
+        businessId: ids.business,
+        startsAt: date("2026-07-01"),
+        endsAt: new Date("2026-07-31T23:59:59.999Z"),
+        status: "OPEN",
+      },
+    });
 
     const entries: SeedJournalEntry[] = [
-      { id: ids.commissionEntry, number: "DEMO-2026-07-001", entryDate: "2026-07-03", description: "Commission income received", sourceType: "BANK_TRANSACTION" as const, transactionId: ids.commission, lines: [[ledger.checking, "5000.00", "0.00"], [ledger.commissionIncome, "0.00", "5000.00"]] },
-      { id: ids.ordinaryExpenseEntry, number: "DEMO-2026-07-002", entryDate: "2026-07-12", description: "Ordinary July operating expenses", sourceType: "BANK_TRANSACTION" as const, transactionId: ids.office, lines: [[ledger.officeSupplies, "240.00", "0.00"], [ledger.internet, "450.00", "0.00"], [ledger.creditCard, "0.00", "240.00"], [ledger.checking, "0.00", "450.00"]] },
-      { id: ids.mixedEntry, number: "DEMO-2026-07-003", entryDate: "2026-07-08", description: "Business portion of mixed-purpose purchase", sourceType: "BANK_TRANSACTION" as const, transactionId: ids.mixed, lines: [[ledger.officeSupplies, "120.00", "0.00"], [ledger.reimbursementPayable, "0.00", "120.00"]] },
-      { id: ids.reimbursementAccrualEntry, number: "DEMO-2026-07-004", entryDate: "2026-07-15", description: "Accountable-plan reimbursement accrual and payment", sourceType: "REIMBURSEMENT_CLAIM" as const, reimbursementClaimId: ids.claim, lines: [[ledger.professionalFees, "300.00", "0.00"], [ledger.reimbursementPayable, "300.00", "0.00"], [ledger.reimbursementPayable, "0.00", "300.00"], [ledger.checking, "0.00", "300.00"]] },
-      { id: ids.payrollEntry, number: "DEMO-2026-07-005", entryDate: "2026-07-16", description: "July payroll run", sourceType: "PAYROLL_RUN" as const, payrollRunId: ids.payroll, lines: [[ledger.payrollExpense, "2000.00", "0.00"], [ledger.payrollTaxExpense, "153.00", "0.00"], [ledger.checking, "0.00", "1547.00"], [ledger.payrollTaxPayable, "0.00", "606.00"]] },
-      { id: ids.distributionEntry, number: "DEMO-2026-07-006", entryDate: "2026-07-18", description: "Owner distribution paid", sourceType: "OWNER_DISTRIBUTION" as const, transactionId: ids.distribution, ownerDistributionId: ids.ownerDistribution, lines: [[ledger.ownerDistributions, "700.00", "0.00"], [ledger.checking, "0.00", "700.00"]] },
+      {
+        id: ids.commissionEntry,
+        number: "DEMO-2026-07-001",
+        entryDate: "2026-07-03",
+        description: "Commission income received",
+        sourceType: "BANK_TRANSACTION" as const,
+        transactionId: ids.commission,
+        lines: [
+          [ledger.checking, "5000.00", "0.00"],
+          [ledger.commissionIncome, "0.00", "5000.00"],
+        ],
+      },
+      {
+        id: ids.ordinaryExpenseEntry,
+        number: "DEMO-2026-07-002",
+        entryDate: "2026-07-12",
+        description: "Ordinary July operating expenses",
+        sourceType: "BANK_TRANSACTION" as const,
+        transactionId: ids.office,
+        lines: [
+          [ledger.officeSupplies, "240.00", "0.00"],
+          [ledger.internet, "450.00", "0.00"],
+          [ledger.creditCard, "0.00", "240.00"],
+          [ledger.checking, "0.00", "450.00"],
+        ],
+      },
+      {
+        id: ids.mixedEntry,
+        number: "DEMO-2026-07-003",
+        entryDate: "2026-07-08",
+        description: "Business portion of mixed-purpose purchase",
+        sourceType: "BANK_TRANSACTION" as const,
+        transactionId: ids.mixed,
+        lines: [
+          [ledger.officeSupplies, "120.00", "0.00"],
+          [ledger.reimbursementPayable, "0.00", "120.00"],
+        ],
+      },
+      {
+        id: ids.reimbursementAccrualEntry,
+        number: "DEMO-2026-07-004",
+        entryDate: "2026-07-15",
+        description: "Accountable-plan reimbursement accrual and payment",
+        sourceType: "REIMBURSEMENT_CLAIM" as const,
+        reimbursementClaimId: ids.claim,
+        lines: [
+          [ledger.professionalFees, "300.00", "0.00"],
+          [ledger.reimbursementPayable, "300.00", "0.00"],
+          [ledger.reimbursementPayable, "0.00", "300.00"],
+          [ledger.checking, "0.00", "300.00"],
+        ],
+      },
+      {
+        id: ids.payrollEntry,
+        number: "DEMO-2026-07-005",
+        entryDate: "2026-07-16",
+        description: "July payroll run",
+        sourceType: "PAYROLL_RUN" as const,
+        payrollRunId: ids.payroll,
+        lines: [
+          [ledger.payrollExpense, "2000.00", "0.00"],
+          [ledger.payrollTaxExpense, "153.00", "0.00"],
+          [ledger.checking, "0.00", "1547.00"],
+          [ledger.payrollTaxPayable, "0.00", "606.00"],
+        ],
+      },
+      {
+        id: ids.distributionEntry,
+        number: "DEMO-2026-07-006",
+        entryDate: "2026-07-18",
+        description: "Owner distribution paid",
+        sourceType: "OWNER_DISTRIBUTION" as const,
+        transactionId: ids.distribution,
+        ownerDistributionId: ids.ownerDistribution,
+        lines: [
+          [ledger.ownerDistributions, "700.00", "0.00"],
+          [ledger.checking, "0.00", "700.00"],
+        ],
+      },
     ];
 
     for (const entry of entries) {
-      await tx.journalEntry.create({ data: { id: entry.id, businessId: ids.business, accountingPeriodId: ids.period, entryNumber: entry.number, entryDate: date(entry.entryDate), description: entry.description, status: "DRAFT", sourceType: entry.sourceType, sourceEntityId: entry.sourceEntityId, transactionId: entry.transactionId, reimbursementClaimId: entry.reimbursementClaimId, payrollRunId: entry.payrollRunId, ownerDistributionId: entry.ownerDistributionId } });
-      await tx.journalLine.createMany({ data: entry.lines.map(([ledgerAccountId, debitAmount, creditAmount], index) => ({ id: `${entry.id}-line-${index + 1}`, businessId: ids.business, journalEntryId: entry.id, ledgerAccountId, lineNumber: index + 1, debitAmount, creditAmount })) });
-      await tx.journalEntry.update({ where: { id: entry.id }, data: { status: "POSTED", postedAt: date(entry.entryDate) } });
+      await tx.journalEntry.create({
+        data: {
+          id: entry.id,
+          businessId: ids.business,
+          accountingPeriodId: ids.period,
+          entryNumber: entry.number,
+          entryDate: date(entry.entryDate),
+          description: entry.description,
+          status: "DRAFT",
+          sourceType: entry.sourceType,
+          sourceEntityId: entry.sourceEntityId,
+          transactionId: entry.transactionId,
+          reimbursementClaimId: entry.reimbursementClaimId,
+          payrollRunId: entry.payrollRunId,
+          ownerDistributionId: entry.ownerDistributionId,
+        },
+      });
+      await tx.journalLine.createMany({
+        data: entry.lines.map(
+          ([ledgerAccountId, debitAmount, creditAmount], index) => ({
+            id: `${entry.id}-line-${index + 1}`,
+            businessId: ids.business,
+            journalEntryId: entry.id,
+            ledgerAccountId,
+            lineNumber: index + 1,
+            debitAmount,
+            creditAmount,
+          }),
+        ),
+      });
+      await tx.journalEntry.update({
+        where: { id: entry.id },
+        data: { status: "POSTED", postedAt: date(entry.entryDate) },
+      });
     }
   });
 
   await verifyDemoSeed(prisma);
-  console.log("Created and verified deterministic fictional demo data: no password, no Better Auth credential account, fictional records only, local target verified.");
+  console.log(
+    "Created and verified deterministic fictional demo data: no password, no Better Auth credential account, fictional records only, local target verified.",
+  );
 }
 
 seed()

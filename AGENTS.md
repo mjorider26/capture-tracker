@@ -39,4 +39,6 @@ Do not run `prisma migrate reset`, `prisma migrate resolve`, `prisma db push`, o
 
 Before committing, run the requested formatting, Prisma validation, seed/verification, tests, integrity checks, lint, build, and `git diff --check`. Review the diff for secrets, generated files, unrelated changes, and weakened protections. Stop and report if a migration fails, a destructive database action is requested, or existing tests expose an architectural issue.
 
+`npm run check:phase` is the standard non-destructive phase check. `npm run test:integration:local` manages only the dedicated local integration database and must never be pointed at the normal development database.
+
 Final reports state: outcome; end-to-end behavior; files changed; exact data counts; safety controls; accounting behavior; commands and pass/fail results; commit hash; and remaining risks, assumptions, or follow-up work.
