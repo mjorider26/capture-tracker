@@ -13,6 +13,8 @@
     "db:test": "tsx scripts/test-database.ts",
     "demo:seed": "tsx prisma/seed.ts",
     "demo:verify": "tsx scripts/verify-demo-seed.ts",
+    "demo:restore": "tsx scripts/restore-demo-transaction-baseline.ts",
+    "money:verify": "tsx scripts/verify-money-dashboard.ts",
     "check": "npm run lint && npm run build",
     "postinstall": "prisma generate",
     "test": "vitest",

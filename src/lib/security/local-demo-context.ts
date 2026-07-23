@@ -41,6 +41,9 @@ async function withTimeout<T>(promise: Promise<T>): Promise<T> {
 export type LocalDemoContext = {
   businessId: string;
   businessName: string;
+  userId: string;
+  membershipId: string;
+  role: "OWNER";
 };
 
 // This checks the direct Host header available to Next.js, not X-Forwarded-Host. It protects local development,
@@ -84,14 +87,20 @@ export async function resolveLocalDemoContext(): Promise<LocalDemoContext | null
             userId: demoUserId,
             role: "OWNER",
           },
-          select: { id: true },
+          select: { id: true, userId: true, role: true },
         }),
         prisma.account.count({ where: { userId: demoUserId } }),
       ]),
     );
 
     if (!business || !membership || credentialCount !== 0) return null;
-    return { businessId: business.id, businessName: business.displayName };
+    return {
+      businessId: business.id,
+      businessName: business.displayName,
+      userId: membership.userId,
+      membershipId: membership.id,
+      role: "OWNER",
+    };
   } catch {
     return null;
   }

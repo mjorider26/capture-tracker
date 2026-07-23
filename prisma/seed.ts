@@ -3,6 +3,7 @@ import "dotenv/config";
 import { type JournalEntrySourceType } from "../src/generated/prisma/client";
 import { createPrismaClient } from "../src/lib/database/create-prisma-client";
 import { requireSafeDemoDatabase } from "../scripts/demo-seed-safety";
+import { restoreDemoMoneyBaseline } from "../scripts/demo-money-baseline";
 import { verifyDemoSeed } from "../scripts/verify-demo-seed";
 
 const databaseUrl = requireSafeDemoDatabase();
@@ -23,6 +24,7 @@ const ids = {
   internet: "demo-transaction-internet-service",
   reimbursementPayment: "demo-transaction-reimbursement-payment",
   distribution: "demo-transaction-owner-distribution",
+  pendingReview: "demo-transaction-pending-review",
   mixedBusinessSplit: "demo-split-mixed-business",
   mixedPersonalSplit: "demo-split-mixed-personal",
   claim: "demo-reimbursement-claim-july",
@@ -111,9 +113,10 @@ async function assertNoUnexpectedDevelopmentData(): Promise<void> {
 async function seed(): Promise<void> {
   const existingCount = await existingDemoRecordCount();
   if (existingCount > 0) {
+    await restoreDemoMoneyBaseline(prisma);
     await verifyDemoSeed(prisma);
     console.log(
-      "Verified existing deterministic demo data without updating records.",
+      "Restored the mutable deterministic Money baseline and verified demo data.",
     );
     return;
   }
@@ -306,6 +309,19 @@ async function seed(): Promise<void> {
           sourceReference: "demo-distribution-2026-07",
           approvedAt: date("2026-07-18"),
           approvedByMembershipId: ids.user,
+        },
+        {
+          id: ids.pendingReview,
+          businessId: ids.business,
+          accountId: ids.checking,
+          postedAt: date("2026-07-20"),
+          description: "Unreviewed field fuel purchase",
+          merchantName: "Fictional Fuel Stop",
+          amount: "125.00",
+          direction: "OUTFLOW",
+          intent: "UNREVIEWED",
+          status: "PENDING_REVIEW",
+          sourceReference: "demo-pending-review-2026-07",
         },
       ],
     });

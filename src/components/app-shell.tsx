@@ -40,7 +40,7 @@ export function AppShell({
         <Navigation basePath={basePath} destination={destination} />
         {mode === "demo" && (
           <p className="mt-auto rounded-xl bg-[#e7f9fb] px-3 py-2 text-xs leading-5 text-[#126676]">
-            Local fictional demo. Read-only preview.
+            Local fictional demo. Reviews affect only the local demo baseline.
           </p>
         )}
       </aside>

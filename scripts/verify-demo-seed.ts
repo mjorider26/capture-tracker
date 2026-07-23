@@ -102,22 +102,36 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
   );
 
   const counts = [
-    await client.financialAccount.count({ where: { businessId: ids.business } }),
+    await client.financialAccount.count({
+      where: { businessId: ids.business },
+    }),
     await client.transaction.count({ where: { businessId: ids.business } }),
-    await client.transactionSplit.count({ where: { businessId: ids.business } }),
-    await client.reimbursementClaim.count({ where: { businessId: ids.business } }),
-    await client.reimbursementExpense.count({ where: { businessId: ids.business } }),
+    await client.transactionSplit.count({
+      where: { businessId: ids.business },
+    }),
+    await client.reimbursementClaim.count({
+      where: { businessId: ids.business },
+    }),
+    await client.reimbursementExpense.count({
+      where: { businessId: ids.business },
+    }),
     await client.payrollRun.count({ where: { businessId: ids.business } }),
-    await client.ownerDistribution.count({ where: { businessId: ids.business } }),
-    await client.quarterlyTaxEstimate.count({ where: { businessId: ids.business } }),
+    await client.ownerDistribution.count({
+      where: { businessId: ids.business },
+    }),
+    await client.quarterlyTaxEstimate.count({
+      where: { businessId: ids.business },
+    }),
     await client.weeklyReview.count({ where: { businessId: ids.business } }),
     await client.reviewTask.count({ where: { businessId: ids.business } }),
     await client.ledgerAccount.count({ where: { businessId: ids.business } }),
     await client.journalEntry.count({ where: { businessId: ids.business } }),
     await client.journalLine.count({ where: { businessId: ids.business } }),
-    await client.accountingPeriod.count({ where: { businessId: ids.business } }),
+    await client.accountingPeriod.count({
+      where: { businessId: ids.business },
+    }),
   ];
-  const expectedCounts = [3, 8, 2, 1, 1, 1, 1, 1, 1, 5, 11, 6, 18, 1];
+  const expectedCounts = [3, 9, 2, 1, 1, 1, 1, 1, 1, 5, 11, 6, 18, 1];
   const labels = [
     "financial accounts",
     "transactions",
@@ -315,7 +329,7 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
 
   console.log("DEMO SEED VERIFIED");
   console.log(
-    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=8, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=11, journalEntries=6, journalLines=18, accountingPeriods=1",
+    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=9, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=11, journalEntries=6, journalLines=18, accountingPeriods=1",
   );
 }
 

@@ -16,6 +16,9 @@ This Next.js version has breaking changes. Read the relevant guide in `node_modu
 - Do not edit an already-applied migration unless explicitly instructed.
 - Do not weaken protections to make a test or seed succeed.
 - Demo data must be deterministic, idempotent, transactional, locally restricted, explicitly opt-in, and unable to run against production-like database URLs.
+- Financial route actions must assemble business scope and actor identity from trusted server context; browser input may never supply either value.
+- Review mutations must match transaction versions by exact equality, enforce roles server-side, and append audit evidence in the same database transaction.
+- Posted, reversed, locked-period, voided, and already-reviewed transaction records are immutable in review workflows. Mixed split input must use exact decimal validation; database integrity triggers remain authoritative.
 
 ## Accounting rules
 

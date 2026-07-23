@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 
 import { AppShell, isDestination } from "@/components/app-shell";
+import { MoneyExperience } from "@/components/money-experience";
 import { TodayExperience } from "@/components/today-experience";
+import { getMoneyDashboard } from "@/lib/data/money-dashboard";
 import { getTodayDashboard } from "@/lib/data/today-dashboard";
 import {
   isAccessControlError,
@@ -14,8 +16,10 @@ export const metadata = { robots: { index: false, follow: false } };
 
 export default async function ApplicationDestinationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ destination: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { destination } = await params;
   if (!isDestination(destination)) notFound();
@@ -24,6 +28,14 @@ export default async function ApplicationDestinationPage({
     destination === "today" ? (
       <TodayExperience
         dashboard={await getTodayDashboard(context.business.id)}
+      />
+    ) : destination === "money" ? (
+      <MoneyExperience
+        dashboard={await getMoneyDashboard(
+          context.business.id,
+          await searchParams,
+        )}
+        basePath="/app"
       />
     ) : (
       <Placeholder destination={destination} />
