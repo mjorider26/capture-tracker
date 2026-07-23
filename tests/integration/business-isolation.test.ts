@@ -1,13 +1,7 @@
 ﻿import { randomUUID } from "node:crypto";
 
 import { config } from "dotenv";
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createPrismaClient } from "../../src/lib/database/create-prisma-client";
 import { findTransactionForBusiness } from "../../src/lib/data/transaction-access-core";
@@ -17,13 +11,10 @@ config({
   override: false,
 });
 
-const connectionString =
-  process.env.TEST_DATABASE_URL?.trim();
+const connectionString = process.env.TEST_DATABASE_URL?.trim();
 
 if (!connectionString) {
-  throw new Error(
-    "TEST_DATABASE_URL is not configured in .env.test.local.",
-  );
+  throw new Error("TEST_DATABASE_URL is not configured in .env.test.local.");
 }
 
 const prisma = createPrismaClient(connectionString);
@@ -131,10 +122,7 @@ describe("business transaction isolation", () => {
     await prisma.transaction.deleteMany({
       where: {
         id: {
-          in: [
-            ids.transactionA,
-            ids.transactionB,
-          ],
+          in: [ids.transactionA, ids.transactionB],
         },
       },
     });
@@ -142,10 +130,7 @@ describe("business transaction isolation", () => {
     await prisma.financialAccount.deleteMany({
       where: {
         id: {
-          in: [
-            ids.accountA,
-            ids.accountB,
-          ],
+          in: [ids.accountA, ids.accountB],
         },
       },
     });
@@ -165,10 +150,7 @@ describe("business transaction isolation", () => {
     await prisma.business.deleteMany({
       where: {
         id: {
-          in: [
-            ids.businessA,
-            ids.businessB,
-          ],
+          in: [ids.businessA, ids.businessB],
         },
       },
     });
@@ -177,11 +159,10 @@ describe("business transaction isolation", () => {
   });
 
   it("returns a transaction belonging to the scoped business", async () => {
-    const transaction =
-      await findTransactionForBusiness(prisma, {
-        businessId: ids.businessA,
-        transactionId: ids.transactionA,
-      });
+    const transaction = await findTransactionForBusiness(prisma, {
+      businessId: ids.businessA,
+      transactionId: ids.transactionA,
+    });
 
     expect(transaction).toMatchObject({
       id: ids.transactionA,
@@ -192,11 +173,10 @@ describe("business transaction isolation", () => {
   });
 
   it("does not return another business's transaction", async () => {
-    const transaction =
-      await findTransactionForBusiness(prisma, {
-        businessId: ids.businessA,
-        transactionId: ids.transactionB,
-      });
+    const transaction = await findTransactionForBusiness(prisma, {
+      businessId: ids.businessA,
+      transactionId: ids.transactionB,
+    });
 
     expect(transaction).toBeNull();
   });
@@ -212,6 +192,20 @@ describe("business transaction isolation", () => {
           amount: "99.00",
           direction: "OUTFLOW",
           sourceReference: `invalid-${testRunId}`,
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a cross-business transaction split relationship", async () => {
+    await expect(
+      prisma.transactionSplit.create({
+        data: {
+          id: `invalid-split-${testRunId}`,
+          businessId: ids.businessA,
+          transactionId: ids.transactionB,
+          intent: "BUSINESS",
+          amount: "1.00",
         },
       }),
     ).rejects.toThrow();

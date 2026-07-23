@@ -21,6 +21,12 @@
     "test:run": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:integration:local": "node scripts/run-local-integration-tests.mjs",
+    "fullpg:prepare": "node scripts/full-postgres-prepare.mjs",
+    "fullpg:seed": "node scripts/full-postgres-seed.mjs",
+    "postgres:verify": "node scripts/full-postgres-verify.mjs",
+    "test:integration:postgres": "node scripts/run-full-postgres-integration.mjs",
+    "postgres:write:validate": "tsx scripts/validate-full-postgres-writes.ts",
+    "check:accounting": "npm run fullpg:prepare && npm run fullpg:seed && npm run postgres:verify && npm run test:integration:postgres && npm run postgres:write:validate",
     "today:verify": "tsx scripts/verify-today-dashboard.ts",
     "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run lint && npm run build"
   },

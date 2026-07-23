@@ -4,6 +4,9 @@ import pg from "pg";
 const { Client } = pg;
 
 function readDatabaseUrl() {
+  const explicitUrl = process.env.DATABASE_URL?.trim();
+  if (explicitUrl) return explicitUrl;
+
   const envText = readFileSync(".env", "utf8");
 
   const line = envText
@@ -87,7 +90,9 @@ function report(label, expected, rows) {
   const found = new Set(rows.map((row) => row.name));
   const missing = expected.filter((name) => !found.has(name));
 
-  console.log(`${label}: ${expected.length - missing.length}/${expected.length}`);
+  console.log(
+    `${label}: ${expected.length - missing.length}/${expected.length}`,
+  );
 
   if (missing.length > 0) {
     console.error(`Missing ${label.toLowerCase()}:`);
