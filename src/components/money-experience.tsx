@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import type { MoneyDashboard } from "@/lib/data/money-dashboard";
 
+import { Card, EmptyState, PageHeader, StatusBadge } from "./ui";
+
 function date(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -26,28 +28,25 @@ export function MoneyExperience({
   );
   return (
     <>
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-[#155eef]">Money</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            Transaction review
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#63738a]">
-            Review unposted activity without changing posted accounting.
-          </p>
-        </div>
-        <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#63738a] shadow-sm ring-1 ring-[#dce5f0]">
-          {dashboard.summary.resultCount} shown
-        </span>
-      </header>
+      <PageHeader
+        eyebrow="Money"
+        title="Transaction review"
+        description="Review unposted activity without changing posted accounting."
+        action={
+          <StatusBadge tone="warning">
+            {dashboard.summary.awaitingReviewCount} awaiting review
+          </StatusBadge>
+        }
+      />
       <section
         aria-label="Money summary"
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         <Summary
           label="Awaiting review"
           value={String(dashboard.summary.awaitingReviewCount)}
           detail="Transactions pending a decision"
+          emphasis
         />
         <Summary
           label="Reviewed business"
@@ -66,15 +65,15 @@ export function MoneyExperience({
         />
       </section>
       <form
-        className="mt-6 grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[#dce5f0] md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]"
+        className="ui-card mt-7 grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]"
         method="get"
       >
-        <label className="text-sm font-semibold text-[#51627a]">
+        <label className="text-sm font-bold text-text-muted">
           Search
           <input
             name="q"
             defaultValue={dashboard.filters.query}
-            className="mt-1 min-h-11 w-full rounded-xl border border-[#cbd7e6] px-3 text-[#10233f]"
+            className="ui-input mt-1"
             placeholder="Description, merchant, or reference"
           />
         </label>
@@ -90,12 +89,12 @@ export function MoneyExperience({
           value={dashboard.filters.intent}
           options={["UNREVIEWED", "BUSINESS", "PERSONAL", "MIXED"]}
         />
-        <label className="text-sm font-semibold text-[#51627a]">
+        <label className="text-sm font-bold text-text-muted">
           Account
           <select
             name="account"
             defaultValue={dashboard.filters.accountId}
-            className="mt-1 min-h-11 w-full rounded-xl border border-[#cbd7e6] bg-white px-3 text-[#10233f]"
+            className="ui-input mt-1"
           >
             <option value="">All accounts</option>
             {dashboard.accounts.map((account) => (
@@ -106,12 +105,12 @@ export function MoneyExperience({
           </select>
         </label>
         <div className="flex items-end gap-2">
-          <button className="min-h-11 rounded-xl bg-[#155eef] px-4 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#12b8c8]">
-            Filter
+          <button className="min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-4 text-sm font-bold text-white">
+            Apply filters
           </button>
           {hasFilters && (
             <Link
-              className="grid min-h-11 place-items-center rounded-xl px-3 text-sm font-semibold text-[#155eef] underline"
+              className="grid min-h-11 place-items-center rounded-[var(--radius-sm)] px-3 text-sm font-bold text-brand-teal underline"
               href={`${basePath}/money`}
             >
               Reset
@@ -119,20 +118,26 @@ export function MoneyExperience({
           )}
         </div>
       </form>
-      <section className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#dce5f0]">
-        <div className="border-b border-[#edf1f6] px-5 py-4">
-          <h2 className="font-bold">Transactions</h2>
-          <p className="mt-1 text-xs text-[#6c7b90]">
-            Most recent first. Posted and reviewed records remain read-only.
-          </p>
+      <section className="ui-card mt-7 overflow-hidden">
+        <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
+          <div>
+            <h2 className="font-bold">Transactions</h2>
+            <p className="mt-1 text-xs text-text-muted">
+              Most recent first. Posted and reviewed records remain read-only.
+            </p>
+          </div>
+          <span className="text-xs font-bold text-text-muted">
+            {dashboard.summary.resultCount} shown
+          </span>
         </div>
         {dashboard.transactions.length === 0 ? (
-          <p className="p-6 text-sm text-[#63738a]">
-            No transactions match these filters.
-          </p>
+          <EmptyState title="No transactions match">
+            Clear a filter or search a different description, merchant, or
+            source reference.
+          </EmptyState>
         ) : (
           <>
-            <div className="divide-y divide-[#edf1f6] md:hidden">
+            <div className="divide-y divide-border-subtle md:hidden">
               {dashboard.transactions.map((transaction) => (
                 <TransactionCard
                   key={transaction.id}
@@ -142,7 +147,7 @@ export function MoneyExperience({
               ))}
             </div>
             <table className="hidden w-full text-left text-sm md:table">
-              <thead className="bg-[#f8faff] text-xs uppercase tracking-wide text-[#6c7b90]">
+              <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-text-muted">
                 <tr>
                   <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Description</th>
@@ -154,19 +159,19 @@ export function MoneyExperience({
                 {dashboard.transactions.map((transaction) => (
                   <tr
                     key={transaction.id}
-                    className="border-t border-[#edf1f6]"
+                    className="border-t border-border-subtle"
                   >
-                    <td className="px-5 py-4 text-[#63738a]">
+                    <td className="px-5 py-4 text-text-muted">
                       {date(transaction.postedAt)}
                     </td>
                     <td className="px-5 py-4">
                       <Link
-                        className="font-semibold text-[#155eef] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#12b8c8]"
+                        className="font-bold text-brand-navy underline decoration-[var(--brand-teal)] underline-offset-4"
                         href={`${basePath}/money/${transaction.id}`}
                       >
                         {transaction.description}
                       </Link>
-                      <p className="mt-1 text-xs text-[#6c7b90]">
+                      <p className="mt-1 text-xs text-[var(--text-subtle)]">
                         {transaction.accountName} ·{" "}
                         {transaction.accountOwnership.toLowerCase()} account
                         {transaction.hasDocuments ? " · document attached" : ""}
@@ -175,7 +180,7 @@ export function MoneyExperience({
                     <td className="px-5 py-4">
                       <State transaction={transaction} />
                     </td>
-                    <td className="px-5 py-4 text-right font-bold">
+                    <td className="money-value px-5 py-4 text-right font-bold">
                       {transaction.direction === "OUTFLOW" ? "−" : "+"}
                       {transaction.amount}
                     </td>
@@ -189,24 +194,27 @@ export function MoneyExperience({
     </>
   );
 }
-
 function Summary({
   label,
   value,
   detail,
+  emphasis = false,
 }: {
   label: string;
   value: string;
   detail: string;
+  emphasis?: boolean;
 }) {
   return (
-    <article className="min-h-32 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#dce5f0]">
-      <p className="text-sm font-semibold text-[#51627a]">{label}</p>
-      <p className="mt-4 text-2xl font-bold tracking-tight text-[#10233f]">
+    <Card
+      className={`min-h-32 p-5 ${emphasis ? "border-[var(--brand-teal)]" : ""}`}
+    >
+      <p className="text-sm font-bold text-text-muted">{label}</p>
+      <p className="money-value mt-4 text-2xl font-bold tracking-[-0.03em] text-brand-navy">
         {value}
       </p>
-      <p className="mt-2 text-xs text-[#6c7b90]">{detail}</p>
-    </article>
+      <p className="mt-2 text-xs text-[var(--text-subtle)]">{detail}</p>
+    </Card>
   );
 }
 function Select({
@@ -221,13 +229,9 @@ function Select({
   options: string[];
 }) {
   return (
-    <label className="text-sm font-semibold text-[#51627a]">
+    <label className="text-sm font-bold text-text-muted">
       {label}
-      <select
-        name={name}
-        defaultValue={value}
-        className="mt-1 min-h-11 w-full rounded-xl border border-[#cbd7e6] bg-white px-3 text-[#10233f]"
-      >
+      <select name={name} defaultValue={value} className="ui-input mt-1">
         <option value="">All</option>
         {options.map((option) => (
           <option key={option} value={option}>
@@ -243,12 +247,19 @@ function State({
 }: {
   transaction: MoneyDashboard["transactions"][number];
 }) {
+  const tone = transaction.isLocked
+    ? "locked"
+    : transaction.status === "PENDING_REVIEW"
+      ? "warning"
+      : transaction.status === "EXCLUDED"
+        ? "neutral"
+        : "success";
   return (
     <div className="space-y-1">
-      <span className="inline-flex rounded-full bg-[#eef4ff] px-2.5 py-1 text-xs font-bold text-[#155eef]">
+      <StatusBadge tone={tone}>
         {transaction.status.replaceAll("_", " ")}
-      </span>
-      <p className="text-xs text-[#63738a]">
+      </StatusBadge>
+      <p className="text-xs text-text-muted">
         {transaction.intent}
         {transaction.isLocked
           ? " · locked"
@@ -271,16 +282,16 @@ function TransactionCard({
       <div className="flex justify-between gap-4">
         <div>
           <Link
-            className="font-semibold text-[#155eef] underline"
+            className="font-bold text-brand-navy underline decoration-[var(--brand-teal)] underline-offset-4"
             href={`${basePath}/money/${transaction.id}`}
           >
             {transaction.description}
           </Link>
-          <p className="mt-1 text-xs text-[#6c7b90]">
+          <p className="mt-1 text-xs text-text-muted">
             {date(transaction.postedAt)} · {transaction.accountName}
           </p>
         </div>
-        <p className="shrink-0 font-bold">
+        <p className="money-value shrink-0 font-bold">
           {transaction.direction === "OUTFLOW" ? "−" : "+"}
           {transaction.amount}
         </p>

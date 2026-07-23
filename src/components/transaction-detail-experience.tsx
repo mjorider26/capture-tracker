@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { TransactionDetail } from "@/lib/data/transaction-detail";
 
 import { TransactionReviewForm } from "./transaction-review-form";
+import { Card, InlineAlert } from "./ui";
 import type { ReviewActionState } from "@/lib/services/review-transaction-action";
 
 export function TransactionDetailExperience({
@@ -27,29 +28,29 @@ export function TransactionDetailExperience({
     <>
       <Link
         href={`${basePath}/money`}
-        className="inline-flex min-h-11 items-center text-sm font-bold text-[#155eef] underline"
+        className="inline-flex min-h-11 items-center text-sm font-bold text-brand-teal underline underline-offset-4"
       >
         ← Back to Money
       </Link>
       <header className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-[#155eef]">
+          <p className="text-sm font-bold tracking-wide text-brand-teal">
             Transaction detail
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
             {detail.description}
           </h1>
-          <p className="mt-2 text-sm text-[#63738a]">
+          <p className="mt-2 text-sm text-text-muted">
             {date} · {detail.account.name} ·{" "}
             {detail.account.ownership.toLowerCase()} account
           </p>
         </div>
-        <p className="text-2xl font-bold">
+        <p className="money-value text-2xl font-bold text-brand-navy">
           {detail.direction === "OUTFLOW" ? "−" : "+"}
           {detail.amount}
         </p>
       </header>
-      <section className="mt-6 grid gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#dce5f0] sm:grid-cols-2">
+      <Card className="mt-6 grid gap-3 p-5 sm:grid-cols-2">
         <Info label="Intent" value={detail.intent} />
         <Info
           label="Review status"
@@ -71,9 +72,9 @@ export function TransactionDetailExperience({
           label="Account type"
           value={detail.account.type.replaceAll("_", " ")}
         />
-      </section>
+      </Card>
       {detail.splits.length > 0 && (
-        <section className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#dce5f0]">
+        <Card className="mt-5 p-5">
           <h2 className="font-bold">Current splits</h2>
           <ul className="mt-3 space-y-2">
             {detail.splits.map((split) => (
@@ -82,11 +83,11 @@ export function TransactionDetailExperience({
                   {split.intent.toLowerCase()}{" "}
                   {split.memo ? `· ${split.memo}` : ""}
                 </span>
-                <span className="font-bold">${split.amount}</span>
+                <span className="money-value font-bold">${split.amount}</span>
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       )}
       {detail.editable ? (
         <TransactionReviewForm
@@ -101,12 +102,11 @@ export function TransactionDetailExperience({
           action={action}
         />
       ) : (
-        <section className="mt-6 rounded-2xl border border-[#f0d5ab] bg-[#fffaf0] p-5">
-          <h2 className="font-bold text-[#8a4b00]">Read-only record</h2>
-          <p className="mt-2 text-sm leading-6 text-[#8a4b00]">
+        <div className="mt-6">
+          <InlineAlert tone="locked" title="Read-only record">
             {detail.lockExplanation}
-          </p>
-        </section>
+          </InlineAlert>
+        </div>
       )}
     </>
   );
@@ -114,10 +114,10 @@ export function TransactionDetailExperience({
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-wide text-[#6c7b90]">
+      <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-subtle)]">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-[#10233f]">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-text-primary">{value}</p>
     </div>
   );
 }

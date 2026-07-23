@@ -1,11 +1,13 @@
 import Link from "next/link";
 
+import { BrandIcon } from "./brand";
+
 export const destinations = [
-  { slug: "today", label: "Today", mark: "◉" },
-  { slug: "money", label: "Money", mark: "◈" },
-  { slug: "taxes", label: "Taxes", mark: "△" },
-  { slug: "documents", label: "Documents", mark: "□" },
-  { slug: "ask-ai", label: "Ask AI", mark: "✦" },
+  { slug: "today", label: "Today", mark: "\u25c9" },
+  { slug: "money", label: "Money", mark: "\u25c6" },
+  { slug: "taxes", label: "Taxes", mark: "\u25b3" },
+  { slug: "documents", label: "Documents", mark: "\u25a1" },
+  { slug: "ask-ai", label: "Ask AI", mark: "\u2726" },
 ] as const;
 
 export type Destination = (typeof destinations)[number]["slug"];
@@ -21,35 +23,32 @@ export function AppShell({
   children,
 }: {
   mode: "app" | "demo";
-  destination: Destination;
+  destination: Destination | null;
   businessName: string;
   children: React.ReactNode;
 }) {
   const basePath = mode === "demo" ? "/demo" : "/app";
-
   return (
-    <div className="min-h-screen bg-[#f5f8fc] text-[#10233f]">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-[#dce5f0] bg-white px-5 py-6 lg:flex">
+    <div className="min-h-screen bg-page text-text-primary">
+      <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col border-r border-border-subtle bg-surface px-5 py-6 lg:flex">
         <Brand />
-        <p className="mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-[#6c7b90]">
+        <p className="mt-8 text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-subtle)]">
           Business
         </p>
-        <p className="mt-2 text-sm font-semibold text-[#10233f]">
-          {businessName}
-        </p>
+        <p className="mt-2 text-sm font-bold">{businessName}</p>
         <Navigation basePath={basePath} destination={destination} />
         {mode === "demo" && (
-          <p className="mt-auto rounded-xl bg-[#e7f9fb] px-3 py-2 text-xs leading-5 text-[#126676]">
+          <p className="mt-auto rounded-[var(--radius-md)] bg-[var(--brand-teal-soft)] px-3 py-3 text-xs leading-5 text-[var(--brand-teal-strong)]">
             Local fictional demo. Reviews affect only the local demo baseline.
           </p>
         )}
       </aside>
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:ml-64 lg:px-10 lg:pb-10 lg:pt-8">
+      <main className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:ml-72 lg:px-10 lg:pb-12 lg:pt-10">
         {children}
       </main>
       <nav
         aria-label="Primary navigation"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-[#dce5f0] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-border-subtle bg-surface/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden"
       >
         <div className="mx-auto flex max-w-lg items-stretch justify-between">
           {destinations.map((item) => (
@@ -70,28 +69,22 @@ export function AppShell({
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <span
-        aria-hidden="true"
-        className="grid h-9 w-9 place-items-center rounded-xl bg-[#155eef] text-sm font-black text-white shadow-sm"
-      >
-        CT
-      </span>
-      <span className="text-base font-bold tracking-tight text-[#10233f]">
-        Capture Tracker
+      <BrandIcon decorative className="h-11 w-10" />
+      <span className="text-base font-bold tracking-[-0.03em] text-brand-navy">
+        Capture<span className="text-brand-teal">Tracker</span>
       </span>
     </div>
   );
 }
-
 function Navigation({
   basePath,
   destination,
 }: {
   basePath: string;
-  destination: Destination;
+  destination: Destination | null;
 }) {
   return (
-    <nav aria-label="Primary navigation" className="mt-5 space-y-1">
+    <nav aria-label="Primary navigation" className="mt-6 space-y-1">
       {destinations.map((item) => (
         <NavLink
           key={item.slug}
@@ -103,7 +96,6 @@ function Navigation({
     </nav>
   );
 }
-
 function NavLink({
   basePath,
   item,
@@ -121,8 +113,8 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       className={
         compact
-          ? `flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold ${active ? "bg-[#e8efff] text-[#155eef]" : "text-[#63738a]"}`
-          : `flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#12b8c8] ${active ? "bg-[#e8efff] text-[#155eef]" : "text-[#51627a] hover:bg-[#f4f7fb]"}`
+          ? `flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] px-1 text-[10px] font-bold ${active ? "bg-[var(--brand-teal-soft)] text-brand-teal" : "text-text-muted"}`
+          : `flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 text-sm font-bold transition-colors ${active ? "bg-[var(--brand-teal-soft)] text-brand-teal" : "text-text-muted hover:bg-surface-secondary"}`
       }
     >
       <span

@@ -19,6 +19,7 @@ This Next.js version has breaking changes. Read the relevant guide in `node_modu
 - Financial route actions must assemble business scope and actor identity from trusted server context; browser input may never supply either value.
 - Review mutations must match transaction versions by exact equality, enforce roles server-side, and append audit evidence in the same database transaction.
 - Posted, reversed, locked-period, voided, and already-reviewed transaction records are immutable in review workflows. Mixed split input must use exact decimal validation; database integrity triggers remain authoritative.
+- Use the documented design tokens and shared UI primitives rather than arbitrary visual values. Preserve the approved logo asset exactly, use no remote fonts, make statuses textual as well as colored, and format financial values with tabular numerals. Keep business logic out of visual components.
 
 ## Accounting rules
 

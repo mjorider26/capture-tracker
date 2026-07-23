@@ -67,10 +67,7 @@ export function TransactionReviewForm({
       ),
     );
   return (
-    <form
-      action={formAction}
-      className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#dce5f0] sm:p-6"
-    >
+    <form action={formAction} className="ui-card mt-6 p-5 sm:p-6">
       <input type="hidden" name="transactionId" value={transactionId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <input
@@ -80,7 +77,7 @@ export function TransactionReviewForm({
       />
       <fieldset>
         <legend className="text-lg font-bold">Review this transaction</legend>
-        <p className="mt-1 text-sm text-[#63738a]">
+        <p className="mt-1 text-sm text-text-muted">
           Choose how this activity should be treated. This workflow does not
           create journal entries.
         </p>
@@ -88,7 +85,7 @@ export function TransactionReviewForm({
           {(["BUSINESS", "PERSONAL", "MIXED"] as const).map((choice) => (
             <label
               key={choice}
-              className={`min-h-20 rounded-xl border p-3 ${intent === choice ? "border-[#155eef] bg-[#eef4ff]" : "border-[#cbd7e6]"}`}
+              className={`min-h-20 rounded-[var(--radius-md)] border p-3 ${intent === choice ? "border-brand-teal bg-[var(--brand-teal-soft)]" : "border-[var(--border-strong)]"}`}
             >
               <input
                 className="mr-2"
@@ -101,7 +98,7 @@ export function TransactionReviewForm({
               <span className="font-bold">
                 {choice[0] + choice.slice(1).toLowerCase()}
               </span>
-              <span className="mt-1 block text-xs text-[#63738a]">
+              <span className="mt-1 block text-xs text-text-muted">
                 {choice === "BUSINESS"
                   ? "Approve as business activity."
                   : choice === "PERSONAL"
@@ -113,11 +110,11 @@ export function TransactionReviewForm({
         </div>
       </fieldset>
       {intent === "MIXED" && (
-        <section className="mt-5 border-t border-[#edf1f6] pt-5">
+        <section className="mt-5 border-t border-border-subtle pt-5">
           <div className="flex items-baseline justify-between gap-3">
             <div>
               <h3 className="font-bold">Exact mixed-purpose splits</h3>
-              <p className="mt-1 text-sm text-[#63738a]">
+              <p className="mt-1 text-sm text-text-muted">
                 Parent amount: {amount}. Total:{" "}
                 {totals === null ? "invalid" : formatCents(totals)}.{" "}
                 {matches
@@ -136,7 +133,7 @@ export function TransactionReviewForm({
                   { intent: "BUSINESS", amount: "", memo: "" },
                 ])
               }
-              className="min-h-11 rounded-xl px-3 text-sm font-bold text-[#155eef] underline disabled:text-[#9aa9ba]"
+              className="min-h-11 rounded-[var(--radius-sm)] px-3 text-sm font-bold text-brand-teal underline disabled:text-[var(--text-subtle)]"
             >
               Add split
             </button>
@@ -145,7 +142,7 @@ export function TransactionReviewForm({
             {splits.map((split, index) => (
               <div
                 key={index}
-                className="grid gap-2 rounded-xl border border-[#dce5f0] p-3 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                className="grid gap-2 rounded-[var(--radius-md)] border border-border-subtle p-3 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto]"
               >
                 <label className="text-sm font-semibold">
                   Purpose
@@ -157,7 +154,7 @@ export function TransactionReviewForm({
                         intent: event.target.value as Split["intent"],
                       })
                     }
-                    className="mt-1 min-h-11 w-full rounded-lg border border-[#cbd7e6] bg-white px-2"
+                    className="ui-input mt-1"
                   >
                     <option value="BUSINESS">Business</option>
                     <option value="PERSONAL">Personal</option>
@@ -173,7 +170,7 @@ export function TransactionReviewForm({
                     onChange={(event) =>
                       update(index, { amount: event.target.value })
                     }
-                    className="mt-1 min-h-11 w-full rounded-lg border border-[#cbd7e6] px-2"
+                    className="ui-input mt-1"
                   />
                 </label>
                 <label className="text-sm font-semibold">
@@ -184,7 +181,7 @@ export function TransactionReviewForm({
                     onChange={(event) =>
                       update(index, { memo: event.target.value })
                     }
-                    className="mt-1 min-h-11 w-full rounded-lg border border-[#cbd7e6] px-2"
+                    className="ui-input mt-1"
                   />
                 </label>
                 <button
@@ -197,14 +194,14 @@ export function TransactionReviewForm({
                       ),
                     )
                   }
-                  className="self-end min-h-11 text-sm font-bold text-[#155eef] underline disabled:text-[#9aa9ba]"
+                  className="self-end min-h-11 text-sm font-bold text-brand-teal underline disabled:text-[var(--text-subtle)]"
                 >
                   Remove
                 </button>
               </div>
             ))}
           </div>
-          <p id="split-help" className="mt-2 text-xs text-[#6c7b90]">
+          <p id="split-help" className="mt-2 text-xs text-[var(--text-subtle)]">
             Amounts must be positive decimal strings with no more than two
             fractional digits.
           </p>
@@ -213,14 +210,14 @@ export function TransactionReviewForm({
       {state.status !== "idle" && (
         <p
           role="status"
-          className={`mt-5 rounded-xl p-3 text-sm font-semibold ${state.status === "success" ? "bg-[#e7f9fb] text-[#126676]" : "bg-[#fff4e5] text-[#8a4b00]"}`}
+          className={`mt-5 rounded-[var(--radius-md)] p-3 text-sm font-semibold ${state.status === "success" ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--warning-soft)] text-[var(--warning)]"}`}
         >
           {state.message}
         </p>
       )}
       <button
         disabled={pending || (intent === "MIXED" && !matches)}
-        className="mt-5 min-h-11 rounded-xl bg-[#155eef] px-4 text-sm font-bold text-white disabled:bg-[#9aa9ba]"
+        className="mt-5 min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-4 text-sm font-bold text-white disabled:bg-[var(--locked)]"
       >
         {pending ? "Saving review…" : "Save review"}
       </button>
