@@ -12,7 +12,10 @@
     "db:verify": "node scripts/verify-database-integrity.mjs",
     "db:test": "tsx scripts/test-database.ts",
     "check": "npm run lint && npm run build",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.24",
