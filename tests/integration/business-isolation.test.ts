@@ -1,6 +1,5 @@
 ﻿import { randomUUID } from "node:crypto";
 
-import { PrismaPg } from "@prisma/adapter-pg";
 import { config } from "dotenv";
 import {
   afterAll,
@@ -10,7 +9,7 @@ import {
   it,
 } from "vitest";
 
-import { PrismaClient } from "../../src/generated/prisma/client";
+import { createPrismaClient } from "../../src/lib/database/create-prisma-client";
 import { findTransactionForBusiness } from "../../src/lib/data/transaction-access-core";
 
 config({
@@ -27,13 +26,7 @@ if (!connectionString) {
   );
 }
 
-const adapter = new PrismaPg({
-  connectionString,
-});
-
-const prisma = new PrismaClient({
-  adapter,
-});
+const prisma = createPrismaClient(connectionString);
 
 const testRunId = randomUUID();
 

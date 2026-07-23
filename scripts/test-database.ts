@@ -1,5 +1,12 @@
 ﻿import "dotenv/config";
-import { prisma } from "../src/lib/prisma";
+import { createPrismaClient } from "../src/lib/database/create-prisma-client";
+
+const connectionString = process.env.DATABASE_URL?.trim();
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not configured.");
+}
+
+const prisma = createPrismaClient(connectionString);
 
 async function main(): Promise<void> {
   const [businesses, transactions, journalEntries] =
