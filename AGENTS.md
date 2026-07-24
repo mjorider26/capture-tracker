@@ -31,6 +31,10 @@ This Next.js version has breaking changes. Read the relevant guide in `node_modu
 - Personally paid business expenses credit owner reimbursement payable; reimbursement payments debit that payable and credit business cash.
 - Transaction splits and reimbursement expenses must reconcile exactly to their parent amount or claim total.
 - Payroll net pay must equal gross wages less employee withholding, employee payroll tax, and other deductions. Employer payroll tax remains separately represented.
+- Finalized reconciliations are immutable and may finalize only at an exact zero difference.
+- Posted journal lines are never edited; corrections use server-derived reversals in an open period.
+- High-risk accounting writes require `npm run check:accounting`; demo journal reversal must not mutate normal immutable history.
+- Concurrency-sensitive eligibility checks must use atomic conditional writes, not read-then-write checks.
 
 ## Testing philosophy
 

@@ -40,6 +40,7 @@ const ids = {
   reimbursementAccrualEntry: "demo-journal-entry-reimbursement-accrual",
   payrollEntry: "demo-journal-entry-payroll",
   distributionEntry: "demo-journal-entry-owner-distribution",
+  reconciliation: "demo-reconciliation-business-checking-july-2026",
 };
 
 const ledger = {
@@ -748,6 +749,18 @@ async function seed(): Promise<void> {
         data: { status: "POSTED", postedAt: date(entry.entryDate) },
       });
     }
+    await tx.reconciliation.create({
+      data: {
+        id: ids.reconciliation,
+        businessId: ids.business,
+        financialAccountId: ids.checking,
+        statementStartDate: date("2026-07-01"),
+        statementEndDate: date("2026-07-31"),
+        statementOpeningBalance: "0.00",
+        statementEndingBalance: "3550.00",
+        status: "DRAFT",
+      },
+    });
   });
 
   await verifyDemoSeed(prisma);

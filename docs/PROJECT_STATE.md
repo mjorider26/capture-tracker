@@ -1,5 +1,9 @@
 # Capture Tracker project state
 
+## Phase 7 — Account reconciliation and immutable journal reversal
+
+Phase 7 adds Money reconciliation list/detail routes and journal activity/detail routes for `/app` and fail-closed `/demo`. Reconciliation uses exact opening-plus-cleared-inflows-minus-cleared-outflows arithmetic, with a statement-minus-book difference and immutable exact-zero completion. Reversals create server-derived, exact inverted `REVERSING_ENTRY` lines in an open period while preserving original posted lines. The deterministic demo now contains one empty checking draft (statement ending `$3,550.00`); normal Today/Money counts remain 9 transactions, 6 original journal entries, `$3,550.00` cash, `$1,500.00` projected tax, one pending `$125.00` review, five tasks, six journal events, and zero credentials. Added `npm run reconciliation:verify`; high-risk evidence remains `npm run check:accounting`. Phase 8 should consider bank ingestion and statement artifacts, never historical rewrites.
+
 Capture Tracker is a mobile-first S-corporation bookkeeping and financial-review product.
 
 - Phase 1 secure accounting foundation: `2676949`

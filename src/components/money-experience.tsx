@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { MoneyDashboard } from "@/lib/data/money-dashboard";
 
 import { Card, EmptyState, PageHeader, StatusBadge } from "./ui";
+import { AccountingNav } from "./accounting-nav";
 
 function date(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -28,6 +29,7 @@ export function MoneyExperience({
   );
   return (
     <>
+      <AccountingNav basePath={basePath} active="transactions" />
       <PageHeader
         eyebrow="Money"
         title="Transaction review"

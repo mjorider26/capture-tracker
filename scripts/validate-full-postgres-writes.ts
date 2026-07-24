@@ -6,11 +6,17 @@ import {
   serializeMoneyAmount,
 } from "../src/lib/data/money-dashboard-core";
 import { reviewTransaction } from "../src/lib/services/review-transaction-core";
+import {
+  finalizeReconciliation,
+  saveReconciliationSelection,
+} from "../src/lib/services/reconciliation";
+import { reverseJournalEntry } from "../src/lib/services/journal-reversal";
 import { restoreDemoMoneyBaseline } from "./demo-money-baseline";
 import { demoMoneyIds } from "./demo-money-baseline";
 import {
   fullPostgresConfig,
   requireValidationConfirmation,
+  sanitize,
 } from "./full-postgres-config.mjs";
 import { verifyDemoSeed } from "./verify-demo-seed";
 
@@ -24,6 +30,14 @@ const owner = {
   role: "OWNER" as const,
   executionMode: "demo" as const,
 };
+
+const reconciliationId = "demo-reconciliation-business-checking-july-2026";
+const reconciliationTransactions = [
+  "demo-transaction-commission-income",
+  "demo-transaction-internet-service",
+  "demo-transaction-reimbursement-payment",
+  "demo-transaction-owner-distribution",
+];
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -191,6 +205,109 @@ async function exerciseMixedReview(
   await verifyDemoSeed(prisma);
 }
 
+async function exerciseReconciliationAndReversal(
+  prisma: ReturnType<typeof createPrismaClient>,
+) {
+  await restoreDemoMoneyBaseline(prisma);
+  const auditBefore = await prisma.auditEvent.count({
+    where: { businessId, entityId: reconciliationId },
+  });
+  const draft = await prisma.reconciliation.findUniqueOrThrow({
+    where: { id: reconciliationId },
+    include: { items: true },
+  });
+  assert(
+    draft.version === 1 && draft.status === "DRAFT" && draft.items.length === 0,
+    "Reconciliation baseline must be an empty draft.",
+  );
+  const rejectedAdvisor = await saveReconciliationSelection(
+    prisma,
+    { ...owner, role: "ADVISOR" },
+    { reconciliationId, expectedVersion: "1", transactionIds: [] },
+  );
+  assert(!rejectedAdvisor.ok && rejectedAdvisor.code === "FORBIDDEN", "Advisor reconciliation write must fail.");
+  const saved = await saveReconciliationSelection(prisma, owner, {
+    reconciliationId,
+    expectedVersion: "1",
+    transactionIds: reconciliationTransactions,
+  });
+  assert(saved.ok && saved.difference === "0.00" && saved.nextVersion === 2, "Exact draft reconciliation selection must commit.");
+  const stale = await saveReconciliationSelection(prisma, owner, {
+    reconciliationId,
+    expectedVersion: "1",
+    transactionIds: [],
+  });
+  assert(!stale.ok && stale.code === "CONFLICT", "Stale reconciliation selection must conflict.");
+  const finalized = await finalizeReconciliation(prisma, owner, {
+    reconciliationId,
+    expectedVersion: "2",
+  });
+  assert(finalized.ok && finalized.status === "COMPLETED" && finalized.nextVersion === 3, "Exact-zero reconciliation must finalize.");
+  const immutable = await saveReconciliationSelection(prisma, owner, {
+    reconciliationId,
+    expectedVersion: "3",
+    transactionIds: [],
+  });
+  assert(!immutable.ok && immutable.code === "IMMUTABLE", "Completed reconciliation must be immutable.");
+  const auditAfter = await prisma.auditEvent.count({ where: { businessId, entityId: reconciliationId } });
+  assert(auditAfter === auditBefore + 2, "Reconciliation success must append exactly one audit per mutation.");
+  await restoreDemoMoneyBaseline(prisma);
+  await restoreDemoMoneyBaseline(prisma);
+
+  const originalId = "demo-journal-entry-commission";
+  const original = await prisma.journalEntry.findUniqueOrThrow({
+    where: { id: originalId }, include: { lines: { orderBy: { lineNumber: "asc" } } },
+  });
+  const reversalAuditBefore = await prisma.auditEvent.count({ where: { businessId, entityId: originalId } });
+  const attempts = await Promise.all([
+    reverseJournalEntry(prisma, owner, { journalEntryId: originalId, expectedVersion: String(original.version), reversalDate: "2026-07-20", reason: "Validation correction one" }),
+    reverseJournalEntry(prisma, owner, { journalEntryId: originalId, expectedVersion: String(original.version), reversalDate: "2026-07-20", reason: "Validation correction two" }),
+  ]);
+  const successes = attempts.filter((result) => result.ok);
+  assert(successes.length === 1, "Exactly one concurrent reversal attempt must succeed.");
+  const reversalId = successes[0]!.reversalEntryId;
+  const reversal = await prisma.journalEntry.findUniqueOrThrow({
+    where: { id: reversalId }, include: { lines: { orderBy: { lineNumber: "asc" } }, reversalOfEntry: true },
+  });
+  assert(reversal.reversalOfEntryId === originalId && reversal.status === "POSTED", "Reversal relation or posting state is invalid.");
+  assert(reversal.lines.length === original.lines.length && reversal.lines.every((line, index) => line.debitAmount.equals(original.lines[index]!.creditAmount) && line.creditAmount.equals(original.lines[index]!.debitAmount)), "Reversal lines must be exact inversions.");
+  const originalAfter = await prisma.journalEntry.findUniqueOrThrow({ where: { id: originalId }, include: { lines: true } });
+  assert(originalAfter.status === "POSTED" && originalAfter.lines.length === original.lines.length, "Original journal history must remain unchanged.");
+  const second = await reverseJournalEntry(prisma, owner, { journalEntryId: originalId, expectedVersion: String(originalAfter.version), reversalDate: "2026-07-20", reason: "Duplicate attempt" });
+  assert(!second.ok && second.code === "CONFLICT", "Sequential duplicate reversal must fail.");
+  const reversalAuditAfter = await prisma.auditEvent.count({ where: { businessId, entityId: reversalId } });
+  assert(reversalAuditAfter === 1 && reversalAuditBefore === await prisma.auditEvent.count({ where: { businessId, entityId: originalId } }), "Reversal audit must be atomic and failures must add none.");
+  // This cleanup touches only the disposable validation fixture and leaves audit evidence append-only.
+  // Deferred parent-line triggers require a two-stage cleanup: first move the
+  // disposable lines to their still-present original, then remove them.
+  await prisma.$transaction(async (tx) => {
+    await tx.journalEntry.update({
+      where: { id: reversalId },
+      data: {
+        status: "DRAFT",
+        reversalOfEntryId: null,
+        entryNumber: "VALIDATION-ARCHIVE-REVERSAL",
+      },
+    });
+    await tx.$executeRaw`
+      UPDATE "JournalLine"
+      SET "journalEntryId" = ${originalId}, "lineNumber" = "lineNumber" + 100
+      WHERE "businessId" = ${businessId} AND "journalEntryId" = ${reversalId}
+    `;
+  });
+  await prisma.$transaction(async (tx) => {
+    await tx.journalLine.deleteMany({
+      where: { businessId, journalEntryId: originalId, lineNumber: { gte: 100 } },
+    });
+    await tx.journalEntry.delete({ where: { id: reversalId } });
+    await tx.journalEntry.update({
+      where: { id: originalId },
+      data: { version: original.version },
+    });
+  });
+  await verifyDemoSeed(prisma);
+}
+
 async function main() {
   const config = fullPostgresConfig();
   requireValidationConfirmation();
@@ -198,6 +315,7 @@ async function main() {
   try {
     await exerciseMixedReview(prisma);
     await exerciseMixedReview(prisma);
+    await exerciseReconciliationAndReversal(prisma);
 
     const advisor = await reviewTransaction(
       prisma,
@@ -282,14 +400,15 @@ async function main() {
     );
     await verifyDemoSeed(prisma);
     console.log(
-      "FULLPG WRITE VALIDATION PASSED: mixed review committed twice; deferred rollback, audit, concurrency, and restoration verified.",
+      "FULLPG WRITE VALIDATION PASSED: mixed review, exact reconciliation, immutable reversal, deferred rollback, audit, concurrency, and restoration verified.",
     );
   } finally {
     await prisma.$disconnect();
   }
 }
 
-main().catch(() => {
-  console.error("Full PostgreSQL write validation failed safely.");
+main().catch((error: unknown) => {
+  const message = error instanceof Error ? sanitize(error.message).replace(/\s+/g, " ").slice(0, 500) : "unknown validation error";
+  console.error(`Full PostgreSQL write validation failed safely: ${message}`);
   process.exitCode = 1;
 });

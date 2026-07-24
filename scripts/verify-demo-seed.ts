@@ -19,6 +19,7 @@ const ids = {
   ownerDistribution: "demo-owner-distribution-july",
   taxEstimate: "demo-quarterly-tax-estimate-q3",
   weeklyReview: "demo-weekly-review-july-20",
+  reconciliation: "demo-reconciliation-business-checking-july-2026",
 };
 
 const entryIds = [
@@ -130,8 +131,9 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
     await client.accountingPeriod.count({
       where: { businessId: ids.business },
     }),
+    await client.reconciliation.count({ where: { businessId: ids.business } }),
   ];
-  const expectedCounts = [3, 9, 2, 1, 1, 1, 1, 1, 1, 5, 11, 6, 18, 1];
+  const expectedCounts = [3, 9, 2, 1, 1, 1, 1, 1, 1, 5, 11, 6, 18, 1, 1];
   const labels = [
     "financial accounts",
     "transactions",
@@ -147,6 +149,7 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
     "journal entries",
     "journal lines",
     "accounting periods",
+    "reconciliations",
   ];
   for (const [index, expected] of expectedCounts.entries()) {
     assert(
@@ -308,6 +311,13 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
       `Journal entry ${entry.id} does not balance.`,
     );
   }
+  const reconciliation = await client.reconciliation.findFirst({
+    where: { id: ids.reconciliation, businessId: ids.business },
+    include: { financialAccount: true, items: true },
+  });
+  assert(reconciliation?.status === "DRAFT" && reconciliation.version === 1, "The deterministic reconciliation draft is invalid.");
+  assert(reconciliation.financialAccountId === ids.checking && reconciliation.financialAccount.ownership === "BUSINESS", "The deterministic reconciliation account is invalid.");
+  assert(reconciliation.statementOpeningBalance.equals("0.00") && reconciliation.statementEndingBalance.equals("3550.00") && reconciliation.items.length === 0, "The deterministic reconciliation baseline is invalid.");
 
   const identityText = [
     user.displayName,
@@ -329,7 +339,7 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
 
   console.log("DEMO SEED VERIFIED");
   console.log(
-    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=9, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=11, journalEntries=6, journalLines=18, accountingPeriods=1",
+    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=9, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=11, journalEntries=6, journalLines=18, accountingPeriods=1, reconciliations=1",
   );
 }
 
