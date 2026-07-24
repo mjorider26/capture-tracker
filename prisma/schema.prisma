@@ -718,6 +718,7 @@ model TaxPaymentRecord {
   amount             Decimal             @db.Decimal(18, 2)
   status             TaxPaymentStatus    @default(PLANNED)
   paidAt             DateTime?
+  idempotencyKey     String?             @db.VarChar(64)
   confirmationNumber String?
   documentId         String?
   notes              String?
@@ -731,6 +732,7 @@ model TaxPaymentRecord {
   journalEntry JournalEntry?         @relation("TaxPaymentJournalEntry")
 
   @@unique([businessId, id])
+  @@unique([businessId, estimateId, idempotencyKey])
   @@index([businessId, taxYear, quarter])
   @@index([businessId, status])
 }

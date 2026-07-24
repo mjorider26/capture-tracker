@@ -20,6 +20,12 @@ Ignored `.env.full-postgres.local` supplies the local admin, validation, and int
 - `npm run postgres:write:validate` executes the $125.00 mixed review twice through the real service, proves stale-version conflicts and audit atomicity, restores the baseline twice, and proves invalid split, reimbursement, ledger, period, and locked-period writes fail at commit and roll back.
 - `npm run check:accounting` runs the complete full-PostgreSQL suite. It is intentionally separate from `check:phase` and fails rather than falling back when configuration is absent.
 
+## Phase 8 tax-payment evidence
+
+`npm run postgres:write:validate` also exercises the real tax-payment service against the same disposable validation database. It records a deterministic $125.00 external payment with simultaneous same-key calls, proving exactly one persisted payment, estimate-version increment, and audit event. An exact replay returns `ALREADY_RECORDED` without mutation; changed facts with the same key return an idempotency conflict; a fresh stale key and a fresh fabricated-future key each leave no payment row or audit event because the transaction rolls back.
+
+The exercise verifies that recording a tax payment creates no `Transaction` or `JournalEntry` and does not alter payroll or distributions. It restores the known fictional fixture twice and confirms the restored payment baseline while retaining append-only audit evidence. The migration adds a nullable idempotency key and PostgreSQL unique index on `(businessId, estimateId, idempotencyKey)`, preserving historical NULL compatibility while providing database-backed scoped duplicate prevention.
+
 ## Result and future use
 
 On local PostgreSQL 17, the exact mixed review commits with two exact splits, increments once, appends one audit event, and creates no journal entry. Invalid deferred writes are rejected at commit and leave no splits, audit event, or version change. The demo restoration is idempotent and preserves append-only audits.

@@ -1,0 +1,1 @@
+import {InlineAlert}from"./ui";export function CpaBoundary(){return <InlineAlert title="CPA review boundary" tone="warning">Capture Tracker organizes recorded financial facts and highlights items for review. It does not determine legal compliance or reasonable compensation. A CPA or qualified tax professional must make that determination.</InlineAlert>}

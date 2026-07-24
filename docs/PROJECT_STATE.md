@@ -1,5 +1,11 @@
 # Capture Tracker project state
 
+## Phase 8 — Taxes workspace
+
+Phase 8 adds the scoped Taxes overview and an immutable manual external-payment service. Tax payment intent is protected by a nullable UUID-style idempotency key and business/estimate-scoped unique index; exact replays add nothing, while mismatched replays conflict. The workspace shows stored estimates, exact recorded totals, payroll, distributions, truthful safe-harbor readiness, and CPA boundaries without invented tax rules. Added `npm run taxes:verify`.
+
+**Recommended next phase: Phase 9 — Cloud Production Foundation and Real-Data Boundary.** It is mandatory before Robert or any real-client onboarding, real documents, banking, tax, payroll, or AI financial-data access. Local databases remain fictional-only.
+
 ## Phase 7 — Account reconciliation and immutable journal reversal
 
 Phase 7 adds Money reconciliation list/detail routes and journal activity/detail routes for `/app` and fail-closed `/demo`. Reconciliation uses exact opening-plus-cleared-inflows-minus-cleared-outflows arithmetic, with a statement-minus-book difference and immutable exact-zero completion. Reversals create server-derived, exact inverted `REVERSING_ENTRY` lines in an open period while preserving original posted lines. The deterministic demo now contains one empty checking draft (statement ending `$3,550.00`); normal Today/Money counts remain 9 transactions, 6 original journal entries, `$3,550.00` cash, `$1,500.00` projected tax, one pending `$125.00` review, five tasks, six journal events, and zero credentials. Added `npm run reconciliation:verify`; high-risk evidence remains `npm run check:accounting`. Phase 8 should consider bank ingestion and statement artifacts, never historical rewrites.

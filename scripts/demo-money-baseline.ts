@@ -5,6 +5,7 @@ export const demoMoneyIds = {
   checking: "demo-financial-account-business-checking",
   pendingReview: "demo-transaction-pending-review",
   reconciliation: "demo-reconciliation-business-checking-july-2026",
+  taxEstimate: "demo-quarterly-tax-estimate-q3",
 } as const;
 
 // This is the only mutable Phase 5 demo transaction. Posted and historical demo records are intentionally untouched.
@@ -86,6 +87,13 @@ export async function restoreDemoMoneyBaseline(
         completedByMembershipId: null,
         version: 1,
       },
+    });
+    await tx.taxPaymentRecord.deleteMany({
+      where: { businessId: demoMoneyIds.business, estimateId: demoMoneyIds.taxEstimate },
+    });
+    await tx.quarterlyTaxEstimate.update({
+      where: { id: demoMoneyIds.taxEstimate },
+      data: { version: 1 },
     });
   });
 }

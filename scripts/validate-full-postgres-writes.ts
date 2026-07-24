@@ -11,6 +11,7 @@ import {
   saveReconciliationSelection,
 } from "../src/lib/services/reconciliation";
 import { reverseJournalEntry } from "../src/lib/services/journal-reversal";
+import { recordTaxPayment } from "../src/lib/services/tax-payment";
 import { restoreDemoMoneyBaseline } from "./demo-money-baseline";
 import { demoMoneyIds } from "./demo-money-baseline";
 import {
@@ -225,58 +226,135 @@ async function exerciseReconciliationAndReversal(
     { ...owner, role: "ADVISOR" },
     { reconciliationId, expectedVersion: "1", transactionIds: [] },
   );
-  assert(!rejectedAdvisor.ok && rejectedAdvisor.code === "FORBIDDEN", "Advisor reconciliation write must fail.");
+  assert(
+    !rejectedAdvisor.ok && rejectedAdvisor.code === "FORBIDDEN",
+    "Advisor reconciliation write must fail.",
+  );
   const saved = await saveReconciliationSelection(prisma, owner, {
     reconciliationId,
     expectedVersion: "1",
     transactionIds: reconciliationTransactions,
   });
-  assert(saved.ok && saved.difference === "0.00" && saved.nextVersion === 2, "Exact draft reconciliation selection must commit.");
+  assert(
+    saved.ok && saved.difference === "0.00" && saved.nextVersion === 2,
+    "Exact draft reconciliation selection must commit.",
+  );
   const stale = await saveReconciliationSelection(prisma, owner, {
     reconciliationId,
     expectedVersion: "1",
     transactionIds: [],
   });
-  assert(!stale.ok && stale.code === "CONFLICT", "Stale reconciliation selection must conflict.");
+  assert(
+    !stale.ok && stale.code === "CONFLICT",
+    "Stale reconciliation selection must conflict.",
+  );
   const finalized = await finalizeReconciliation(prisma, owner, {
     reconciliationId,
     expectedVersion: "2",
   });
-  assert(finalized.ok && finalized.status === "COMPLETED" && finalized.nextVersion === 3, "Exact-zero reconciliation must finalize.");
+  assert(
+    finalized.ok &&
+      finalized.status === "COMPLETED" &&
+      finalized.nextVersion === 3,
+    "Exact-zero reconciliation must finalize.",
+  );
   const immutable = await saveReconciliationSelection(prisma, owner, {
     reconciliationId,
     expectedVersion: "3",
     transactionIds: [],
   });
-  assert(!immutable.ok && immutable.code === "IMMUTABLE", "Completed reconciliation must be immutable.");
-  const auditAfter = await prisma.auditEvent.count({ where: { businessId, entityId: reconciliationId } });
-  assert(auditAfter === auditBefore + 2, "Reconciliation success must append exactly one audit per mutation.");
+  assert(
+    !immutable.ok && immutable.code === "IMMUTABLE",
+    "Completed reconciliation must be immutable.",
+  );
+  const auditAfter = await prisma.auditEvent.count({
+    where: { businessId, entityId: reconciliationId },
+  });
+  assert(
+    auditAfter === auditBefore + 2,
+    "Reconciliation success must append exactly one audit per mutation.",
+  );
   await restoreDemoMoneyBaseline(prisma);
   await restoreDemoMoneyBaseline(prisma);
 
   const originalId = "demo-journal-entry-commission";
   const original = await prisma.journalEntry.findUniqueOrThrow({
-    where: { id: originalId }, include: { lines: { orderBy: { lineNumber: "asc" } } },
+    where: { id: originalId },
+    include: { lines: { orderBy: { lineNumber: "asc" } } },
   });
-  const reversalAuditBefore = await prisma.auditEvent.count({ where: { businessId, entityId: originalId } });
+  const reversalAuditBefore = await prisma.auditEvent.count({
+    where: { businessId, entityId: originalId },
+  });
   const attempts = await Promise.all([
-    reverseJournalEntry(prisma, owner, { journalEntryId: originalId, expectedVersion: String(original.version), reversalDate: "2026-07-20", reason: "Validation correction one" }),
-    reverseJournalEntry(prisma, owner, { journalEntryId: originalId, expectedVersion: String(original.version), reversalDate: "2026-07-20", reason: "Validation correction two" }),
+    reverseJournalEntry(prisma, owner, {
+      journalEntryId: originalId,
+      expectedVersion: String(original.version),
+      reversalDate: "2026-07-20",
+      reason: "Validation correction one",
+    }),
+    reverseJournalEntry(prisma, owner, {
+      journalEntryId: originalId,
+      expectedVersion: String(original.version),
+      reversalDate: "2026-07-20",
+      reason: "Validation correction two",
+    }),
   ]);
   const successes = attempts.filter((result) => result.ok);
-  assert(successes.length === 1, "Exactly one concurrent reversal attempt must succeed.");
+  assert(
+    successes.length === 1,
+    "Exactly one concurrent reversal attempt must succeed.",
+  );
   const reversalId = successes[0]!.reversalEntryId;
   const reversal = await prisma.journalEntry.findUniqueOrThrow({
-    where: { id: reversalId }, include: { lines: { orderBy: { lineNumber: "asc" } }, reversalOfEntry: true },
+    where: { id: reversalId },
+    include: {
+      lines: { orderBy: { lineNumber: "asc" } },
+      reversalOfEntry: true,
+    },
   });
-  assert(reversal.reversalOfEntryId === originalId && reversal.status === "POSTED", "Reversal relation or posting state is invalid.");
-  assert(reversal.lines.length === original.lines.length && reversal.lines.every((line, index) => line.debitAmount.equals(original.lines[index]!.creditAmount) && line.creditAmount.equals(original.lines[index]!.debitAmount)), "Reversal lines must be exact inversions.");
-  const originalAfter = await prisma.journalEntry.findUniqueOrThrow({ where: { id: originalId }, include: { lines: true } });
-  assert(originalAfter.status === "POSTED" && originalAfter.lines.length === original.lines.length, "Original journal history must remain unchanged.");
-  const second = await reverseJournalEntry(prisma, owner, { journalEntryId: originalId, expectedVersion: String(originalAfter.version), reversalDate: "2026-07-20", reason: "Duplicate attempt" });
-  assert(!second.ok && second.code === "CONFLICT", "Sequential duplicate reversal must fail.");
-  const reversalAuditAfter = await prisma.auditEvent.count({ where: { businessId, entityId: reversalId } });
-  assert(reversalAuditAfter === 1 && reversalAuditBefore === await prisma.auditEvent.count({ where: { businessId, entityId: originalId } }), "Reversal audit must be atomic and failures must add none.");
+  assert(
+    reversal.reversalOfEntryId === originalId && reversal.status === "POSTED",
+    "Reversal relation or posting state is invalid.",
+  );
+  assert(
+    reversal.lines.length === original.lines.length &&
+      reversal.lines.every(
+        (line, index) =>
+          line.debitAmount.equals(original.lines[index]!.creditAmount) &&
+          line.creditAmount.equals(original.lines[index]!.debitAmount),
+      ),
+    "Reversal lines must be exact inversions.",
+  );
+  const originalAfter = await prisma.journalEntry.findUniqueOrThrow({
+    where: { id: originalId },
+    include: { lines: true },
+  });
+  assert(
+    originalAfter.status === "POSTED" &&
+      originalAfter.lines.length === original.lines.length,
+    "Original journal history must remain unchanged.",
+  );
+  const second = await reverseJournalEntry(prisma, owner, {
+    journalEntryId: originalId,
+    expectedVersion: String(originalAfter.version),
+    reversalDate: "2026-07-20",
+    reason: "Duplicate attempt",
+  });
+  assert(
+    !second.ok && second.code === "CONFLICT",
+    "Sequential duplicate reversal must fail.",
+  );
+  const reversalAuditAfter = await prisma.auditEvent.count({
+    where: { businessId, entityId: reversalId },
+  });
+  assert(
+    reversalAuditAfter === 1 &&
+      reversalAuditBefore ===
+        (await prisma.auditEvent.count({
+          where: { businessId, entityId: originalId },
+        })),
+    "Reversal audit must be atomic and failures must add none.",
+  );
   // This cleanup touches only the disposable validation fixture and leaves audit evidence append-only.
   // Deferred parent-line triggers require a two-stage cleanup: first move the
   // disposable lines to their still-present original, then remove them.
@@ -297,7 +375,11 @@ async function exerciseReconciliationAndReversal(
   });
   await prisma.$transaction(async (tx) => {
     await tx.journalLine.deleteMany({
-      where: { businessId, journalEntryId: originalId, lineNumber: { gte: 100 } },
+      where: {
+        businessId,
+        journalEntryId: originalId,
+        lineNumber: { gte: 100 },
+      },
     });
     await tx.journalEntry.delete({ where: { id: reversalId } });
     await tx.journalEntry.update({
@@ -305,6 +387,169 @@ async function exerciseReconciliationAndReversal(
       data: { version: original.version },
     });
   });
+  await verifyDemoSeed(prisma);
+}
+
+async function exerciseTaxPayment(
+  prisma: ReturnType<typeof createPrismaClient>,
+) {
+  await restoreDemoMoneyBaseline(prisma);
+  const estimateId = "demo-quarterly-tax-estimate-q3";
+  const [
+    estimate,
+    transactionCount,
+    journalCount,
+    payrollCount,
+    distributionCount,
+  ] = await Promise.all([
+    prisma.quarterlyTaxEstimate.findUniqueOrThrow({
+      where: { id: estimateId },
+    }),
+    prisma.transaction.count({ where: { businessId } }),
+    prisma.journalEntry.count({ where: { businessId } }),
+    prisma.payrollRun.count({ where: { businessId, status: "PROCESSED" } }),
+    prisma.ownerDistribution.count({ where: { businessId, status: "PAID" } }),
+  ]);
+  const key = "11111111-1111-4111-8111-111111111111";
+  const input = {
+    estimateId,
+    expectedVersion: String(estimate.version),
+    amount: "125.00",
+    paidAt: "2026-08-01",
+    notes: "Fictional external payment record",
+    idempotencyKey: key,
+  };
+  const auditBefore = await prisma.auditEvent.count({
+    where: { businessId, entityType: "TaxPaymentRecord" },
+  });
+  const [left, right] = await Promise.all([
+    recordTaxPayment(prisma, owner, input),
+    recordTaxPayment(prisma, owner, input),
+  ]);
+  assert(
+    [left, right].filter((result) => result.ok && result.code === "CREATED")
+      .length === 1,
+    "One concurrent payment must be created.",
+  );
+  assert(
+    [left, right].filter(
+      (result) => result.ok && result.code === "ALREADY_RECORDED",
+    ).length === 1,
+    "One concurrent payment must replay safely.",
+  );
+  const payments = await prisma.taxPaymentRecord.findMany({
+    where: { businessId, estimateId, idempotencyKey: key },
+  });
+  const after = await prisma.quarterlyTaxEstimate.findUniqueOrThrow({
+    where: { id: estimateId },
+  });
+  const auditAfter = await prisma.auditEvent.count({
+    where: { businessId, entityType: "TaxPaymentRecord" },
+  });
+  assert(
+    payments.length === 1 &&
+      payments[0]!.amount.equals("125.00") &&
+      after.version === estimate.version + 1 &&
+      auditAfter === auditBefore + 1,
+    "Tax payment, version, and audit must each persist exactly once.",
+  );
+  assert(
+    (await prisma.transaction.count({ where: { businessId } })) ===
+      transactionCount &&
+      (await prisma.journalEntry.count({ where: { businessId } })) ===
+        journalCount &&
+      (await prisma.payrollRun.count({
+        where: { businessId, status: "PROCESSED" },
+      })) === payrollCount &&
+      (await prisma.ownerDistribution.count({
+        where: { businessId, status: "PAID" },
+      })) === distributionCount,
+    "Tax payment must not create or alter transactions, journals, payroll, or distributions.",
+  );
+  const replay = await recordTaxPayment(prisma, owner, input);
+  assert(
+    replay.ok && replay.code === "ALREADY_RECORDED",
+    "Exact replay must return ALREADY_RECORDED.",
+  );
+  assert(
+    (await prisma.taxPaymentRecord.count({
+      where: { businessId, estimateId, idempotencyKey: key },
+    })) === 1 &&
+      (
+        await prisma.quarterlyTaxEstimate.findUniqueOrThrow({
+          where: { id: estimateId },
+        })
+      ).version === after.version &&
+      (await prisma.auditEvent.count({
+        where: { businessId, entityType: "TaxPaymentRecord" },
+      })) === auditAfter,
+    "Exact replay must not add a payment, version increment, or audit event.",
+  );
+  const mismatch = await recordTaxPayment(prisma, owner, {
+    ...input,
+    amount: "126.00",
+  });
+  assert(
+    !mismatch.ok && mismatch.code === "IDEMPOTENCY_CONFLICT",
+    "Mismatched idempotency replay must conflict.",
+  );
+  assert(
+    (await prisma.taxPaymentRecord.count({
+      where: { businessId, estimateId, idempotencyKey: key },
+    })) === 1 &&
+      (await prisma.auditEvent.count({
+        where: { businessId, entityType: "TaxPaymentRecord" },
+      })) === auditAfter,
+    "Mismatched idempotency replay must make no mutation.",
+  );
+  for (const [freshKey, expectedVersion, expectedCode] of [
+    [
+      "22222222-2222-4222-8222-222222222222",
+      String(estimate.version),
+      "STALE_VERSION",
+    ],
+    ["33333333-3333-4333-8333-333333333333", "99", "FUTURE_VERSION"],
+  ] as const) {
+    const failed = await recordTaxPayment(prisma, owner, {
+      ...input,
+      idempotencyKey: freshKey,
+      expectedVersion,
+    });
+    assert(
+      !failed.ok && failed.code === expectedCode,
+      "Stale and future versions must be distinguished.",
+    );
+    assert(
+      (await prisma.taxPaymentRecord.count({
+        where: { businessId, estimateId, idempotencyKey: freshKey },
+      })) === 0,
+      "Failed version gate must roll back its inserted payment.",
+    );
+  }
+  assert(
+    (await prisma.auditEvent.count({
+      where: { businessId, entityType: "TaxPaymentRecord" },
+    })) === auditAfter,
+    "Version conflicts must add no audit evidence.",
+  );
+  await restoreDemoMoneyBaseline(prisma);
+  await restoreDemoMoneyBaseline(prisma);
+  const restored = await prisma.quarterlyTaxEstimate.findUniqueOrThrow({
+    where: { id: estimateId },
+  });
+  assert(
+    restored.version === estimate.version &&
+      (await prisma.taxPaymentRecord.count({
+        where: { businessId, estimateId },
+      })) === 0,
+    "Demo tax restoration must be idempotent.",
+  );
+  assert(
+    (await prisma.auditEvent.count({
+      where: { businessId, entityType: "TaxPaymentRecord" },
+    })) === auditAfter,
+    "Demo restoration must preserve append-only payment audit history.",
+  );
   await verifyDemoSeed(prisma);
 }
 
@@ -316,6 +561,7 @@ async function main() {
     await exerciseMixedReview(prisma);
     await exerciseMixedReview(prisma);
     await exerciseReconciliationAndReversal(prisma);
+    await exerciseTaxPayment(prisma);
 
     const advisor = await reviewTransaction(
       prisma,
@@ -408,7 +654,10 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? sanitize(error.message).replace(/\s+/g, " ").slice(0, 500) : "unknown validation error";
+  const message =
+    error instanceof Error
+      ? sanitize(error.message).replace(/\s+/g, " ").slice(0, 500)
+      : "unknown validation error";
   console.error(`Full PostgreSQL write validation failed safely: ${message}`);
   process.exitCode = 1;
 });

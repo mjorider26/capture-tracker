@@ -17,6 +17,7 @@
     "money:verify": "tsx scripts/verify-money-dashboard.ts",
     "reconciliation:verify": "tsx scripts/verify-reconciliation.ts",
     "reconciliation:exercise": "tsx scripts/exercise-demo-reconciliation.ts",
+    "taxes:verify": "tsx scripts/verify-taxes.ts",
     "check": "npm run lint && npm run build",
     "postinstall": "prisma generate",
     "test": "vitest",

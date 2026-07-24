@@ -35,6 +35,12 @@ This Next.js version has breaking changes. Read the relevant guide in `node_modu
 - Posted journal lines are never edited; corrections use server-derived reversals in an open period.
 - High-risk accounting writes require `npm run check:accounting`; demo journal reversal must not mutate normal immutable history.
 - Concurrency-sensitive eligibility checks must use atomic conditional writes, not read-then-write checks.
+- Tax payments are recorded, never initiated; payment history and idempotency keys are immutable.
+- Tax-payment duplicate prevention must be database-backed and proven under real full-PostgreSQL concurrency; version checks do not replace uniqueness.
+- Do not hardcode tax-law constants or fabricate safe-harbor or reasonable-compensation conclusions; retain a visible CPA boundary.
+- Local development and local PostgreSQL are fictional-data-only: never copy real customer, banking, payroll, tax, receipt, statement, personal, financial, production data, or credentials to a workstation.
+- Production and staging must be physically and credential-separate from local development. Never download production database dumps to a personal workstation or store production credentials in repository files or normal local `.env` files; staging uses fictional or formally sanitized data only.
+- Cloud production infrastructure is mandatory before real customer onboarding. Documents must use private encrypted object storage rather than local disk or PostgreSQL blobs, and production access must use authorized server-side application paths; browsers never connect directly to PostgreSQL.
 
 ## Testing philosophy
 

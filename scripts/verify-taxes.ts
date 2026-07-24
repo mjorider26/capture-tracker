@@ -1,0 +1,6 @@
+import "dotenv/config";
+import { createPrismaClient } from "../src/lib/database/create-prisma-client";
+import { requireSafeDemoDatabase } from "./demo-seed-safety";
+import { demoMoneyIds } from "./demo-money-baseline";
+const prisma=createPrismaClient(requireSafeDemoDatabase());
+async function main(){const [estimate,payments,credentials,transactions,entries,reconciliations]=await Promise.all([prisma.quarterlyTaxEstimate.findUnique({where:{id:demoMoneyIds.taxEstimate}}),prisma.taxPaymentRecord.count({where:{businessId:demoMoneyIds.business,estimateId:demoMoneyIds.taxEstimate}}),prisma.account.count(),prisma.transaction.count({where:{businessId:demoMoneyIds.business}}),prisma.journalEntry.count({where:{businessId:demoMoneyIds.business}}),prisma.reconciliation.count({where:{businessId:demoMoneyIds.business}})]);if(!estimate||!estimate.recommendedPayment.equals("1500.00")||payments!==0||credentials!==0||transactions!==9||entries!==6||reconciliations!==1)throw new Error("Tax demo baseline is invalid.");console.log("TAXES BASELINE VERIFIED: estimates=1, payments=0, projected=$1500.00, remaining=$1500.00");} main().catch(()=>{console.error("Taxes baseline verification failed.");process.exitCode=1}).finally(()=>prisma.$disconnect());
