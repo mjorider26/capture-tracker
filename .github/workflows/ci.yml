@@ -1,0 +1,49 @@
+name: verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  application-and-cloud-foundation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: capture_tracker
+          POSTGRES_USER: capture_tracker
+          POSTGRES_PASSWORD: capture_tracker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U capture_tracker -d capture_tracker"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://capture_tracker:capture_tracker@localhost:5432/capture_tracker
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-fictional-only-not-a-production-secret
+      CAPTURE_TRACKER_ENVIRONMENT: test
+      CAPTURE_TRACKER_EXECUTION_CONTEXT: ci
+      CAPTURE_TRACKER_DEPLOYMENT_PROFILE: no-deploy
+      CAPTURE_TRACKER_REAL_DATA_APPROVED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npm run check:phase
+      - run: npm run cloud:config:verify
+      - run: npm run cloud:build
+      - run: npm run cloud:runtime:verify
+      - run: npm run data-boundary:verify
+      - run: npm run container:verify
+      - run: npm --prefix infra/aws ci
+      - run: npm run infra:test
+      - run: npm run infra:synth

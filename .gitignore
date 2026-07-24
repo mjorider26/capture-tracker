@@ -41,6 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+/infra/aws/cdk.out/
+/infra/aws/node_modules/
+/infra/aws/.test-dist/
+/.open-next/
 
 .env
 

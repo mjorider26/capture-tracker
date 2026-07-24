@@ -24,4 +24,4 @@ The following notice is persistently visible near the top of Taxes Overview and 
 
 Safe-harbor readiness uses stored facts only. It can report not configured, a current estimate with a formal test unavailable, or that a CPA estimate is authoritative; it never embeds remembered percentages, thresholds, brackets, penalty formulas, due dates, or state rules. Projected tax obligation, quarterly estimates, and recorded payments remain separate values.
 
-Local environments contain fictional data only. Phase 9 cloud production foundations and the real-data boundary are mandatory before real-client onboarding or financial-data access.
+Local environments contain fictional data only. The optional production-secure-AWS profile and a later explicit production-readiness decision remain mandatory before real-client onboarding or financial-data access; Phase 9B is fictional Cloudflare/Neon staging only.

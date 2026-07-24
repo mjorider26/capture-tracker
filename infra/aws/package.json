@@ -1,0 +1,21 @@
+{
+  "name": "capture-tracker-aws-foundation",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node -e \"require('fs').rmSync('.test-dist',{recursive:true,force:true})\" && tsc --outDir .test-dist && node --test .test-dist/test/*.test.js",
+    "synth": "npm run build && cdk synth --no-lookups",
+    "synth:staging": "npm run synth -- --context environment=staging",
+    "synth:production": "npm run synth -- --context environment=production"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.196.0",
+    "constructs": "10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.30",
+    "aws-cdk": "2.1029.3",
+    "typescript": "5.8.3"
+  }
+}

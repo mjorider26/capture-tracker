@@ -4,7 +4,7 @@
 
 Phase 8 adds the scoped Taxes overview and an immutable manual external-payment service. Tax payment intent is protected by a nullable UUID-style idempotency key and business/estimate-scoped unique index; exact replays add nothing, while mismatched replays conflict. The workspace shows stored estimates, exact recorded totals, payroll, distributions, truthful safe-harbor readiness, and CPA boundaries without invented tax rules. Added `npm run taxes:verify`.
 
-**Recommended next phase: Phase 9 — Cloud Production Foundation and Real-Data Boundary.** It is mandatory before Robert or any real-client onboarding, real documents, banking, tax, payroll, or AI financial-data access. Local databases remain fictional-only.
+**Recommended next phase: Phase 9B — Free Cloudflare/Neon Staging Deployment, Reachable Browser Validation, Backup Review, and Cost Verification.** It may deploy only fictional staging. Production remains undeployed, `CAPTURE_TRACKER_REAL_DATA_APPROVED=false`, and real-data onboarding remains blocked until a later explicit production-readiness decision. Local databases remain fictional-only.
 
 ## Phase 7 — Account reconciliation and immutable journal reversal
 
@@ -24,7 +24,7 @@ The stack remains Next.js App Router, PostgreSQL, Prisma, Better Auth, and serve
 
 The fictional demo now has 9 transactions, including one unposted $125.00 pending review transaction. `npm run demo:restore` resets only that known mutable transaction and its splits, never audit evidence; `npm run money:verify` verifies the non-destructive Money baseline.
 
-Next recommended phase: journal correction/reversal and reconciliation workflows for reviewed records, retaining the current immutable accounting boundary and running `npm run check:accounting` before accounting-write commits.
+Next recommended phase: **Phase 9B — Free Cloudflare/Neon Staging Deployment, Reachable Browser Validation, Backup Review, and Cost Verification.** It is fictional staging only; production remains undeployed and real-data onboarding remains blocked.
 
 The exact mixed-review write now passes on full PostgreSQL 17 with real commit-time deferred constraints. The remaining caveat is limited to Prisma Dev/PGlite, which may close during this deferred-trigger path; the secure workflow and trigger remain unchanged.
 

@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "capture-tracker-fictional-staging",
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "capture-tracker-fictional-staging"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CAPTURE_TRACKER_DOCUMENTS_BUCKET",
+      "bucket_name": "capture-tracker-fictional-staging-documents"
+    }
+  ],
+  "vars": {
+    "CAPTURE_TRACKER_ENVIRONMENT": "staging",
+    "CAPTURE_TRACKER_EXECUTION_CONTEXT": "cloudflare",
+    "CAPTURE_TRACKER_DEPLOYMENT_PROFILE": "free-preview-cloudflare-neon",
+    "CAPTURE_TRACKER_REAL_DATA_APPROVED": "false",
+    "CAPTURE_TRACKER_PAID_SERVICE_APPROVED": "false",
+    "CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false",
+    "CAPTURE_TRACKER_DATA_MODE": "fictional"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

@@ -1,0 +1,1 @@
+{ "app": "npx tsx bin/capture-tracker.ts", "context": { "environment": "staging" } }

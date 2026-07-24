@@ -31,10 +31,22 @@
     "postgres:write:validate": "tsx scripts/validate-full-postgres-writes.ts",
     "check:accounting": "npm run fullpg:prepare && npm run fullpg:seed && npm run postgres:verify && npm run test:integration:postgres && npm run postgres:write:validate",
     "today:verify": "tsx scripts/verify-today-dashboard.ts",
+    "cloud:migrate": "tsx scripts/cloud-migrate.ts",
+    "cloud:build": "opennextjs-cloudflare build",
+    "cloud:deploy:preview": "tsx scripts/deploy-free-preview.ts",
+    "cloud:config:verify": "tsx scripts/verify-cloud-config.ts",
+    "cloud:runtime:verify": "node scripts/verify-cloud-runtime.mjs",
+    "data-boundary:verify": "node scripts/verify-data-boundary.mjs",
+    "container:verify": "npm run build && node scripts/verify-container.mjs",
+    "infra:install": "npm --prefix infra/aws ci",
+    "infra:test": "npm --prefix infra/aws test",
+    "infra:synth": "npm --prefix infra/aws run synth:staging && npm --prefix infra/aws run synth:production",
+    "check:cloud-foundation": "npm run cloud:config:verify && npm run cloud:runtime:verify && npm run data-boundary:verify && npm run container:verify && npm run infra:test && npm run infra:synth",
     "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run lint && npm run build"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.24",
+    "@opennextjs/cloudflare": "1.20.2",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
     "better-auth": "^1.6.24",
@@ -59,7 +71,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "4.114.0"
   },
   "type": "module"
 }

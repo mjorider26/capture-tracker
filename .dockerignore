@@ -1,0 +1,15 @@
+.git
+.env*
+.next
+node_modules
+coverage
+infra/aws/cdk.out
+src/generated
+tests
+*.pem
+*.key
+*.sqlite
+*.db
+docs
+scripts
+AGENTS.md
