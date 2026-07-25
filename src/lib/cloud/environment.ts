@@ -74,6 +74,12 @@ export function readCloudEnvironment(input: EnvironmentInput = process.env) {
 
   if (!expectedDatabaseName || !/^[a-z0-9_]{3,63}$/i.test(expectedDatabaseName)) throw new CloudConfigurationError("Cloud database name is not configured safely.");
   if (!runtimeDatabaseUrl || !migrationDatabaseUrl) throw new CloudConfigurationError("Separate runtime and migration database URLs are required.");
+  // DATABASE_URL is an application-runtime secret, never cloud configuration
+  // input. If present it must exactly mirror the explicit pooled runtime URL;
+  // it can never be used as a local or migration fallback.
+  if (value(input, "DATABASE_URL") && value(input, "DATABASE_URL") !== runtimeDatabaseUrl) {
+    throw new CloudConfigurationError("DATABASE_URL cannot override the cloud runtime target.");
+  }
   if (runtimeDatabaseUrl === migrationDatabaseUrl) throw new CloudConfigurationError("Runtime and migration database URLs must be distinct.");
   const runtimeTarget = validatePostgresTarget(runtimeDatabaseUrl, environment, expectedDatabaseName);
   const migrationTarget = validatePostgresTarget(migrationDatabaseUrl, environment, expectedDatabaseName);

@@ -40,6 +40,7 @@ This Next.js version has breaking changes. Read the relevant guide in `node_modu
 - Do not hardcode tax-law constants or fabricate safe-harbor or reasonable-compensation conclusions; retain a visible CPA boundary.
 - Local development and local PostgreSQL are fictional-data-only: never copy real customer, banking, payroll, tax, receipt, statement, personal, financial, production data, or credentials to a workstation.
 - Production and staging must be physically and credential-separate from local development. Never download production database dumps to a personal workstation or store production credentials in repository files or normal local `.env` files; staging uses fictional or formally sanitized data only.
+- `free-preview-cloudflare-neon` is fictional staging only. It must reject production, real-data approval, local/Prisma database targets, unsafe names, missing TLS, and runtime/migration URL fallback. Cloud migration may only use `prisma migrate deploy` and the separate direct URL. Never run cloud bootstrap, migration, smoke, Neon verification, or deployment commands without the explicit later-session authorization and confirmations described in `docs/CLOUD_DEPLOYMENT_RUNBOOK.md`.
 - Cloud production infrastructure is mandatory before real customer onboarding. Documents must use private encrypted object storage rather than local disk or PostgreSQL blobs, and production access must use authorized server-side application paths; browsers never connect directly to PostgreSQL.
 
 ## Testing philosophy

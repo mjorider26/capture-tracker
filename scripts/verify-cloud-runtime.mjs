@@ -18,12 +18,15 @@ const prisma = text("src/lib/prisma.ts");
 const auth = text("src/lib/auth.ts");
 
 assert(wrangler.includes('"nodejs_compat"'), "Cloudflare Node compatibility flag is required.");
+assert(wrangler.includes('"global_fetch_strictly_public"') && wrangler.includes('"compatibility_date": "2026-07-23"'), "Pinned Worker compatibility date and required flags are required.");
+assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\/|BETTER_AUTH_SECRET/i.test(wrangler), "Wrangler configuration must remain non-secret and account-free.");
 assert(wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS_BUCKET"'), "Private R2 document binding is required.");
 assert(!/r2\.dev|custom_domains|public[_ -]?access/i.test(wrangler), "R2 configuration must not expose public object URLs.");
 assert(wrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "false"'), "Free preview must keep real-data approval false.");
 assert(wrangler.includes('"CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false"'), "Free preview must block customer onboarding.");
 assert(wrangler.includes('"observability"'), "Worker logging must be enabled.");
 assert(nextConfig.includes('output: "standalone"') && nextConfig.includes("initOpenNextCloudflareForDev"), "Next.js must retain standalone and OpenNext development support.");
+assert(nextConfig.includes('X-Content-Type-Options') && nextConfig.includes('X-Frame-Options'), "Cloud staging must set baseline security headers.");
 assert(openNext.includes("defineCloudflareConfig"), "OpenNext configuration is required.");
 assert(!openNext.includes("r2IncrementalCache"), "Financial application routes must not opt into R2 incremental caching.");
 for (const [label, route] of [["liveness", live], ["readiness", ready]]) {

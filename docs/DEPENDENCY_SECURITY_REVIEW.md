@@ -1,0 +1,21 @@
+# Dependency security review
+
+Audit rerun: `npm.cmd audit --omit=dev --json` on 2026-07-25. Result: 12 high and one moderate advisory; no forced upgrade, downgrade, override, or suppression was applied. The audit's offered fixes would replace currently pinned direct dependencies with older semver-major versions, so they are not safe compatible upgrades.
+
+| Advisory / package | Dependency path | Classification | Worker-bundle presence and reachability | Upgrade availability | Mitigation | Blocks fictional staging? |
+| --- | --- | --- | --- | --- | --- | --- |
+| `GHSA-mh99-v99m-4gvg` / `brace-expansion` | `@opennextjs/cloudflare@1.20.2` → `@opennextjs/aws` → `@node-minify/core` → `glob` → `minimatch` → `brace-expansion` | Build tooling | Not expected in a deployed Worker; OpenNext Linux artifact is still unmeasured | Audit offers Cloudflare `0.2.1` (major/downgrade), no compatible fix | Keep pinned; await compatible upstream release; re-audit before deployment | Yes |
+| `glob` | Same OpenNext/minify path | Build tooling | Not expected in Worker; unmeasured pending Linux build | Same forced Cloudflare `0.2.1` path | Same | Yes |
+| `minimatch` | Same OpenNext/minify path | Build tooling | Not expected in Worker; unmeasured pending Linux build | Same forced Cloudflare `0.2.1` path | Same | Yes |
+| `@node-minify/core` | `@opennextjs/cloudflare` → `@opennextjs/aws` → `@node-minify/core` | Build tooling | Not expected in Worker; unmeasured pending Linux build | Same forced Cloudflare `0.2.1` path | Same | Yes |
+| `@opennextjs/aws` | `@opennextjs/cloudflare` → `@opennextjs/aws` | Build tooling | Not expected in Cloudflare Worker runtime; adapter build dependency | Same forced Cloudflare `0.2.1` path | Same | Yes |
+| `@opennextjs/cloudflare` | Direct runtime/build adapter `1.20.2` | Deployment build adapter | Adapter produces the Worker; actual Linux bundle presence/reachability is pending | Audit only offers `0.2.1` as semver-major/downgrade | Do not force; block external deployment pending upstream compatible remediation and Linux artifact review | Yes |
+| `GHSA-c96f-x56v-gq3h` / `find-my-way` | `prisma@7.9.0` → `@prisma/dev` → `find-my-way` | Development CLI tooling | Not expected in deployed Worker; Prisma Dev is local tooling | Audit offers Prisma `7.8.0` (major/downgrade), no compatible fix | Keep validation pinned; await compatible Prisma release | Yes |
+| `valibot` | `prisma` → `@prisma/dev` → `valibot` | Development CLI tooling | Not expected in Worker | Same forced Prisma `7.8.0` path | Same | Yes |
+| `@prisma/dev` | `prisma@7.9.0` → `@prisma/dev` | Development CLI tooling | Not expected in Worker; server Prisma runtime is separately reviewed by the future artifact scan | Same forced Prisma `7.8.0` path | Same | Yes |
+| `prisma` | Direct development dependency `7.9.0` | Development/migration tooling | Not expected in Worker bundle; `@prisma/client` is application runtime and needs later artifact confirmation | Audit only offers Prisma `7.8.0` as major/downgrade | Do not force or downgrade | Yes |
+| `GHSA-qx2v-qp2m-jg93`, `GHSA-6g55-p6wh-862q`, `GHSA-r28c-9q8g-f849` / `postcss` | `next@16.2.11` → bundled `postcss` | Framework build tooling | Not expected in Worker request path; actual artifact review pending Linux OpenNext build | Audit offers Next `14.2.35` (major/downgrade), no compatible fix | Keep pinned; await compatible Next release | Yes |
+| `GHSA-f88m-g3jw-g9cj` / `sharp` | `next@16.2.11` → `sharp` | Framework optional image/build dependency | Not expected in the Worker bundle unless adapter includes it; unmeasured | Same forced Next `14.2.35` path | Keep pinned; do not enable unsupported image path; await compatible release | Yes |
+| `next` | Direct runtime dependency `16.2.11` → `postcss`, `sharp` | Deployed framework/runtime | May contribute runtime code after OpenNext transformation; not yet measured or browser-tested | Audit only offers Next `14.2.35` as major/downgrade | Do not force/downgrade; block external fictional staging pending upstream compatible remediation | Yes |
+
+The local synthetic bundle verifier confirms its synthetic artifact is under the 3 MiB guard and has no database URL or secret pattern. It is not evidence of an actual Linux OpenNext Worker bundle. Re-run the audit on clean Linux CI and update this review before any external deployment.

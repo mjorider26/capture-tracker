@@ -1,14 +1,14 @@
-import { spawn } from "node:child_process";
-import { readCloudEnvironment } from "../src/lib/cloud/environment";
+import { spawnSync } from "node:child_process";
+import { assertCloudMigration } from "../src/lib/cloud/staging-guards";
 
-const config = readCloudEnvironment();
-if (config.deploymentProfile === "no-deploy") throw new Error("No deployment profile is selected.");
-if (config.deploymentProfile === "free-preview-cloudflare-neon" && config.environment !== "staging") throw new Error("Free preview migrations are staging-only.");
-const expected = config.environment === "production" ? "CAPTURE_TRACKER_PRODUCTION_MIGRATE" : "CAPTURE_TRACKER_STAGING_MIGRATE";
-if (process.env.CAPTURE_TRACKER_CLOUD_MIGRATION_CONFIRMATION !== expected) throw new Error("Cloud migration confirmation is missing.");
+const config = assertCloudMigration();
 
-const child = spawn("npx", ["prisma", "migrate", "deploy"], {
-  stdio: "inherit",
+const child = spawnSync("npx", ["prisma", "migrate", "deploy"], {
+  // This child receives only the direct connection as DATABASE_URL. Never
+  // inherit a pooled or local DATABASE_URL as a fallback.
+  stdio: "pipe",
+  encoding: "utf8",
   env: { ...process.env, DATABASE_URL: config.migrationDatabaseUrl },
 });
-child.on("exit", (code) => { process.exitCode = code ?? 1; });
+if (child.status !== 0) throw new Error("Cloud migration deploy failed without exposing connection details.");
+console.log("Cloud migration deploy completed.");

@@ -1,5 +1,7 @@
 # Phase 9A cloud foundation
 
+> Phase 9B repository preparation update (2026-07-25): no external account, provider resource, deployment, migration, bootstrap, restore drill, billing check, paid activation, AWS action, or R2 subscription occurred. The documented free-preview profile remains fictional-only; production is undeployed and real-data approval remains false. Linux OpenNext build, actual bundle measurement, reachable browser testing, Neon verification/concurrency proof, backup/restore drill, and live cost verification remain pending for the later external session. See `REAL_DATA_BOUNDARY.md`, `BACKUP_AND_RECOVERY.md`, and `CLOUD_DEPLOYMENT_RUNBOOK.md`.
+
 ## Deployment gate
 
 `CAPTURE_TRACKER_DEPLOYMENT_PROFILE` defaults to `no-deploy`. There is no generic deployment command. `cloud:deploy:preview` rejects every profile except `free-preview-cloudflare-neon`, requires the exact `DEPLOY_FICTIONAL_STAGING` confirmation, and is the only Cloudflare deployment entry point. It is not called by CI.
