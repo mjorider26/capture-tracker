@@ -1,0 +1,7 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { resolveLocalDemoContext } from "@/lib/security/local-demo-context";
+import { askAi, recordAskAiFeedback } from "@/lib/services/ask-ai";
+type State = { ok: boolean; message?: string };
+export async function askDemoAi(_: State, form: FormData): Promise<State> { const c = await resolveLocalDemoContext(); if (!c) return { ok: false, message: "Local demo Ask AI is unavailable." }; const result = await askAi({ businessId: c.businessId, actorUserId: c.userId }, { question: String(form.get("question") ?? ""), conversationId: String(form.get("conversationId") ?? "") || undefined }); if (!result.ok) return { ok: false, message: "Ask AI could not prepare a safe answer." }; revalidatePath("/demo/ask-ai"); return { ok: true, message: result.state === "BLOCKED" ? "The request was safely blocked." : "Fictional answer prepared." }; }
+export async function feedbackDemoAi(_: State, form: FormData): Promise<State> { const c = await resolveLocalDemoContext(); if (!c) return { ok: false, message: "Local demo feedback is unavailable." }; const ok = await recordAskAiFeedback({ businessId: c.businessId, actorUserId: c.userId }, String(form.get("runId") ?? ""), String(form.get("rating") ?? "")); return { ok, message: ok ? "Feedback recorded." : "Feedback could not be saved." }; }

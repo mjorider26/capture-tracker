@@ -331,6 +331,12 @@ model Business {
   taxPaymentRecords          TaxPaymentRecord[]
   weeklyReviews              WeeklyReview[]
   weeklyReviewHistory        WeeklyReviewHistory[]
+  askAiConversations         AskAiConversation[]
+  askAiMessages              AskAiMessage[]
+  askAiRuns                  AskAiRun[]
+  askAiEvidence              AskAiEvidence[]
+  askAiFeedback              AskAiFeedback[]
+  askAiEvents                AskAiEvent[]
   aiRecommendations          AIRecommendation[]
   approvalDecisions          ApprovalDecision[]
   ledgerAccounts             LedgerAccount[]
@@ -372,6 +378,11 @@ model BusinessMember {
   startedWeeklyReviews         WeeklyReview[]                @relation("WeeklyReviewStartedBy")
   completedWeeklyReviews       WeeklyReview[]                @relation("WeeklyReviewCompletedBy")
   weeklyReviewHistory          WeeklyReviewHistory[]         @relation("WeeklyReviewHistoryActor")
+  askAiConversations           AskAiConversation[]           @relation("AskAiConversationActor")
+  askAiMessages                AskAiMessage[]                @relation("AskAiMessageActor")
+  askAiRuns                    AskAiRun[]                    @relation("AskAiRunActor")
+  askAiFeedback                AskAiFeedback[]               @relation("AskAiFeedbackActor")
+  askAiEvents                  AskAiEvent[]                  @relation("AskAiEventActor")
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -823,6 +834,31 @@ enum WeeklyReviewHistoryAction {
   REOPENED
 }
 
+enum AskAiMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM_EVENT
+}
+
+enum AskAiRunStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  BLOCKED
+}
+
+enum AskAiEventAction {
+  QUESTION_SUBMITTED
+  CONTEXT_PREPARED
+  ADAPTER_INVOKED
+  ANSWER_COMPLETED
+  ANSWER_FAILED
+  ANSWER_BLOCKED
+  ANSWER_REFRESHED
+  FEEDBACK_RECORDED
+}
+
 enum ReviewTaskCategory {
   RECEIPT
   TRANSACTION_REVIEW
@@ -1101,6 +1137,126 @@ model WeeklyReviewHistory {
 
   @@unique([businessId, id])
   @@index([businessId, weeklyReviewId, createdAt])
+}
+
+model AskAiConversation {
+  id              String    @id @default(cuid())
+  businessId      String
+  createdByUserId String
+  title           String    @default("Ask AI conversation")
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  business  Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  createdBy BusinessMember @relation("AskAiConversationActor", fields: [businessId, createdByUserId], references: [businessId, userId], onDelete: Restrict)
+  messages  AskAiMessage[]
+  runs      AskAiRun[]
+
+  @@unique([businessId, id])
+  @@index([businessId, updatedAt])
+}
+
+model AskAiMessage {
+  id             String           @id @default(cuid())
+  businessId     String
+  conversationId String
+  actorUserId    String
+  role           AskAiMessageRole
+  content        String           @db.VarChar(2000)
+  runId          String?          @unique
+  createdAt      DateTime         @default(now())
+
+  business     Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  conversation AskAiConversation @relation(fields: [businessId, conversationId], references: [businessId, id], onDelete: Restrict)
+  actor        BusinessMember    @relation("AskAiMessageActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+  run          AskAiRun?         @relation("AskAiAssistantMessage", fields: [runId], references: [id], onDelete: Restrict)
+  userRun      AskAiRun?         @relation("AskAiUserMessage")
+
+  @@unique([businessId, id])
+  @@index([businessId, conversationId, createdAt])
+}
+
+model AskAiRun {
+  id              String         @id @default(cuid())
+  businessId      String
+  conversationId  String
+  userMessageId   String
+  actorUserId     String
+  idempotencyKey  String         @db.VarChar(96)
+  adapterId       String
+  adapterVersion  String
+  status          AskAiRunStatus @default(PENDING)
+  requestedAt     DateTime       @default(now())
+  completedAt     DateTime?
+  evidenceAsOf    DateTime?
+  failureCode     String?
+  responseVersion String         @default("v1")
+
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  conversation     AskAiConversation @relation(fields: [businessId, conversationId], references: [businessId, id], onDelete: Restrict)
+  userMessage      AskAiMessage      @relation("AskAiUserMessage", fields: [businessId, userMessageId], references: [businessId, id], onDelete: Restrict)
+  actor            BusinessMember    @relation("AskAiRunActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+  assistantMessage AskAiMessage?     @relation("AskAiAssistantMessage")
+  evidence         AskAiEvidence[]
+  feedback         AskAiFeedback[]
+  events           AskAiEvent[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, userMessageId])
+  @@unique([businessId, conversationId, idempotencyKey])
+  @@index([businessId, status, requestedAt])
+}
+
+model AskAiEvidence {
+  id           String   @id @default(cuid())
+  businessId   String
+  runId        String
+  alias        String   @db.VarChar(64)
+  sourceType   String   @db.VarChar(64)
+  sourceId     String?  @db.VarChar(128)
+  displayLabel String   @db.VarChar(300)
+  route        String?  @db.VarChar(300)
+  sourceAsOf   DateTime
+  createdAt    DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  run      AskAiRun @relation(fields: [businessId, runId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, runId, alias])
+  @@index([businessId, runId])
+}
+
+model AskAiFeedback {
+  id          String   @id @default(cuid())
+  businessId  String
+  runId       String
+  actorUserId String
+  rating      String   @db.VarChar(24)
+  note        String?  @db.VarChar(500)
+  createdAt   DateTime @default(now())
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  run      AskAiRun       @relation(fields: [businessId, runId], references: [businessId, id], onDelete: Restrict)
+  actor    BusinessMember @relation("AskAiFeedbackActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@unique([businessId, runId, actorUserId])
+}
+
+model AskAiEvent {
+  id          String           @id @default(cuid())
+  businessId  String
+  runId       String
+  actorUserId String
+  action      AskAiEventAction
+  detail      String?          @db.VarChar(300)
+  createdAt   DateTime         @default(now())
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  run      AskAiRun       @relation(fields: [businessId, runId], references: [businessId, id], onDelete: Restrict)
+  actor    BusinessMember @relation("AskAiEventActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@index([businessId, runId, createdAt])
 }
 
 model ReviewTask {

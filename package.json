@@ -37,6 +37,7 @@
     "document-matching:verify": "node scripts/verify-document-matching.mjs",
     "weekly-review:verify": "node scripts/verify-weekly-review.mjs",
     "reports:verify": "node scripts/verify-reports.mjs",
+    "ask-ai:verify": "node scripts/verify-ask-ai.mjs",
     "cloud:migrate": "tsx scripts/cloud-migrate.ts",
     "cloud:build": "opennextjs-cloudflare build",
     "cloud:deploy:preview": "tsx scripts/deploy-free-preview.ts",
