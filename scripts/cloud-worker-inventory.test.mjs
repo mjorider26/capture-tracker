@@ -40,6 +40,16 @@ try {
   try { verifyReachabilityReport(report); } catch { rejected = true; }
   assert(rejected, "Reachability gate must reject runtime highs and unresolved copied packages.");
 
+  const unoptimizedImageArtifact = join(root, ".open-next-unoptimized-image");
+  write(join(unoptimizedImageArtifact, "worker.js"), 'import "./server-functions/default/handler.mjs";');
+  write(join(unoptimizedImageArtifact, "server-functions/default/handler.mjs"), "export default {}; ");
+  write(join(unoptimizedImageArtifact, "server-functions/default/node_modules/next/dist/server/image-optimizer.js"), 'const sharp = require("sharp"); export { sharp };');
+  write(join(unoptimizedImageArtifact, "server-functions/default/.next/required-server-files.json"), JSON.stringify({ config: { images: { unoptimized: true } } }));
+  const unoptimizedImage = inspectWorkerArtifact({ artifactRoot: unoptimizedImageArtifact, workspaceRoot: root });
+  assert(result(unoptimizedImage, "sharp").classification === "conditional runtime package", "Sharp must be conditional only when the generated artifact disables the image optimizer.");
+  assert(result(unoptimizedImage, "sharp").requestTimeReachability === "not-reachable", "Disabled image optimization must make Sharp's conditional import unreachable.");
+  verifyReachabilityReport(unoptimizedImage);
+
   const buildOnlyArtifact = join(root, ".open-next-build-only");
   write(join(buildOnlyArtifact, "worker.js"), 'import "./server-functions/default/handler.mjs";');
   write(join(buildOnlyArtifact, "server-functions/default/handler.mjs"), "export default {}; ");

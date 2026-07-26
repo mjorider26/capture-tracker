@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
   // into the server-function tree. `pg` conditionally requires this package
   // when it runs in Cloudflare Workers.
   serverExternalPackages: ["pg-cloudflare"],
+  // Capture Tracker uses only fixed local brand assets. OpenNext's runtime
+  // image optimizer requires a separate Cloudflare Images binding, which is
+  // intentionally out of scope for the fictional no-cost preview. Keep the
+  // Image component and serve those assets as-is instead of leaving Sharp's
+  // Node-native conditional path reachable in the Worker runtime.
+  images: { unoptimized: true },
   // Keep Turbopack within this repository when a parent directory has another
   // lockfile; it must not scan a user home directory during builds.
   turbopack: { root: projectRoot },

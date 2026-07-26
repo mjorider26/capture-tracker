@@ -104,6 +104,15 @@ function metaInputs(files, target, artifactRoot) {
   }
   return [...new Set(matched)].sort();
 }
+function imageOptimizationDisabled(manifests) {
+  return manifests.some((item) => {
+    try {
+      return JSON.parse(item.text)?.config?.images?.unoptimized === true;
+    } catch {
+      return false;
+    }
+  });
+}
 export function assertSanitizedReport(report) {
   const text = JSON.stringify(report);
   assert(!prohibited.test(text), "Sanitized artifact report contains a secret, URL, or absolute path pattern.");
@@ -120,6 +129,7 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
   const manifests = files.filter(safeJson).map((path) => ({ path, relative: portable(relative(artifactRoot, path)), text: readText(path) }));
   const sourceMaps = files.filter((path) => path.endsWith(".map")).map((path) => ({ path, relative: portable(relative(artifactRoot, path)), text: readText(path) }));
   const packageManifests = files.filter((path) => path.endsWith("package.json")).map((path) => ({ path, relative: portable(relative(artifactRoot, path)), packageName: packageFromPath(path) }));
+  const imageOptimizerIsDisabled = imageOptimizationDisabled(manifests);
 
   const packages = targets.map((target) => {
     const bundledEvidence = metaInputs(files, target, artifactRoot);
@@ -128,11 +138,16 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
     const manifestEvidence = manifests.filter((item) => matchesTarget(target, item.text)).map((item) => item.relative).sort();
     const sourceMapEvidence = sourceMaps.filter((item) => matchesTarget(target, item.text)).map((item) => item.relative).sort();
     const installedVersion = packageVersion(workspaceRoot, target);
-    const unresolved = codeEvidence.length > 0 && bundledEvidence.length === 0 && copiedEvidence.length === 0;
+    const disabledImageOptimizerReference = target.name === "sharp"
+      && imageOptimizerIsDisabled
+      && codeEvidence.length > 0
+      && codeEvidence.every((path) => path.endsWith("/node_modules/next/dist/server/image-optimizer.js"));
+    const unresolved = codeEvidence.length > 0 && bundledEvidence.length === 0 && copiedEvidence.length === 0 && !disabledImageOptimizerReference;
     let classification = "absent";
     if (unresolved) classification = "unresolved";
     else if (bundledEvidence.length > 0) classification = "bundled in Worker executable code";
     else if (copiedEvidence.length > 0) classification = "copied runtime package";
+    else if (disabledImageOptimizerReference) classification = "conditional runtime package";
     else if (manifestEvidence.length > 0) classification = "referenced only by a build manifest";
     else if (installedVersion) classification = "build-time only";
 
@@ -144,7 +159,7 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
     // executable and stays not-reachable.
     let requestTimeReachability = "not-reachable";
     if (classification === "unresolved") requestTimeReachability = "unresolved";
-    else if (classification === "bundled in Worker executable code" || classification === "copied runtime package" || codeEvidence.length > 0) requestTimeReachability = "reachable";
+    else if (classification === "bundled in Worker executable code" || classification === "copied runtime package" || (classification !== "conditional runtime package" && codeEvidence.length > 0)) requestTimeReachability = "reachable";
 
     return {
       package: target.name,
@@ -159,7 +174,7 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
         manifestOnlyReferences: manifestEvidence,
         sourceMapOnlyReferences: sourceMapEvidence,
       },
-      evidenceRule: bundledEvidence.length ? "METAFILE_EXECUTABLE_INPUT" : copiedEvidence.length ? "COPIED_RUNTIME_PACKAGE" : manifestEvidence.length ? "MANIFEST_NON_EXECUTABLE" : sourceMapEvidence.length ? "SOURCE_MAP_NON_EXECUTABLE" : installedVersion ? "INSTALLED_NOT_ARTIFACT" : "NO_ARTIFACT_EVIDENCE",
+      evidenceRule: bundledEvidence.length ? "METAFILE_EXECUTABLE_INPUT" : copiedEvidence.length ? "COPIED_RUNTIME_PACKAGE" : disabledImageOptimizerReference ? "DISABLED_IMAGE_OPTIMIZER_CONDITIONAL" : manifestEvidence.length ? "MANIFEST_NON_EXECUTABLE" : sourceMapEvidence.length ? "SOURCE_MAP_NON_EXECUTABLE" : installedVersion ? "INSTALLED_NOT_ARTIFACT" : "NO_ARTIFACT_EVIDENCE",
     };
   });
 
