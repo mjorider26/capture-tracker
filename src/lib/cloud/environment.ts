@@ -68,7 +68,9 @@ export function readCloudEnvironment(input: EnvironmentInput = process.env) {
   const runtimeDatabaseUrl = cloud ? value(input, environment === "staging" ? "CAPTURE_TRACKER_STAGING_DATABASE_URL" : "CAPTURE_TRACKER_PRODUCTION_DATABASE_URL") : value(input, "DATABASE_URL");
   const migrationDatabaseUrl = cloud ? value(input, environment === "staging" ? "CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL" : "CAPTURE_TRACKER_PRODUCTION_DIRECT_DATABASE_URL") : undefined;
   const expectedDatabaseName = cloud ? value(input, environment === "staging" ? "CAPTURE_TRACKER_STAGING_DATABASE_NAME" : "CAPTURE_TRACKER_PRODUCTION_DATABASE_NAME") : undefined;
-  const documentBucket = cloud ? cloudName(value(input, environment === "staging" ? "CAPTURE_TRACKER_STAGING_DOCUMENT_BUCKET" : "CAPTURE_TRACKER_PRODUCTION_DOCUMENT_BUCKET"), "Private document bucket") : undefined;
+  // R2 is deliberately absent from the fictional Cloudflare preview. A
+  // private document bucket remains a production-only prerequisite.
+  const documentBucket = environment === "production" ? cloudName(value(input, "CAPTURE_TRACKER_PRODUCTION_DOCUMENT_BUCKET"), "Private document bucket") : undefined;
 
   if (!cloud) return { environment, executionContext, deploymentProfile, realDataApproved, runtimeDatabaseUrl, migrationDatabaseUrl, expectedDatabaseName, documentBucket };
 

@@ -8,7 +8,7 @@ No real client onboarding is allowed. The repository must not contain real custo
 
 ## Enforced staging boundary
 
-`free-preview-cloudflare-neon` only accepts Cloudflare staging with fictional data, paid-service approval false, customer onboarding false, a TLS-required Neon pooled runtime URL, and a separate TLS-required direct migration URL. It rejects production, real-data approval, localhost, Prisma Dev, unsafe database names, non-Neon targets, and local `DATABASE_URL` fallback.
+`free-preview-cloudflare-neon` only accepts Cloudflare staging with fictional data, paid-service approval false, customer onboarding false, no R2 binding, a TLS-required Neon pooled runtime URL, and a separate TLS-required direct migration URL. It rejects production, real-data approval, localhost, Prisma Dev, unsafe database names, non-Neon targets, and local `DATABASE_URL` fallback.
 
 The only future bootstrap is `cloud:bootstrap:fictional`. It is a CLI command, not an HTTP endpoint. It needs the exact staging profile, explicit confirmation, secure runtime-only fictional `.demo` login input, and an empty-or-known deterministic fictional database. It is idempotent, refuses foreign identity/business data, and never prints the password. It must never be run automatically.
 

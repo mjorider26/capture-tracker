@@ -44,6 +44,7 @@ jobs:
       - run: npm run cloud:build
       - run: npm run cloud:bundle:verify
       - run: npm run cloud:runtime:verify
+      - run: npm run dependency:separation:verify
       - run: npm run data-boundary:verify
       - run: npm run client-secret:verify
       - run: npm run container:verify

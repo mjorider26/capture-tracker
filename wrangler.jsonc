@@ -14,12 +14,6 @@
       "service": "capture-tracker-fictional-staging"
     }
   ],
-  "r2_buckets": [
-    {
-      "binding": "CAPTURE_TRACKER_DOCUMENTS_BUCKET",
-      "bucket_name": "capture-tracker-fictional-staging-documents"
-    }
-  ],
   "vars": {
     "CAPTURE_TRACKER_ENVIRONMENT": "staging",
     "CAPTURE_TRACKER_EXECUTION_CONTEXT": "cloudflare",

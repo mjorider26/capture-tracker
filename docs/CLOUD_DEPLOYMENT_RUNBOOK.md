@@ -5,7 +5,8 @@ This is a later-session runbook. It performs no provider action merely by existi
 ## Preconditions
 
 - Reconfirm Cloudflare Workers Free and Neon Free plan terms, limits, backup/restore controls, and that no paid activation or credit-card entry is authorized.
-- Confirm production is undeployed, real-data approval is false, R2 is deferred, and no AWS resource is in scope.
+- Confirm production is undeployed, real-data approval is false, fictional staging has no R2 binding, and no AWS resource is in scope.
+- Confirm `docs/DEPENDENCY_SECURITY_REVIEW.md` has a current passing separation check, a reviewed Linux OpenNext Worker artifact, and no runtime-reachable high advisory. This gate is currently blocked.
 - Create only separately credentialed fictional staging resources after explicit authorization. Do not create R2 unless a later document-storage phase approves it.
 - Supply secrets only to provider runtime secret storage. Never commit them, put them in Wrangler configuration, or print them.
 
@@ -13,7 +14,7 @@ This is a later-session runbook. It performs no provider action merely by existi
 
 1. Configure the pinned `free-preview-cloudflare-neon` Worker variables from `wrangler.jsonc`; do not add an account ID, token, secret, or database URL to the repository.
 2. Set the pooled Neon runtime connection and direct migration connection only as secure runtime inputs. Both require TLS; the runtime endpoint must be pooled and the migration endpoint direct.
-3. Run `npm run cloud:config:verify`, `npm run cloud:phase-9b:verify`, and the Linux CI workflow. Linux OpenNext build and actual Worker-bundle measurement remain pending until that CI run occurs.
+3. Run `npm run cloud:config:verify`, `npm run cloud:phase-9b:verify`, `npm run dependency:separation:verify`, the fresh production audit, and the Linux CI workflow. Linux OpenNext build and actual Worker-bundle measurement must pass before this release gate may open.
 4. With explicit confirmation only, run `npm run cloud:migrate`. It only invokes `prisma migrate deploy`; it cannot seed, run `migrate dev`, reset, resolve, or push.
 5. With a distinct explicit confirmation and secure runtime-only fictional `.demo` credential input, run `npm run cloud:bootstrap:fictional`. It creates only deterministic fictional records and a hashed fictional credential.
 6. Build and deploy only when separately authorized. CI contains no deployment command.

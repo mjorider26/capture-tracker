@@ -57,4 +57,11 @@ Before committing, run the requested formatting, Prisma validation, seed/verific
 
 `npm run check:phase` is the standard non-destructive phase check. `npm run test:integration:local` manages only the dedicated local integration database and must never be pointed at the normal development database.
 
+## Phase 9B.1 dependency and staging-release gate
+
+- `@opennextjs/cloudflare` is exact build tooling, never an application runtime dependency. Keep AWS CDK, Wrangler, Prisma CLI, test runners, local database tooling, and unsafe dynamic package loading out of `src` and Worker runtime declarations; retain `@prisma/client`, `@prisma/adapter-pg`, and `pg` only through server-only application paths.
+- Run `npm run dependency:separation:verify` with cloud checks. It is static evidence only: do not claim an OpenNext package is absent from the Worker until a reviewed Linux `.open-next/worker.js` exists and `npm run cloud:bundle:verify` passes against it.
+- Fictitious `free-preview-cloudflare-neon` staging has no R2 binding or deployment. PostgreSQL/Neon remains required; D1 is not permitted. `production-secure-aws` remains optional and undeployed.
+- A staging release is blocked while any runtime-reachable high advisory, unreviewed Linux artifact, unsupported dependency path, or unreviewed untrusted-build input remains. Re-run `npm audit --omit=dev --json` after every dependency/lockfile change and immediately before any later explicitly authorized release. Do not use force fixes, lockfile hand edits, unsupported overrides, suppressions, or version downgrades to clear this gate.
+
 Final reports state: outcome; end-to-end behavior; files changed; exact data counts; safety controls; accounting behavior; commands and pass/fail results; commit hash; and remaining risks, assumptions, or follow-up work.
