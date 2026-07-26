@@ -30,6 +30,22 @@ function advisoryId(via) {
   }
   return null;
 }
+function advisoryIdsForFinding(packageName, vulnerabilities, visited = new Set()) {
+  if (visited.has(packageName)) return [];
+  visited.add(packageName);
+  const finding = vulnerabilities[packageName];
+  if (!finding || typeof finding !== "object") return [];
+  const identifiers = [];
+  for (const via of finding.via ?? []) {
+    if (typeof via === "object" && via !== null) {
+      const identifier = advisoryId(via);
+      if (identifier) identifiers.push(identifier);
+    } else if (typeof via === "string") {
+      identifiers.push(...advisoryIdsForFinding(via, vulnerabilities, visited));
+    }
+  }
+  return [...new Set(identifiers)].sort();
+}
 function fixSummary(fix, state) {
   if (!fix) return { available: false, package: null, version: null, breaking: false };
   if (fix === true) return { available: true, package: null, version: null, breaking: false };
@@ -69,8 +85,7 @@ export function createRuntimeAuditReport({ payload, inventory, now = new Date(),
   }
   assert(inventory?.schemaVersion === 1 && inventory.reportSanitized === true && Array.isArray(inventory.packages), "Sanitized Worker inventory is missing or invalid.");
   const advisories = Object.entries(payload.vulnerabilities).map(([packageName, finding]) => {
-    const advisoryVia = (finding.via ?? []).filter((via) => typeof via === "object" && via !== null);
-    const advisoryIds = advisoryVia.map(advisoryId).filter(Boolean);
+    const advisoryIds = advisoryIdsForFinding(packageName, payload.vulnerabilities);
     assert(advisoryIds.length > 0, `Audit finding is missing an advisory identifier: ${packageName}.`);
     const viaPackages = (finding.via ?? []).map((via) => typeof via === "string" ? via : via.name).filter(Boolean).map((value) => sanitized(String(value), state));
     const classification = classifyPackage(packageName, inventory);
