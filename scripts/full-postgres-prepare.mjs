@@ -20,6 +20,7 @@ const expectedTables = new Set([
   "Transaction",
   "TransactionSplit",
   "Document",
+  "DocumentStatusHistory",
   "TransactionDocument",
   "AuditEvent",
   "ReimbursementClaim",

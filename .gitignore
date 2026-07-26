@@ -46,6 +46,7 @@ next-env.d.ts
 /infra/aws/.test-dist/
 /.open-next/
 /.artifacts/
+/.document-storage/
 
 .env
 

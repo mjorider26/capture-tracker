@@ -6,7 +6,9 @@ All local development, local PostgreSQL validation, tests, and demo records are 
 
 No real client onboarding is allowed. The repository must not contain real customer, banking, payroll, tax, receipt, statement, personal, financial, production, credential, or provider-account data. No Cloudflare, Neon, R2, or AWS resource currently exists.
 
-Phase 10A document records are fictional metadata only. They contain no binary bytes, local paths, provider URLs, storage configuration, or real receipt/banking/tax/payroll/customer data. Actual document storage remains a separately approved future boundary.
+Phase 10A document records are fictional metadata only. Phase 10B additionally permits local-fictional PDF/JPEG/PNG bytes only under the ignored `.document-storage/` development root. Those bytes must never be real receipts, banking statements, tax, payroll, customer, personal, financial, production, credential, or provider-account data. The local adapter rejects production and real-data approval; it has no cloud configuration, provider URL, bucket, account ID, access key, or public URL.
+
+Document reads remain authenticated, business-scoped, short-lived, and server-authorized. The future R2 boundary is only a typed Worker binding contract; it does not activate R2 for fictional staging or create any resource. Real document storage requires a separate production-readiness decision with encrypted private storage, scanning operations, access review, recovery evidence, credentials, and explicit authorization.
 
 ## Enforced staging boundary
 

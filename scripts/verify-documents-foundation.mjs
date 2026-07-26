@@ -1,6 +1,16 @@
 import { readFileSync } from "node:fs";
-const files = ["src/lib/documents/core.ts", "src/lib/documents/storage.ts", "src/lib/documents/service.ts", "src/components/documents-experience.tsx", "docs/DOCUMENTS_FOUNDATION.md"];
-for (const file of files) { const value = readFileSync(file, "utf8"); if (/type\s*=\s*["']file["']|<input[^>]+type=["']file/i.test(value)) throw new Error(`File upload control found in ${file}.`); }
-const schema = readFileSync("prisma/schema.prisma", "utf8");
-for (const required of ["DocumentStatusHistory", "METADATA_ONLY", "DocumentCategory"]) if (!schema.includes(required)) throw new Error(`Missing documents foundation requirement: ${required}`);
-console.log("DOCUMENTS FOUNDATION VERIFIED: metadata-only storage, scoped history, and no file-upload controls.");
+
+function requireText(file, fragments) {
+  const value = readFileSync(file, "utf8");
+  for (const fragment of fragments) {
+    if (!value.includes(fragment)) throw new Error(`Missing document security requirement ${fragment} in ${file}.`);
+  }
+}
+
+requireText("prisma/schema.prisma", ["DocumentStatusHistory", "METADATA_ONLY", "PENDING_STORAGE", "STORED_PRIVATE", "QUARANTINED_PRIVATE", "privateReadEligible", "@@unique([businessId, sha256])"]);
+requireText("src/lib/documents/secure-upload.ts", ["crypto.subtle.digest", "CAPTURE_TRACKER_REAL_DATA_APPROVED", "LOCAL_FICTIONAL", "SUSPICIOUS", "SCANNER_ERROR", "privateReadEligible"]);
+requireText("src/lib/documents/read-grant.ts", ["server-only", "DOCUMENT_READ_GRANT_SECRET"]);
+requireText("src/app/api/documents/[documentId]/content/route.ts", ["verifyDocumentReadGrant", "malwareScanStatus !== \"CLEAN\"", "Cache-Control", "X-Content-Type-Options", "frame-ancestors"]);
+requireText("src/lib/documents/r2-storage.ts", ["DocumentR2Bucket", "pending/", "\"quarantine\"", "DocumentR2UnavailableError"]);
+
+console.log("DOCUMENTS FOUNDATION VERIFIED: fictional byte validation, scoped history, private grants, protected reads, and inactive R2 boundary.");

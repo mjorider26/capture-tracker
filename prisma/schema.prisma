@@ -73,6 +73,10 @@ enum DocumentCategory {
 
 enum DocumentStorageState {
   METADATA_ONLY
+  PENDING_STORAGE
+  STORED_PRIVATE
+  QUARANTINED_PRIVATE
+  STORAGE_FAILED
 }
 
 enum MalwareScanStatus {
@@ -385,6 +389,11 @@ model Document {
   category               DocumentCategory
   status                 DocumentStatus       @default(PENDING_VALIDATION)
   storageState           DocumentStorageState @default(METADATA_ONLY)
+  storageProvider        String?
+  storedSizeBytes        BigInt?
+  objectVersion          String?
+  uploadCompletedAt      DateTime?
+  privateReadEligible    Boolean              @default(false)
   documentDate           DateTime?
   quarantineReasonCode   String?
   quarantineExplanation  String?
@@ -416,6 +425,7 @@ model Document {
 
   @@unique([businessId, id])
   @@unique([businessId, replacedById])
+  @@unique([businessId, sha256])
   @@index([businessId, sha256])
   @@index([businessId, status])
   @@index([businessId, type])
