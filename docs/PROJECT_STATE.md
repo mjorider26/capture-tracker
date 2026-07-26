@@ -11,6 +11,7 @@ Capture Tracker is a mobile-first S-corporation bookkeeping and financial-review
 - Phase 9B repository preparation added fictional-staging configuration guards, migration/bootstrap safeguards, future smoke and Neon verification tools, Linux CI preparation, bundle verification tooling, and boundary/recovery/cost documentation.
 - Phase 9B.1 updated Next to 16.2.12, moved OpenNext to exact build-only tooling, removed the deferred R2 binding from fictional staging, and added dependency-separation release checks. Production audit improved from 12 high/1 moderate to 6 high/1 moderate; the gate was initially blocked by remaining Next/Prisma findings and missing Linux Worker artifact evidence.
 - Phase 9B.2 isolated AWS CDK TypeScript from the root Next build and repaired the `pg-cloudflare@1.4.0` Workerd package boundary. The successful Linux OpenNext workflow now produces a 2,278-byte Worker entry below the 3 MiB guard and verifies driver packaging, configured tooling exclusions, and secret/data scans. PostCSS, Sharp, `find-my-way`, and Valibot do not yet have direct artifact-inventory/reachability evidence, so fictional staging remains decision B conditionally blocked.
+- Phase 9B.3 adds sanitized Worker dependency inventory and request-entrypoint reachability tooling to the non-deploy Linux workflow. It will upload only ignored, sanitized package/classification evidence and fail if a target is unresolved or a high target is request-time reachable. It has not yet run against a new Linux artifact, so the gate remains decision B.
 
 ## Current boundary
 
@@ -18,7 +19,7 @@ Local/test data and free-preview staging are fictional-only. Production is undep
 
 ## Recommended next work
 
-**Phase 9B.2 remediation follow-up — record direct Linux artifact inventory and request-time reachability for PostCSS, Sharp, `find-my-way`, and Valibot; rerun the fresh audit and trusted-build review before any fictional staging release.**
+**Phase 9B.3 remediation follow-up — push the inventory gate, review the uploaded sanitized Linux artifact/audit evidence for PostCSS, Sharp, `find-my-way`, and Valibot, then complete the fresh audit and trusted-build review before any fictional staging release.**
 
 Pending external-session work after the conditional release gate is cleared: provider account setup, Neon migrations, fictional cloud bootstrap, Worker deployment, reachable browser testing, Neon integrity and concurrency proof, backup/restore drill, and live cost verification. No R2 resource is in scope.
 
