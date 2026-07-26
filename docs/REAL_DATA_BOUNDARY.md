@@ -6,6 +6,8 @@ All local development, local PostgreSQL validation, tests, and demo records are 
 
 No real client onboarding is allowed. The repository must not contain real customer, banking, payroll, tax, receipt, statement, personal, financial, production, credential, or provider-account data. No Cloudflare, Neon, R2, or AWS resource currently exists.
 
+Phase 10A document records are fictional metadata only. They contain no binary bytes, local paths, provider URLs, storage configuration, or real receipt/banking/tax/payroll/customer data. Actual document storage remains a separately approved future boundary.
+
 ## Enforced staging boundary
 
 `free-preview-cloudflare-neon` only accepts Cloudflare staging with fictional data, paid-service approval false, customer onboarding false, no R2 binding, a TLS-required Neon pooled runtime URL, and a separate TLS-required direct migration URL. It rejects production, real-data approval, localhost, Prisma Dev, unsafe database names, non-Neon targets, and local `DATABASE_URL` fallback.

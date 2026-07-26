@@ -63,6 +63,18 @@ enum DocumentStatus {
   DELETED
 }
 
+enum DocumentCategory {
+  RECEIPT
+  BANK_STATEMENT
+  TAX_DOCUMENT
+  PAYROLL_DOCUMENT
+  OTHER
+}
+
+enum DocumentStorageState {
+  METADATA_ONLY
+}
+
 enum MalwareScanStatus {
   NOT_STARTED
   PENDING
@@ -228,6 +240,7 @@ model Business {
   accounts              FinancialAccount[]
   transactions          Transaction[]
   documents             Document[]
+  documentStatusHistory DocumentStatusHistory[]
   transactionDocuments  TransactionDocument[]
   auditEvents           AuditEvent[]
   reimbursementClaims   ReimbursementClaim[]
@@ -259,13 +272,14 @@ model BusinessMember {
   updatedAt  DateTime     @updatedAt
   version    Int          @default(1)
 
-  business             Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approvedTransactions Transaction[]        @relation("TransactionApproverMembership")
-  uploadedDocuments    Document[]           @relation("DocumentUploaderMembership")
-  auditEvents          AuditEvent[]         @relation("AuditActorMembership")
-  reimbursementClaims  ReimbursementClaim[] @relation("ReimbursementClaimantMembership")
-  approvalDecisions    ApprovalDecision[]   @relation("ApprovalReviewerMembership")
+  business              Business                @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedTransactions  Transaction[]           @relation("TransactionApproverMembership")
+  uploadedDocuments     Document[]              @relation("DocumentUploaderMembership")
+  documentStatusHistory DocumentStatusHistory[] @relation("DocumentStatusHistoryActor")
+  auditEvents           AuditEvent[]            @relation("AuditActorMembership")
+  reimbursementClaims   ReimbursementClaim[]    @relation("ReimbursementClaimantMembership")
+  approvalDecisions     ApprovalDecision[]      @relation("ApprovalReviewerMembership")
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -357,39 +371,48 @@ model TransactionSplit {
 }
 
 model Document {
-  id                     String            @id @default(cuid())
+  id                     String               @id @default(cuid())
   businessId             String
   uploadedByMembershipId String
-  storageKey             String            @unique
+  storageKey             String?              @unique
   originalFilename       String
+  displayName            String
   mimeType               String
   detectedMimeType       String?
   sizeBytes              BigInt
   sha256                 String
   type                   DocumentType
-  status                 DocumentStatus    @default(PENDING_VALIDATION)
-  malwareScanStatus      MalwareScanStatus @default(NOT_STARTED)
-  malwareScanProvider    String?           @default("AWS_GUARDDUTY_S3")
+  category               DocumentCategory
+  status                 DocumentStatus       @default(PENDING_VALIDATION)
+  storageState           DocumentStorageState @default(METADATA_ONLY)
+  documentDate           DateTime?
+  quarantineReasonCode   String?
+  quarantineExplanation  String?
+  malwareScanStatus      MalwareScanStatus    @default(NOT_STARTED)
+  malwareScanProvider    String?
   malwareScannedAt       DateTime?
   validationError        String?
   retentionClass         RetentionClass
-  retentionUntil         DateTime?
-  legalHold              Boolean           @default(false)
-  uploadedAt             DateTime          @default(now())
+  retentionUntil         DateTime
+  legalHold              Boolean              @default(false)
+  uploadedAt             DateTime             @default(now())
   activatedAt            DateTime?
   supersededAt           DateTime?
   deletedAt              DateTime?
   replacedById           String?
-  version                Int               @default(1)
+  version                Int                  @default(1)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
 
-  business              Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  uploadedByMembership  BusinessMember         @relation("DocumentUploaderMembership", fields: [businessId, uploadedByMembershipId], references: [businessId, userId], onDelete: Restrict)
-  replacedBy            Document?              @relation("DocumentVersions", fields: [businessId, replacedById], references: [businessId, id], onDelete: Restrict)
-  previousVersions      Document[]             @relation("DocumentVersions")
+  business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  uploadedByMembership  BusinessMember          @relation("DocumentUploaderMembership", fields: [businessId, uploadedByMembershipId], references: [businessId, userId], onDelete: Restrict)
+  replacedBy            Document?               @relation("DocumentVersions", fields: [businessId, replacedById], references: [businessId, id], onDelete: Restrict)
+  previousVersions      Document[]              @relation("DocumentVersions")
   transactions          TransactionDocument[]
-  reimbursementExpenses ReimbursementExpense[] @relation("ReimbursementExpenseDocument")
-  payrollRuns           PayrollRun[]           @relation("PayrollRunDocument")
-  taxPayments           TaxPaymentRecord[]     @relation("TaxPaymentDocument")
+  reimbursementExpenses ReimbursementExpense[]  @relation("ReimbursementExpenseDocument")
+  payrollRuns           PayrollRun[]            @relation("PayrollRunDocument")
+  taxPayments           TaxPaymentRecord[]      @relation("TaxPaymentDocument")
+  statusHistory         DocumentStatusHistory[]
 
   @@unique([businessId, id])
   @@unique([businessId, replacedById])
@@ -398,6 +421,25 @@ model Document {
   @@index([businessId, type])
   @@index([retentionUntil])
   @@index([malwareScanStatus])
+}
+
+model DocumentStatusHistory {
+  id             String          @id @default(cuid())
+  businessId     String
+  documentId     String
+  previousStatus DocumentStatus?
+  newStatus      DocumentStatus
+  reasonCode     String?
+  note           String?
+  actorUserId    String
+  createdAt      DateTime        @default(now())
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  document Document       @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  actor    BusinessMember @relation("DocumentStatusHistoryActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, documentId, createdAt])
 }
 
 model TransactionDocument {
