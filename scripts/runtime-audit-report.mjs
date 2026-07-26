@@ -13,11 +13,16 @@ function assert(condition, message) {
 function command() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
 }
+function runNpm(args) {
+  const options = { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] };
+  if (process.platform !== "win32") return spawnSync(command(), args, options);
+  return spawnSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", command(), ...args], options);
+}
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 function hasAuditSchema(value) {
-  return Boolean(value && typeof value === "object" && value.metadata?.vulnerabilities && value.vulnerabilities && typeof value.vulnerabilities === "object");
+  return Boolean(value && typeof value === "object" && Number.isInteger(value.auditReportVersion) && value.metadata?.vulnerabilities && value.vulnerabilities && typeof value.vulnerabilities === "object");
 }
 function extractJsonObjects(output) {
   const objects = [];
@@ -49,21 +54,98 @@ function extractJsonObjects(output) {
 function unavailableAuditResponse(values) {
   return /(?:EAI_AGAIN|ECONNREFUSED|ENETUNREACH|ENOTFOUND|ETIMEDOUT|EAUDIT|audit (?:endpoint|service).*(?:unavailable|failed)|registry.*unavailable)/i.test(values.filter(Boolean).join("\n"));
 }
-export function parseAuditCommandResult({ stdout = "", stderr = "", exitCode = 0, spawnError = null }) {
+function errorObject(value) {
+  return value?.error && typeof value.error === "object" && !Array.isArray(value.error) ? value.error : null;
+}
+function responseSchema(value, fallback = "unexpected-npm-schema-version") {
+  if (hasAuditSchema(value)) return "standard-npm-audit-report";
+  const error = errorObject(value);
+  if (!error) return fallback;
+  const status = [error.statusCode, error.status, error.code].find((candidate) => Number.isInteger(candidate));
+  const description = [error.code, error.summary, error.detail, error.message].filter((candidate) => typeof candidate === "string").join("\n");
+  if ([401, 403].includes(status) || /(?:E401|E403|unauthori[sz]ed|forbidden|authentication|authorization)/i.test(description)) return "authentication-or-authorization-error";
+  if (status === 429 || /(?:E429|rate.?limit|too many requests)/i.test(description)) return "rate-limit-response";
+  if (/(?:proxy|EAI_AGAIN|ECONNREFUSED|ENETUNREACH|ENOTFOUND|ETIMEDOUT)/i.test(description)) return "proxy-or-network-response";
+  if (/(?:registry|service|EAUDIT|unavailable)/i.test(description)) return "registry-or-service-error-payload";
+  return "npm-audit-error-object";
+}
+function captureDiagnostics(value, { stdout, stderr, exitCode, registryHostname, fallbackSchema }) {
+  const error = errorObject(value);
+  const status = error && [error.statusCode, error.status, error.code].find((candidate) => Number.isInteger(candidate));
+  return {
+    topLevelKeys: value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value).slice(0, 20) : [],
+    auditReportVersionPresent: Number.isInteger(value?.auditReportVersion),
+    metadataPresent: Boolean(value?.metadata),
+    vulnerabilitiesPresent: Object.hasOwn(value ?? {}, "vulnerabilities"),
+    vulnerabilitiesType: value?.vulnerabilities === undefined ? "absent" : Array.isArray(value.vulnerabilities) ? "array" : typeof value.vulnerabilities,
+    error: {
+      present: Boolean(error),
+      code: error?.code ?? null,
+      summary: error?.summary ?? error?.message ?? null,
+      detail: error?.detail ?? null,
+      statusCode: status ?? null,
+    },
+    responseSchema: responseSchema(value, fallbackSchema),
+    stdoutBytes: Buffer.byteLength(String(stdout)),
+    stderrBytes: Buffer.byteLength(String(stderr)),
+    npmExitCode: Number.isInteger(exitCode) ? exitCode : null,
+    registryHostname,
+  };
+}
+function noJsonDiagnostics({ stdout, stderr, exitCode, registryHostname, responseSchema: schema }) {
+  return {
+    topLevelKeys: [], auditReportVersionPresent: false, metadataPresent: false, vulnerabilitiesPresent: false, vulnerabilitiesType: "absent",
+    error: { present: false, code: null, summary: null, detail: null, statusCode: null },
+    responseSchema: schema, stdoutBytes: Buffer.byteLength(String(stdout)), stderrBytes: Buffer.byteLength(String(stderr)), npmExitCode: Number.isInteger(exitCode) ? exitCode : null, registryHostname,
+  };
+}
+export function parseAuditCommandResult({ stdout = "", stderr = "", exitCode = 0, spawnError = null, registryHostname = null }) {
   const candidates = extractJsonObjects(String(stdout));
   const payload = candidates.find(hasAuditSchema);
-  if (payload) return { endpointStatus: "available", captureResult: "valid-audit-json", payload };
-  if (unavailableAuditResponse([stdout, stderr, spawnError])) return { endpointStatus: "unavailable", captureResult: "audit-service-unavailable", payload: null };
-  if (candidates.length > 0) return { endpointStatus: "malformed", captureResult: "json-without-audit-schema", payload: null };
-  if (String(stdout).trim()) return { endpointStatus: "malformed", captureResult: "no-complete-json-on-stdout", payload: null };
-  if (spawnError || exitCode !== 0 || String(stderr).trim()) return { endpointStatus: "unavailable", captureResult: "audit-command-no-json-response", payload: null };
-  return { endpointStatus: "malformed", captureResult: "empty-audit-response", payload: null };
+  if (payload) return { endpointStatus: "available", captureResult: "valid-audit-json", payload, diagnostics: captureDiagnostics(payload, { stdout, stderr, exitCode, registryHostname }) };
+  const candidate = candidates.find((value) => errorObject(value)) ?? candidates.at(-1) ?? null;
+  if (candidate) {
+    const diagnostics = captureDiagnostics(candidate, { stdout, stderr, exitCode, registryHostname });
+    const unavailable = diagnostics.responseSchema !== "unexpected-npm-schema-version";
+    return { endpointStatus: unavailable ? "unavailable" : "malformed", captureResult: unavailable ? "audit-error-json" : "json-without-audit-schema", payload: null, diagnostics };
+  }
+  if (unavailableAuditResponse([stdout, stderr, spawnError])) return { endpointStatus: "unavailable", captureResult: "audit-service-unavailable", payload: null, diagnostics: noJsonDiagnostics({ stdout, stderr, exitCode, registryHostname, responseSchema: "proxy-or-network-response" }) };
+  if (String(stdout).trim()) return { endpointStatus: "malformed", captureResult: "no-complete-json-on-stdout", payload: null, diagnostics: noJsonDiagnostics({ stdout, stderr, exitCode, registryHostname, responseSchema: "unexpected-npm-schema-version" }) };
+  if (spawnError || exitCode !== 0 || String(stderr).trim()) return { endpointStatus: "unavailable", captureResult: "audit-command-no-json-response", payload: null, diagnostics: noJsonDiagnostics({ stdout, stderr, exitCode, registryHostname, responseSchema: "proxy-or-network-response" }) };
+  return { endpointStatus: "malformed", captureResult: "empty-audit-response", payload: null, diagnostics: noJsonDiagnostics({ stdout, stderr, exitCode, registryHostname, responseSchema: "unexpected-npm-schema-version" }) };
 }
 function sanitized(value, state) {
   if (typeof value !== "string") return value;
   if (!prohibited.test(value)) return value;
   state.redactions += 1;
   return "[redacted]";
+}
+function sanitizedDiagnostic(value, state) {
+  if (typeof value !== "string") return value;
+  const withoutUrls = value.replace(/https?:\/\/[^\s"']+/gi, "[redacted-url]").replace(/(?:authorization|cookie)\s*[:=]\s*(?:bearer\s+)?\S+/gi, "[redacted-header]").slice(0, 500);
+  if (withoutUrls !== value) state.redactions += 1;
+  return sanitized(withoutUrls, state);
+}
+function sanitizedDiagnostics(diagnostics, state) {
+  const sensitiveKey = /(?:token|cookie|authorization|password|secret)/i;
+  const safeCode = typeof diagnostics?.error?.code === "string" && /^(?:[A-Z][A-Z0-9_-]{0,39}|\d{3})$/.test(diagnostics.error.code) ? diagnostics.error.code : null;
+  return {
+    topLevelKeys: (diagnostics?.topLevelKeys ?? []).map((key) => sensitiveKey.test(key) ? "[sensitive-key]" : String(key).slice(0, 80)),
+    auditReportVersionPresent: Boolean(diagnostics?.auditReportVersionPresent),
+    metadataPresent: Boolean(diagnostics?.metadataPresent),
+    vulnerabilitiesPresent: Boolean(diagnostics?.vulnerabilitiesPresent),
+    vulnerabilitiesType: diagnostics?.vulnerabilitiesType ?? "absent",
+    error: {
+      present: Boolean(diagnostics?.error?.present), code: safeCode,
+      summary: sanitizedDiagnostic(diagnostics?.error?.summary, state), detail: sanitizedDiagnostic(diagnostics?.error?.detail, state),
+      statusCode: Number.isInteger(diagnostics?.error?.statusCode) && diagnostics.error.statusCode >= 100 && diagnostics.error.statusCode <= 599 ? diagnostics.error.statusCode : null,
+    },
+    responseSchema: diagnostics?.responseSchema ?? "unexpected-npm-schema-version",
+    stdoutBytes: Number.isInteger(diagnostics?.stdoutBytes) ? diagnostics.stdoutBytes : null,
+    stderrBytes: Number.isInteger(diagnostics?.stderrBytes) ? diagnostics.stderrBytes : null,
+    npmExitCode: Number.isInteger(diagnostics?.npmExitCode) ? diagnostics.npmExitCode : null,
+    registryHostname: typeof diagnostics?.registryHostname === "string" && /^[a-z0-9.-]+$/i.test(diagnostics.registryHostname) ? diagnostics.registryHostname.toLowerCase() : null,
+  };
 }
 function advisoryId(via) {
   if (Number.isInteger(via.source)) return `NPM-AUDIT-${via.source}`;
@@ -112,7 +194,7 @@ export function classifyPackage(packageName, inventory) {
   if (runtimeWithoutTarget.has(packageName)) return "server/runtime dependency outside the Worker entry path";
   return "absent from deployed artifact";
 }
-export function createRuntimeAuditReport({ payload, endpointStatus, captureResult, inventory, now = new Date(), nodeVersion = process.version, npmVersion = "unknown", lockfileVersion = null, lockfileClean = true }) {
+export function createRuntimeAuditReport({ payload, endpointStatus, captureResult, diagnostics, inventory, now = new Date(), nodeVersion = process.version, npmVersion = "unknown", lockfileVersion = null, lockfileClean = true }) {
   const state = { redactions: 0 };
   const base = {
     schemaVersion: 2,
@@ -122,11 +204,12 @@ export function createRuntimeAuditReport({ payload, endpointStatus, captureResul
     lockfileVersion,
     command: "npm audit --omit=dev --json",
     lockfileClean,
+    diagnostics: sanitizedDiagnostics(diagnostics, state),
   };
   const status = endpointStatus ?? (payload === null ? "unavailable" : "available");
-  if (status === "unavailable") return { ...base, endpointStatus: "unavailable", captureResult: captureResult ?? "audit-service-unavailable", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-unavailable" };
+  if (status === "unavailable") return { ...base, endpointStatus: "unavailable", captureResult: captureResult ?? "audit-service-unavailable", totals: null, advisories: [], sanitizationDetected: state.redactions > 0, releaseGate: "blocked-audit-unavailable" };
   if (status === "malformed" || !hasAuditSchema(payload)) {
-    return { ...base, endpointStatus: "malformed", captureResult: captureResult ?? "json-without-audit-schema", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed" };
+    return { ...base, endpointStatus: "malformed", captureResult: captureResult ?? "json-without-audit-schema", totals: null, advisories: [], sanitizationDetected: state.redactions > 0, releaseGate: "blocked-audit-malformed" };
   }
   assert(inventory?.schemaVersion === 1 && inventory.reportSanitized === true && Array.isArray(inventory.packages), "Sanitized Worker inventory is missing or invalid.");
   const advisories = Object.entries(payload.vulnerabilities).map(([packageName, finding]) => {
@@ -174,16 +257,28 @@ export function verifyRuntimeAuditReport(report) {
   return report;
 }
 function auditPayload() {
-  const result = spawnSync(command(), ["audit", "--omit=dev", "--json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const result = runNpm(["audit", "--omit=dev", "--json"]);
   return parseAuditCommandResult({
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
     exitCode: result.status ?? 1,
     spawnError: result.error?.code ?? null,
+    registryHostname: registryHostname(),
   });
 }
+function registryHostname() {
+  try {
+    const result = runNpm(["config", "get", "registry"]);
+    if (result.status !== 0) return null;
+    const configured = String(result.stdout ?? "").trim();
+    return new URL(configured).hostname;
+  } catch { return null; }
+}
 function npmVersion() {
-  try { return execFileSync(command(), ["--version"], { encoding: "utf8" }).trim(); } catch { return "unknown"; }
+  try {
+    const result = runNpm(["--version"]);
+    return result.status === 0 ? String(result.stdout ?? "").trim() : "unknown";
+  } catch { return "unknown"; }
 }
 function lockfileClean() {
   try { execFileSync("git", ["diff", "--exit-code", "--", "package-lock.json"], { stdio: "ignore" }); return true; } catch { return false; }
@@ -196,7 +291,7 @@ function publishSummary(report) {
   const summaryPath = process.env.GITHUB_STEP_SUMMARY;
   if (!summaryPath) return;
   const totals = report.totals ? Object.entries(report.totals).map(([severity, count]) => `${severity}=${count}`).join(", ") : "unavailable";
-  writeFileSync(summaryPath, `## Runtime dependency audit\n\n- Endpoint: ${report.endpointStatus}\n- Capture: ${report.captureResult}\n- Totals: ${totals}\n- Findings: ${report.advisories.length}\n- Gate: ${report.releaseGate}\n`, { encoding: "utf8", flag: "a" });
+  writeFileSync(summaryPath, `## Runtime dependency audit\n\n- Endpoint: ${report.endpointStatus}\n- Capture: ${report.captureResult}\n- Response schema: ${report.diagnostics.responseSchema}\n- Registry hostname: ${report.diagnostics.registryHostname ?? "unavailable"}\n- Totals: ${totals}\n- Findings: ${report.advisories.length}\n- Gate: ${report.releaseGate}\n`, { encoding: "utf8", flag: "a" });
 }
 
 const args = new Set(process.argv.slice(2));
@@ -208,7 +303,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const audit = auditPayload();
     report = createRuntimeAuditReport({ ...audit, inventory, npmVersion: npmVersion(), lockfileVersion: lock.lockfileVersion ?? null, lockfileClean: lockfileClean() });
   } catch (error) {
-    report = { schemaVersion: 2, endpointStatus: "malformed", captureResult: "sanitized-report-construction-failed", command: "npm audit --omit=dev --json", advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed", error: "sanitized-report-construction-failed" };
+    report = { schemaVersion: 2, endpointStatus: "malformed", captureResult: "sanitized-report-construction-failed", command: "npm audit --omit=dev --json", diagnostics: noJsonDiagnostics({ stdout: "", stderr: "", exitCode: null, registryHostname: null, responseSchema: "unexpected-npm-schema-version" }), advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed", error: "sanitized-report-construction-failed" };
     writeReport(report);
     throw error;
   }
