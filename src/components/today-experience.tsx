@@ -42,15 +42,15 @@ export function TodayExperience({
 function ExecutiveSummary({ dashboard }: { dashboard: TodayDashboard }) {
   return (
     <section aria-label="Executive financial summary" className="overflow-hidden rounded-[var(--radius-xl)] bg-brand-navy text-white shadow-[var(--shadow-elevated)]">
-      <div className="grid lg:grid-cols-[minmax(0,1.25fr)_minmax(30rem,0.75fr)]">
-        <div className="relative p-6 sm:p-8 lg:p-9">
+      <div className="grid min-[1180px]:grid-cols-[minmax(0,1.25fr)_minmax(30rem,0.75fr)]">
+        <div className="relative p-6 sm:p-8 min-[1180px]:p-9">
           <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-brand-teal/20 blur-3xl" aria-hidden="true" />
           <p className="relative text-xs font-bold uppercase tracking-[0.16em] text-teal-100/70">Available business cash</p>
           <p className="money-value relative mt-4 text-4xl font-bold tracking-[-0.05em] sm:text-5xl">{dashboard.availableCash.value}</p>
           <p className="relative mt-4 max-w-xl text-sm leading-6 text-slate-300">{dashboard.availableCash.explanation}</p>
           <span className="relative mt-6 inline-flex items-center gap-2 text-xs font-bold text-teal-100"><span className="h-2 w-2 rounded-full bg-brand-teal" aria-hidden="true" />Approved cash activity only</span>
         </div>
-        <div className="grid border-t border-white/10 bg-white/[0.055] sm:grid-cols-3 lg:border-l lg:border-t-0">
+        <div className="grid border-t border-white/10 bg-white/[0.055] sm:grid-cols-3 min-[1180px]:border-l min-[1180px]:border-t-0">
           <SummaryMetric label="Tax reserve" value={dashboard.taxReserve.value} detail={dashboard.taxReserve.status === "available" ? "Dedicated account" : "Setup needed"} tone={dashboard.taxReserve.status === "available" ? "success" : "warning"} />
           <SummaryMetric label="Projected tax" value={dashboard.projectedTax.value} detail={dashboard.projectedTax.dueDate ? `Due ${dashboard.projectedTax.dueDate}` : "No current estimate"} tone={dashboard.projectedTax.status === "attention" ? "warning" : "neutral"} />
           <SummaryMetric label="Reserve position" value={dashboard.reservePosition.value} detail={dashboard.reservePosition.status === "surplus" ? "Reserve exceeds obligation" : dashboard.reservePosition.status === "gap" ? "Funding attention" : "Needs reserve + estimate"} tone={dashboard.reservePosition.status === "surplus" ? "success" : dashboard.reservePosition.status === "gap" ? "warning" : "neutral"} />
@@ -73,7 +73,7 @@ function SummaryMetric({
 }) {
   const dot = tone === "success" ? "bg-brand-teal" : tone === "warning" ? "bg-amber-300" : "bg-slate-400";
   return (
-    <div className="min-w-0 border-b border-white/10 p-5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 lg:border-r-0 lg:border-b lg:last:border-b-0">
+    <div className="min-w-0 border-b border-white/10 p-5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 min-[1180px]:border-r-0 min-[1180px]:border-b min-[1180px]:last:border-b-0">
       <p className="text-xs font-bold text-slate-300">{label}</p>
       <p className="money-value mt-3 break-words text-xl font-bold tracking-[-0.035em] text-white">{value}</p>
       <p className="mt-3 flex gap-2 text-xs leading-5 text-slate-300"><span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />{detail}</p>

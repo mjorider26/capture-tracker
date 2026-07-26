@@ -9,7 +9,7 @@ const initialState: DocumentUploadState = { ok: false };
 export function DocumentUploadForm() {
   const [state, action, pending] = useActionState(uploadDocument, initialState);
   const [filename, setFilename] = useState("");
-  return <section className="rounded-[var(--radius-md)] bg-surface p-5 ring-1 ring-border-subtle">
+  return <section id="document-upload" className="ui-card scroll-mt-6 p-5 sm:p-6">
     <h2 className="text-lg font-bold">Upload a fictional document</h2>
     <p className="mt-1 text-sm text-text-muted">PDF, JPEG, or PNG only · 10 MiB maximum. Use fictional data only; this local workflow is not approved for real documents.</p>
     <form action={action} className="mt-4 space-y-3">

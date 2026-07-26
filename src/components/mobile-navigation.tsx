@@ -29,7 +29,7 @@ export function MobileNavigation({
   }, []);
 
   return (
-    <div className="lg:hidden">
+    <div className="min-[1180px]:hidden">
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border-subtle bg-surface/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgb(11_34_57_/_0.08)] backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
           <span className="flex min-w-0 items-center gap-2 text-sm font-bold text-text-primary">

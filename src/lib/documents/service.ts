@@ -7,7 +7,46 @@ type Actor = { businessId: string; actorUserId: string };
 type Result<T> = { ok: true; value: T; duplicate?: boolean } | { ok: false; code: "INVALID" | "NOT_FOUND" | "INVALID_TRANSITION"; message: string };
 
 export async function listDocuments(businessId: string) {
-  return prisma.document.findMany({ where: { businessId }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+  return prisma.document.findMany({
+    where: { businessId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true,
+      displayName: true,
+      originalFilename: true,
+      category: true,
+      status: true,
+      sizeBytes: true,
+      retentionUntil: true,
+      documentDate: true,
+      malwareScanStatus: true,
+      transactions: {
+        where: { unlinkedAt: null },
+        select: { id: true },
+        take: 1,
+      },
+      extractionAttempts: {
+        orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
+        select: {
+          status: true,
+          candidates: { select: { reviewState: true }, take: 10 },
+        },
+        take: 1,
+      },
+      matchRuns: {
+        orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
+        select: {
+          status: true,
+          suggestions: {
+            where: { status: "SUGGESTED" },
+            select: { id: true },
+            take: 1,
+          },
+        },
+        take: 1,
+      },
+    },
+  });
 }
 export async function getDocument(businessId: string, documentId: string) {
   return prisma.document.findFirst({ where: { businessId, id: documentId }, include: { statusHistory: { orderBy: { createdAt: "asc" } } } });

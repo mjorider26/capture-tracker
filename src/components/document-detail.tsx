@@ -1,4 +1,72 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-type Detail = { displayName: string; originalFilename: string; status: string; sha256: string; storageState: string; malwareScanStatus: string; retentionUntil: Date; quarantineReasonCode: string | null; statusHistory: Array<{ id: string; newStatus: string; createdAt: Date; reasonCode: string | null }> };
-export function DocumentDetail({ document, basePath, actions, contentHref }: { document: Detail; basePath: "/app" | "/demo"; actions?: ReactNode; contentHref?: string }) { return <section className="space-y-6"><Link className="text-sm font-bold text-brand-teal" href={`${basePath}/documents`}>← Documents</Link><div className="rounded-[var(--radius-md)] bg-surface p-6 ring-1 ring-border-subtle"><p className="text-sm font-bold text-brand-teal">{document.storageState === "METADATA_ONLY" ? "Metadata-only record" : "Private document record"}</p><h1 className="mt-1 text-3xl font-bold">{document.displayName}</h1><dl className="mt-6 grid gap-4 sm:grid-cols-2 text-sm"><div><dt className="text-text-muted">Original filename</dt><dd className="font-semibold">{document.originalFilename}</dd></div><div><dt className="text-text-muted">Status</dt><dd className="font-semibold">{document.status.replaceAll("_", " ")}</dd></div><div><dt className="text-text-muted">SHA-256</dt><dd className="break-all font-mono text-xs" aria-label={`Full SHA-256 ${document.sha256}`}>{document.sha256}</dd></div><div><dt className="text-text-muted">Storage</dt><dd className="font-semibold">{document.storageState.replaceAll("_", " ")}</dd></div><div><dt className="text-text-muted">Scanner</dt><dd className="font-semibold">{document.malwareScanStatus.replaceAll("_", " ")}</dd></div><div><dt className="text-text-muted">Scheduled retention through</dt><dd>{document.retentionUntil.toLocaleDateString()}</dd></div>{document.quarantineReasonCode && <div><dt className="text-text-muted">Quarantine reason</dt><dd>{document.quarantineReasonCode}</dd></div>}</dl>{contentHref ? <a href={contentHref} className="mt-6 inline-flex min-h-11 items-center rounded-[var(--radius-sm)] bg-brand-teal px-4 text-sm font-bold text-white">Open private document</a> : <p className="mt-6 text-sm text-text-muted">Preview and download are unavailable until an active document passes the private storage and clean-scan gate.</p>}{actions}</div><div className="rounded-[var(--radius-md)] bg-surface p-6 ring-1 ring-border-subtle"><h2 className="text-lg font-bold">Status history</h2><ol className="mt-4 space-y-3">{document.statusHistory.map((event) => <li key={event.id} className="border-l-2 border-brand-teal pl-3 text-sm"><p className="font-semibold">{event.newStatus.replaceAll("_", " ")}</p><p className="text-text-muted">{event.createdAt.toLocaleString()}{event.reasonCode ? ` · ${event.reasonCode}` : ""}</p></li>)}</ol></div></section>; }
+
+import { Card, PageHeader, StatusBadge } from "./ui";
+
+type Detail = {
+  displayName: string;
+  originalFilename: string;
+  status: string;
+  storageState: string;
+  malwareScanStatus: string;
+  retentionUntil: Date;
+  quarantineReasonCode: string | null;
+  statusHistory: Array<{
+    id: string;
+    newStatus: string;
+    createdAt: Date;
+    reasonCode: string | null;
+  }>;
+};
+
+const display = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+const date = (value: Date) => new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/Los_Angeles" }).format(value);
+
+export function DocumentDetail({ document, basePath, actions, contentHref }: { document: Detail; basePath: "/app" | "/demo"; actions?: ReactNode; contentHref?: string }) {
+  const metadataOnly = document.storageState === "METADATA_ONLY";
+  const active = document.status === "ACTIVE";
+  const clean = document.malwareScanStatus === "CLEAN";
+  const scanLabel = document.malwareScanStatus === "CLEAN" ? "Clean scan passed" : document.malwareScanStatus === "QUARANTINED" ? "Quarantined by scan" : display(document.malwareScanStatus);
+
+  return (
+    <section className="space-y-6">
+      <Link className="inline-flex min-h-11 items-center text-sm font-bold text-brand-teal underline underline-offset-4" href={`${basePath}/documents`}>
+        Back to Documents
+      </Link>
+      <PageHeader
+        eyebrow={metadataOnly ? "Metadata-only record" : "Private document record"}
+        title={document.displayName}
+        description="Evidence is available only after the existing active, private-storage, and clean-scan protections have all passed."
+        action={<StatusBadge tone={active && clean ? "success" : document.status === "PENDING_VALIDATION" ? "warning" : "locked"}>{active && clean ? "Active and clean" : display(document.status)}</StatusBadge>}
+      />
+      <Card className="p-5 sm:p-6">
+        <h2 className="text-lg font-bold text-text-primary">Document safeguards</h2>
+        <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
+          <div><dt className="text-text-muted">Original filename</dt><dd className="mt-1 font-semibold text-text-primary">{document.originalFilename}</dd></div>
+          <div><dt className="text-text-muted">Validation</dt><dd className="mt-1"><StatusBadge tone={active && clean ? "success" : document.status === "PENDING_VALIDATION" ? "warning" : "locked"}>{active && clean ? "Active and clean" : display(document.status)}</StatusBadge></dd></div>
+          <div><dt className="text-text-muted">Evidence access</dt><dd className="mt-1 font-semibold text-text-primary">{metadataOnly ? "Metadata only" : contentHref ? "Protected access available" : "Protected access unavailable"}</dd></div>
+          <div><dt className="text-text-muted">Scanner</dt><dd className="mt-1 font-semibold text-text-primary">{scanLabel}</dd></div>
+          <div><dt className="text-text-muted">Scheduled retention through</dt><dd className="mt-1 text-text-primary">{date(document.retentionUntil)}</dd></div>
+          {document.quarantineReasonCode && <div><dt className="text-text-muted">Review reason</dt><dd className="mt-1 text-text-primary">{display(document.quarantineReasonCode)}</dd></div>}
+        </dl>
+        {contentHref ? (
+          <a href={contentHref} className="mt-6 inline-flex min-h-11 items-center rounded-[var(--radius-sm)] bg-brand-teal px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--brand-teal-strong)]">Open protected document</a>
+        ) : (
+          <p className="mt-6 rounded-[var(--radius-sm)] bg-surface-secondary p-4 text-sm leading-6 text-text-muted">Preview and download are unavailable until an active document passes the private-storage and clean-scan gate.</p>
+        )}
+        {actions}
+      </Card>
+      <Card className="p-5 sm:p-6">
+        <h2 className="text-lg font-bold">Status history</h2>
+        <ol className="mt-5 space-y-4">
+          {document.statusHistory.map((event) => (
+            <li key={event.id} className="border-l-2 border-brand-teal pl-4 text-sm">
+              <p className="font-semibold text-text-primary">{display(event.newStatus)}</p>
+              <p className="mt-1 text-text-muted">{date(event.createdAt)}{event.reasonCode ? ` / ${display(event.reasonCode)}` : ""}</p>
+            </li>
+          ))}
+        </ol>
+      </Card>
+    </section>
+  );
+}

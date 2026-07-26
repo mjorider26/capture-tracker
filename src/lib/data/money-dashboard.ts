@@ -5,7 +5,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { prisma } from "../prisma";
 import {
   buildMoneySummary,
-  emptyMoneyFilter,
+  parseMoneyFilter,
   serializeMoneyAmount,
   type MoneyFilter,
 } from "./money-dashboard-core";
@@ -34,34 +34,7 @@ export type MoneyDashboard = {
   }>;
 };
 
-const filterValues = {
-  status: new Set(["PENDING_REVIEW", "APPROVED", "EXCLUDED", "VOIDED"]),
-  intent: new Set(["UNREVIEWED", "BUSINESS", "PERSONAL", "MIXED"]),
-};
-
-export function parseMoneyFilter(
-  input: Record<string, string | string[] | undefined>,
-): MoneyFilter {
-  const fallback = emptyMoneyFilter();
-  const get = (name: string) => {
-    const value = input[name];
-    return typeof value === "string" ? value.trim() : "";
-  };
-  const query = get("q").slice(0, 120);
-  const status = get("status");
-  const intent = get("intent");
-  const accountId = get("account").slice(0, 191);
-  return {
-    query,
-    status: filterValues.status.has(status)
-      ? (status as MoneyFilter["status"])
-      : fallback.status,
-    intent: filterValues.intent.has(intent)
-      ? (intent as MoneyFilter["intent"])
-      : fallback.intent,
-    accountId,
-  };
-}
+export { parseMoneyFilter } from "./money-dashboard-core";
 
 // The businessId argument is accepted only from server-side context resolution.
 export async function getMoneyDashboard(

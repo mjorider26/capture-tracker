@@ -36,7 +36,7 @@ export function AppShell({
   const current = destinations.find((item) => item.slug === destination);
   return (
     <div className="min-h-screen overflow-x-clip bg-page text-text-primary">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-white/10 bg-brand-navy px-4 py-5 text-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-white/10 bg-brand-navy px-4 py-5 text-white min-[1180px]:flex">
         <Brand />
         <div className="mt-8 rounded-[var(--radius-md)] border border-white/10 bg-white/[0.06] px-3 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">Business</p>
@@ -49,7 +49,7 @@ export function AppShell({
           </p>
         )}
       </aside>
-      <main className="min-w-0 pb-24 lg:ml-60 lg:pb-10">
+      <main className="min-w-0 pb-24 min-[1180px]:ml-60 min-[1180px]:pb-10">
         <div className="sticky top-0 z-10 border-b border-border-subtle bg-page/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-10">
           <div className="mx-auto flex max-w-[88rem] items-center justify-between gap-4">
             <div className="min-w-0">
