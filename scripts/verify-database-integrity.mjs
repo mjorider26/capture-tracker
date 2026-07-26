@@ -70,6 +70,9 @@ const expectedConstraints = [
   "TransactionDocument_unlink_integrity",
   "DocumentExtractionCandidate_confidence_range",
   "DocumentExtractionCandidate_review_integrity",
+  "DocumentMatchSuggestion_score_range",
+  "DocumentMatchSuggestion_rank_positive",
+  "DocumentMatchSuggestion_decision_integrity",
 ];
 
 const expectedFunctions = [

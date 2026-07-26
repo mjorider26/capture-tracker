@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 
 export type TransactionDocumentActor = { businessId: string; actorUserId: string };
 export type TransactionDocumentLinkOutcome =
@@ -6,21 +6,24 @@ export type TransactionDocumentLinkOutcome =
   | { ok: false; code: "NOT_FOUND" | "DOCUMENT_NOT_ELIGIBLE" | "INVALID" };
 
 type Client = Pick<PrismaClient, "$transaction" | "transactionDocument">;
+type LinkClient = Prisma.TransactionClient;
+
+export async function linkDocumentToTransactionInTransaction(client: LinkClient, actor: TransactionDocumentActor, transactionId: string, documentId: string, note?: string): Promise<TransactionDocumentLinkOutcome> {
+  const [transaction, document] = await Promise.all([
+        client.transaction.findFirst({ where: { id: transactionId, businessId: actor.businessId, voidedAt: null }, select: { id: true } }),
+        client.document.findFirst({ where: { id: documentId, businessId: actor.businessId }, select: { id: true, status: true, malwareScanStatus: true, storageState: true, privateReadEligible: true, deletedAt: true } }),
+  ]);
+  if (!transaction || !document) return { ok: false as const, code: "NOT_FOUND" as const };
+  if (document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN" || document.storageState !== "STORED_PRIVATE" || !document.privateReadEligible || document.deletedAt) return { ok: false as const, code: "DOCUMENT_NOT_ELIGIBLE" as const };
+  const existing = await client.transactionDocument.findFirst({ where: { businessId: actor.businessId, transactionId, documentId, unlinkedAt: null }, select: { id: true } });
+  if (existing) return { ok: true as const, state: "ALREADY_LINKED" as const, linkId: existing.id };
+  const link = await client.transactionDocument.create({ data: { businessId: actor.businessId, transactionId, documentId, linkedByUserId: actor.actorUserId, history: { create: { action: "LINKED", actorUserId: actor.actorUserId, note: note?.slice(0, 200) || null } } } });
+  return { ok: true as const, state: "LINKED" as const, linkId: link.id };
+}
 
 export async function linkDocumentToTransactionCore(client: Client, actor: TransactionDocumentActor, transactionId: string, documentId: string): Promise<TransactionDocumentLinkOutcome> {
   try {
-    return await client.$transaction(async (tx) => {
-      const [transaction, document] = await Promise.all([
-        tx.transaction.findFirst({ where: { id: transactionId, businessId: actor.businessId, voidedAt: null }, select: { id: true } }),
-        tx.document.findFirst({ where: { id: documentId, businessId: actor.businessId }, select: { id: true, status: true, malwareScanStatus: true, storageState: true, privateReadEligible: true, deletedAt: true } }),
-      ]);
-      if (!transaction || !document) return { ok: false as const, code: "NOT_FOUND" as const };
-      if (document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN" || document.storageState !== "STORED_PRIVATE" || !document.privateReadEligible || document.deletedAt) return { ok: false as const, code: "DOCUMENT_NOT_ELIGIBLE" as const };
-      const existing = await tx.transactionDocument.findFirst({ where: { businessId: actor.businessId, transactionId, documentId, unlinkedAt: null }, select: { id: true } });
-      if (existing) return { ok: true as const, state: "ALREADY_LINKED" as const, linkId: existing.id };
-      const link = await tx.transactionDocument.create({ data: { businessId: actor.businessId, transactionId, documentId, linkedByUserId: actor.actorUserId, history: { create: { action: "LINKED", actorUserId: actor.actorUserId } } } });
-      return { ok: true as const, state: "LINKED" as const, linkId: link.id };
-    });
+    return await client.$transaction(async (tx) => linkDocumentToTransactionInTransaction(tx, actor, transactionId, documentId));
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       const canonical = await client.transactionDocument.findFirst({ where: { businessId: actor.businessId, transactionId, documentId, unlinkedAt: null }, select: { id: true } });

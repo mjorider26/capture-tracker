@@ -123,6 +123,32 @@ enum DocumentExtractionHistoryAction {
   REJECTED
 }
 
+enum DocumentMatchRunStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+  STALE
+  DISMISSED
+}
+
+enum DocumentMatchSuggestionStatus {
+  SUGGESTED
+  APPROVED
+  REJECTED
+  DISMISSED
+  STALE
+}
+
+enum DocumentMatchHistoryAction {
+  GENERATED
+  APPROVED
+  REJECTED
+  DISMISSED
+  STALE
+  LINKED
+  LINK_FAILED
+}
+
 enum MalwareScanStatus {
   NOT_STARTED
   PENDING
@@ -293,6 +319,9 @@ model Business {
   transactionDocumentHistory TransactionDocumentHistory[]
   documentExtractionAttempts DocumentExtractionAttempt[]
   documentExtractionHistory  DocumentExtractionHistory[]
+  documentMatchRuns          DocumentMatchRun[]
+  documentMatchSuggestions   DocumentMatchSuggestion[]
+  documentMatchHistory       DocumentMatchHistory[]
   auditEvents                AuditEvent[]
   reimbursementClaims        ReimbursementClaim[]
   reimbursementExpenses      ReimbursementExpense[]
@@ -337,6 +366,8 @@ model BusinessMember {
   requestedDocumentExtractions DocumentExtractionAttempt[]   @relation("DocumentExtractionRequestedBy")
   reviewedDocumentCandidates   DocumentExtractionCandidate[] @relation("DocumentExtractionReviewedBy")
   documentExtractionHistory    DocumentExtractionHistory[]   @relation("DocumentExtractionHistoryActor")
+  requestedDocumentMatchRuns   DocumentMatchRun[]            @relation("DocumentMatchRequestedBy")
+  documentMatchHistory         DocumentMatchHistory[]        @relation("DocumentMatchHistoryActor")
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -391,15 +422,16 @@ model Transaction {
   voidedAt               DateTime?
   version                Int                  @default(1)
 
-  business              Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  account               FinancialAccount       @relation(fields: [businessId, accountId], references: [businessId, id], onDelete: Restrict)
-  approvedByMembership  BusinessMember?        @relation("TransactionApproverMembership", fields: [businessId, approvedByMembershipId], references: [businessId, userId], onDelete: Restrict)
+  business              Business                  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  account               FinancialAccount          @relation(fields: [businessId, accountId], references: [businessId, id], onDelete: Restrict)
+  approvedByMembership  BusinessMember?           @relation("TransactionApproverMembership", fields: [businessId, approvedByMembershipId], references: [businessId, userId], onDelete: Restrict)
   splits                TransactionSplit[]
   documents             TransactionDocument[]
-  reimbursementPayments ReimbursementClaim[]   @relation("ReimbursementPaymentTransaction")
-  reimbursementExpenses ReimbursementExpense[] @relation("ReimbursementExpenseTransaction")
-  distributions         OwnerDistribution[]    @relation("DistributionTransaction")
-  journalEntry          JournalEntry?          @relation("TransactionJournalEntry")
+  matchSuggestions      DocumentMatchSuggestion[]
+  reimbursementPayments ReimbursementClaim[]      @relation("ReimbursementPaymentTransaction")
+  reimbursementExpenses ReimbursementExpense[]    @relation("ReimbursementExpenseTransaction")
+  distributions         OwnerDistribution[]       @relation("DistributionTransaction")
+  journalEntry          JournalEntry?             @relation("TransactionJournalEntry")
   reconciliationItems   ReconciliationItem[]
 
   @@unique([businessId, id])
@@ -476,6 +508,7 @@ model Document {
   taxPayments           TaxPaymentRecord[]          @relation("TaxPaymentDocument")
   statusHistory         DocumentStatusHistory[]
   extractionAttempts    DocumentExtractionAttempt[]
+  matchRuns             DocumentMatchRun[]
 
   @@unique([businessId, id])
   @@unique([businessId, replacedById])
@@ -567,6 +600,7 @@ model DocumentExtractionAttempt {
   requestedBy BusinessMember                @relation("DocumentExtractionRequestedBy", fields: [businessId, requestedByUserId], references: [businessId, userId], onDelete: Restrict)
   candidates  DocumentExtractionCandidate[]
   history     DocumentExtractionHistory[]
+  matchRuns   DocumentMatchRun[]
 
   @@unique([businessId, id])
   @@index([businessId, documentId, requestedAt])
@@ -594,6 +628,80 @@ model DocumentExtractionCandidate {
 
   @@unique([businessId, id])
   @@index([businessId, extractionAttemptId, fieldType])
+}
+
+model DocumentMatchRun {
+  id                    String                 @id @default(cuid())
+  businessId            String
+  documentId            String
+  extractionAttemptId   String
+  sourceSha256          String
+  sourceObjectVersion   String?
+  evidenceFingerprint   String
+  matchingEngineId      String
+  matchingEngineVersion String
+  status                DocumentMatchRunStatus @default(PROCESSING)
+  requestedByUserId     String
+  requestedAt           DateTime               @default(now())
+  completedAt           DateTime?
+  failureCode           String?
+  createdAt             DateTime               @default(now())
+
+  business    Business                  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  document    Document                  @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  extraction  DocumentExtractionAttempt @relation(fields: [businessId, extractionAttemptId], references: [businessId, id], onDelete: Restrict)
+  requestedBy BusinessMember            @relation("DocumentMatchRequestedBy", fields: [businessId, requestedByUserId], references: [businessId, userId], onDelete: Restrict)
+  suggestions DocumentMatchSuggestion[]
+  history     DocumentMatchHistory[]
+
+  @@unique([businessId, id])
+  @@index([businessId, documentId, requestedAt])
+  @@index([businessId, extractionAttemptId])
+}
+
+model DocumentMatchSuggestion {
+  id                  String                        @id @default(cuid())
+  businessId          String
+  runId               String
+  transactionId       String
+  score               Int
+  reasonCodes         Json
+  rank                Int
+  status              DocumentMatchSuggestionStatus @default(SUGGESTED)
+  transactionAmount   Decimal                       @db.Decimal(18, 2)
+  transactionPostedAt DateTime
+  transactionVersion  Int
+  createdAt           DateTime                      @default(now())
+  decidedAt           DateTime?
+
+  business    Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  run         DocumentMatchRun       @relation(fields: [businessId, runId], references: [businessId, id], onDelete: Restrict)
+  transaction Transaction            @relation(fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+  history     DocumentMatchHistory[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, runId, transactionId])
+  @@index([businessId, transactionId, createdAt])
+}
+
+model DocumentMatchHistory {
+  id           String                     @id @default(cuid())
+  businessId   String
+  runId        String
+  suggestionId String?
+  action       DocumentMatchHistoryAction
+  actorUserId  String
+  note         String?
+  createdAt    DateTime                   @default(now())
+
+  business   Business                 @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  run        DocumentMatchRun         @relation(fields: [businessId, runId], references: [businessId, id], onDelete: Restrict)
+  suggestion DocumentMatchSuggestion? @relation(fields: [businessId, suggestionId], references: [businessId, id], onDelete: Restrict)
+  actor      BusinessMember           @relation("DocumentMatchHistoryActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, runId, createdAt])
+  @@index([businessId, suggestionId, createdAt])
 }
 
 model DocumentExtractionHistory {

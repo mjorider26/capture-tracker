@@ -34,6 +34,7 @@
     "documents:verify": "node scripts/verify-documents-foundation.mjs",
     "document-links:verify": "node scripts/verify-document-links.mjs",
     "extraction:verify": "node scripts/verify-document-extraction.mjs",
+    "document-matching:verify": "node scripts/verify-document-matching.mjs",
     "cloud:migrate": "tsx scripts/cloud-migrate.ts",
     "cloud:build": "opennextjs-cloudflare build",
     "cloud:deploy:preview": "tsx scripts/deploy-free-preview.ts",
