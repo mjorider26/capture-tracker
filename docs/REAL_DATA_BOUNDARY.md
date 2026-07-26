@@ -21,3 +21,6 @@ The only future bootstrap is `cloud:bootstrap:fictional`. It is a CLI command, n
 ## Approval gate
 
 Real data requires a later, separate production-readiness decision and cannot be enabled by the staging profile. That decision must include deployed production infrastructure, separate credentials, backup/recovery evidence, document storage controls, access review, and explicit authorization. This Phase 9B preparation grants none of those approvals.
+# Pilot readiness clarification
+
+Onboarding, settings, activity viewing, and exports are fictional-only product workflows. They do not authorize real customer onboarding, provider access, deployment, or real-data export.

@@ -337,6 +337,10 @@ model Business {
   askAiEvidence              AskAiEvidence[]
   askAiFeedback              AskAiFeedback[]
   askAiEvents                AskAiEvent[]
+  onboarding                 BusinessOnboarding?
+  settings                   BusinessSettings?
+  settingsHistory            BusinessSettingsHistory[]
+  exportAudits               ExportAudit[]
   aiRecommendations          AIRecommendation[]
   approvalDecisions          ApprovalDecision[]
   ledgerAccounts             LedgerAccount[]
@@ -383,6 +387,9 @@ model BusinessMember {
   askAiRuns                    AskAiRun[]                    @relation("AskAiRunActor")
   askAiFeedback                AskAiFeedback[]               @relation("AskAiFeedbackActor")
   askAiEvents                  AskAiEvent[]                  @relation("AskAiEventActor")
+  onboardingChanges            BusinessOnboarding[]          @relation("BusinessOnboardingActor")
+  settingsChanges              BusinessSettingsHistory[]     @relation("BusinessSettingsHistoryActor")
+  exportAudits                 ExportAudit[]                 @relation("ExportAuditActor")
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -859,6 +866,22 @@ enum AskAiEventAction {
   FEEDBACK_RECORDED
 }
 
+enum OnboardingStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ExportKind {
+  TRANSACTIONS
+  JOURNAL
+  ACCOUNTS
+  REPORTS
+  DOCUMENTS
+  DOCUMENT_LINKS
+  WEEKLY_REVIEW
+  ASK_AI
+}
+
 enum ReviewTaskCategory {
   RECEIPT
   TRANSACTION_REVIEW
@@ -1257,6 +1280,66 @@ model AskAiEvent {
   actor    BusinessMember @relation("AskAiEventActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
 
   @@index([businessId, runId, createdAt])
+}
+
+model BusinessOnboarding {
+  id                    String           @id @default(cuid())
+  businessId            String           @unique
+  actorUserId           String
+  ownerDisplayName      String           @db.VarChar(120)
+  description           String?          @db.VarChar(500)
+  fictionalAcknowledged Boolean          @default(false)
+  chartConfirmed        Boolean          @default(false)
+  status                OnboardingStatus @default(IN_PROGRESS)
+  completedAt           DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  actor    BusinessMember @relation("BusinessOnboardingActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@unique([businessId, id])
+}
+
+model BusinessSettings {
+  id                  String   @id @default(cuid())
+  businessId          String   @unique
+  defaultReportPeriod String   @default("month") @db.VarChar(24)
+  weeklyReviewDay     Int      @default(1)
+  retentionMonths     Int      @default(84)
+  updatedAt           DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+}
+
+model BusinessSettingsHistory {
+  id          String   @id @default(cuid())
+  businessId  String
+  actorUserId String
+  changedJson Json
+  createdAt   DateTime @default(now())
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  actor    BusinessMember @relation("BusinessSettingsHistoryActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@index([businessId, createdAt])
+}
+
+model ExportAudit {
+  id          String     @id @default(cuid())
+  businessId  String
+  actorUserId String
+  kind        ExportKind
+  rowCount    Int
+  manifest    Json
+  createdAt   DateTime   @default(now())
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  actor    BusinessMember @relation("ExportAuditActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@index([businessId, createdAt])
 }
 
 model ReviewTask {

@@ -10,6 +10,8 @@ export const destinations = [
   { slug: "review", label: "Review", mark: "\u2713" },
   { slug: "reports", label: "Reports", mark: "\u2261" },
   { slug: "ask-ai", label: "Ask AI", mark: "\u2726" },
+  { slug: "activity", label: "Activity", mark: "\u25f4" },
+  { slug: "settings", label: "Settings", mark: "\u2699" },
 ] as const;
 
 export type Destination = (typeof destinations)[number]["slug"];
