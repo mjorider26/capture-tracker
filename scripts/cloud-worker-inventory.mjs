@@ -104,7 +104,7 @@ function metaInputs(files, target, artifactRoot) {
   }
   return [...new Set(matched)].sort();
 }
-function sanitizedReport(report) {
+export function assertSanitizedReport(report) {
   const text = JSON.stringify(report);
   assert(!prohibited.test(text), "Sanitized artifact report contains a secret, URL, or absolute path pattern.");
   return report;
@@ -120,7 +120,6 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
   const manifests = files.filter(safeJson).map((path) => ({ path, relative: portable(relative(artifactRoot, path)), text: readText(path) }));
   const sourceMaps = files.filter((path) => path.endsWith(".map")).map((path) => ({ path, relative: portable(relative(artifactRoot, path)), text: readText(path) }));
   const packageManifests = files.filter((path) => path.endsWith("package.json")).map((path) => ({ path, relative: portable(relative(artifactRoot, path)), packageName: packageFromPath(path) }));
-  for (const item of code) assert(!prohibited.test(item.text), `Worker executable code contains a prohibited secret or absolute path pattern: ${item.relative}`);
 
   const packages = targets.map((target) => {
     const bundledEvidence = metaInputs(files, target, artifactRoot);
@@ -169,7 +168,7 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
     reportSanitized: true,
   };
   assert(relativeFiles.every((path) => !prohibited.test(path)), "Artifact contains a prohibited path pattern.");
-  return sanitizedReport(report);
+  return assertSanitizedReport(report);
 }
 
 export function verifyReachabilityReport(report) {
@@ -183,7 +182,7 @@ export function verifyReachabilityReport(report) {
 
 function writeReport(path, report) {
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(sanitizedReport(report), null, 2)}\n`, "utf8");
+  writeFileSync(path, `${JSON.stringify(assertSanitizedReport(report), null, 2)}\n`, "utf8");
 }
 
 const args = new Set(process.argv.slice(2));

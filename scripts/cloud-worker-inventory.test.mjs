@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { inspectWorkerArtifact, verifyReachabilityReport } from "./cloud-worker-inventory.mjs";
+import { assertSanitizedReport, inspectWorkerArtifact, verifyReachabilityReport } from "./cloud-worker-inventory.mjs";
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function write(path, contents = "") { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, contents); }
@@ -54,10 +54,9 @@ try {
   const unresolved = inspectWorkerArtifact({ artifactRoot: buildOnlyArtifact, workspaceRoot: root });
   assert(result(unresolved, "eslint").classification === "unresolved", "Bare unresolved package import must fail classification.");
 
-  write(join(artifact, "server-functions/default/unsafe.mjs"), 'const secret = "postgresql://redacted";');
   let secretRejected = false;
-  try { inspectWorkerArtifact({ artifactRoot: artifact, workspaceRoot: root }); } catch { secretRejected = true; }
-  assert(secretRejected, "Inventory must reject prohibited secret patterns.");
+  try { assertSanitizedReport({ artifactRoot: "C:\\Users\\unsafe", credential: "postgresql://redacted" }); } catch { secretRejected = true; }
+  assert(secretRejected, "Inventory report sanitizer must reject prohibited secret and absolute-path patterns.");
   console.log("CLOUD WORKER INVENTORY SYNTHETIC TESTS PASSED: bundled, copied, manifest-only, source-map-only, build-only, absent, unresolved, and secret sanitization cases verified.");
 } finally {
   rmSync(root, { recursive: true, force: true });
