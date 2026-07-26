@@ -33,6 +33,7 @@ export default async function DemoDestinationPage({
       {destination === "today" ? (
         <TodayExperience
           dashboard={await getTodayDashboard(context.businessId)}
+          basePath="/demo"
         />
       ) : destination === "money" ? (
         <MoneyExperience

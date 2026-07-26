@@ -28,7 +28,7 @@ export function BrandIcon({
 }) {
   return (
     <Image
-      className={`h-auto w-auto object-contain ${className}`}
+      className={`object-contain ${className}`}
       src="/brand/capture-tracker-icon.png"
       alt={
         decorative

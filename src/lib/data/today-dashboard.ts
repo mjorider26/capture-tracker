@@ -12,6 +12,11 @@ import {
   orderReviewTasks,
   selectLatestTaxEstimate,
 } from "./today-dashboard-core";
+import { loadWeeklyReviewAttention } from "../services/weekly-review-counts";
+import {
+  prioritizeTodayAttention,
+  type TodayAttentionItem,
+} from "./today-dashboard-presentation";
 
 export type TodayDashboard = {
   businessName: string;
@@ -36,6 +41,12 @@ export type TodayDashboard = {
     explanation: string;
     status: "unknown" | "gap" | "surplus";
   };
+  cashVisual: {
+    availableCash: string;
+    dedicatedReserve: string | null;
+    reserveSharePercent: number | null;
+  };
+  attention: TodayAttentionItem[];
   weeklyReview: {
     status: string;
     estimatedMinutes: number;
@@ -253,6 +264,20 @@ export async function getTodayDashboard(
   const completedCount = orderedTasks.filter(
     (task) => task.status === "COMPLETED" || task.status === "DISMISSED",
   ).length;
+  const attentionCounts = await loadWeeklyReviewAttention(prisma, businessId);
+  const reviewTasks = orderedTasks.length - completedCount;
+  const reserveSharePercent =
+    reserve && cash.greaterThan(0)
+      ? Prisma.Decimal.min(
+          Prisma.Decimal.max(
+            reserve.dividedBy(cash).times(100),
+            new Prisma.Decimal(0),
+          ),
+          new Prisma.Decimal(100),
+        )
+          .toDecimalPlaces(0)
+          .toNumber()
+      : null;
 
   return {
     businessName: business.displayName,
@@ -311,7 +336,16 @@ export async function getTodayDashboard(
               explanation:
                 "Additional dedicated reserve is needed to cover the remaining projected obligation.",
               status: "gap",
-            },
+          },
+    cashVisual: {
+      availableCash: formatUsd(cash),
+      dedicatedReserve: reserve ? formatUsd(reserve) : null,
+      reserveSharePercent,
+    },
+    attention: prioritizeTodayAttention({
+      ...attentionCounts,
+      reviewTasks,
+    }),
     weeklyReview: review
       ? {
           status: review.status,

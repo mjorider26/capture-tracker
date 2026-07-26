@@ -28,6 +28,7 @@ export default async function ApplicationDestinationPage({
     destination === "today" ? (
       <TodayExperience
         dashboard={await getTodayDashboard(context.business.id)}
+        basePath="/app"
       />
     ) : destination === "money" ? (
       <MoneyExperience
