@@ -13,6 +13,7 @@ const ids = {
   checking: "demo-financial-account-business-checking",
   creditCard: "demo-financial-account-business-credit-card",
   personalCard: "demo-financial-account-personal-card",
+  office: "demo-transaction-office-supplies",
   mixed: "demo-transaction-mixed-purpose",
   claim: "demo-reimbursement-claim-july",
   payroll: "demo-payroll-run-july",
@@ -20,6 +21,10 @@ const ids = {
   taxEstimate: "demo-quarterly-tax-estimate-q3",
   weeklyReview: "demo-weekly-review-july-20",
   reconciliation: "demo-reconciliation-business-checking-july-2026",
+  officeReceipt: "demo-document-office-receipt",
+  julyStatement: "demo-document-july-statement",
+  sharedClientReceipt: "demo-document-shared-client-receipt",
+  unlinkedReceipt: "demo-document-unlinked-receipt",
 };
 
 const entryIds = [
@@ -319,6 +324,18 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
   assert(reconciliation.financialAccountId === ids.checking && reconciliation.financialAccount.ownership === "BUSINESS", "The deterministic reconciliation account is invalid.");
   assert(reconciliation.statementOpeningBalance.equals("0.00") && reconciliation.statementEndingBalance.equals("3550.00") && reconciliation.items.length === 0, "The deterministic reconciliation baseline is invalid.");
 
+  const [documents, activeLinks, officeHistory] = await Promise.all([
+    client.document.findMany({ where: { id: { in: [ids.officeReceipt, ids.julyStatement, ids.sharedClientReceipt, ids.unlinkedReceipt] } } }),
+    client.transactionDocument.findMany({ where: { businessId: ids.business, unlinkedAt: null }, select: { transactionId: true, documentId: true } }),
+    client.transactionDocumentHistory.findMany({ where: { businessId: ids.business, link: { transactionId: ids.office, documentId: ids.officeReceipt } }, select: { action: true } }),
+  ]);
+  assert(documents.length === 4 && documents.every((document) => document.status === "ACTIVE" && document.storageState === "STORED_PRIVATE" && document.malwareScanStatus === "CLEAN" && document.privateReadEligible), "The deterministic document-link demo documents are invalid.");
+  assert(activeLinks.some((link) => link.transactionId === ids.office && link.documentId === ids.officeReceipt), "The receipt link is missing.");
+  assert(activeLinks.filter((link) => link.transactionId === "demo-transaction-internet-service").length === 2, "The multi-document transaction demo is incomplete.");
+  assert(activeLinks.filter((link) => link.documentId === ids.sharedClientReceipt).length === 2, "The shared document demo is incomplete.");
+  assert(!activeLinks.some((link) => link.documentId === ids.unlinkedReceipt), "The active unlinked document demo is invalid.");
+  assert(officeHistory.filter((event) => event.action === "LINKED").length === 2 && officeHistory.filter((event) => event.action === "UNLINKED").length === 1, "The deterministic relink history is incomplete.");
+
   const identityText = [
     user.displayName,
     user.email,
@@ -339,7 +356,7 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
 
   console.log("DEMO SEED VERIFIED");
   console.log(
-    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=9, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=11, journalEntries=6, journalLines=18, accountingPeriods=1, reconciliations=1",
+    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=9, documents=4, activeDocumentLinks=4, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=11, journalEntries=6, journalLines=18, accountingPeriods=1, reconciliations=1",
   );
 }
 

@@ -79,6 +79,11 @@ enum DocumentStorageState {
   STORAGE_FAILED
 }
 
+enum TransactionDocumentLinkAction {
+  LINKED
+  UNLINKED
+}
+
 enum MalwareScanStatus {
   NOT_STARTED
   PENDING
@@ -240,29 +245,30 @@ model Business {
   updatedAt            DateTime @updatedAt
   version              Int      @default(1)
 
-  members               BusinessMember[]
-  accounts              FinancialAccount[]
-  transactions          Transaction[]
-  documents             Document[]
-  documentStatusHistory DocumentStatusHistory[]
-  transactionDocuments  TransactionDocument[]
-  auditEvents           AuditEvent[]
-  reimbursementClaims   ReimbursementClaim[]
-  reimbursementExpenses ReimbursementExpense[]
-  payrollRuns           PayrollRun[]
-  ownerDistributions    OwnerDistribution[]
-  quarterlyTaxEstimates QuarterlyTaxEstimate[]
-  taxPaymentRecords     TaxPaymentRecord[]
-  weeklyReviews         WeeklyReview[]
-  aiRecommendations     AIRecommendation[]
-  approvalDecisions     ApprovalDecision[]
-  ledgerAccounts        LedgerAccount[]
-  journalEntries        JournalEntry[]
-  journalLines          JournalLine[]
-  accountingPeriods     AccountingPeriod[]
-  reconciliations       Reconciliation[]
-  reconciliationItems   ReconciliationItem[]
-  postingRules          PostingRule[]
+  members                    BusinessMember[]
+  accounts                   FinancialAccount[]
+  transactions               Transaction[]
+  documents                  Document[]
+  documentStatusHistory      DocumentStatusHistory[]
+  transactionDocuments       TransactionDocument[]
+  transactionDocumentHistory TransactionDocumentHistory[]
+  auditEvents                AuditEvent[]
+  reimbursementClaims        ReimbursementClaim[]
+  reimbursementExpenses      ReimbursementExpense[]
+  payrollRuns                PayrollRun[]
+  ownerDistributions         OwnerDistribution[]
+  quarterlyTaxEstimates      QuarterlyTaxEstimate[]
+  taxPaymentRecords          TaxPaymentRecord[]
+  weeklyReviews              WeeklyReview[]
+  aiRecommendations          AIRecommendation[]
+  approvalDecisions          ApprovalDecision[]
+  ledgerAccounts             LedgerAccount[]
+  journalEntries             JournalEntry[]
+  journalLines               JournalLine[]
+  accountingPeriods          AccountingPeriod[]
+  reconciliations            Reconciliation[]
+  reconciliationItems        ReconciliationItem[]
+  postingRules               PostingRule[]
 
   @@index([legalName])
 }
@@ -276,14 +282,17 @@ model BusinessMember {
   updatedAt  DateTime     @updatedAt
   version    Int          @default(1)
 
-  business              Business                @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approvedTransactions  Transaction[]           @relation("TransactionApproverMembership")
-  uploadedDocuments     Document[]              @relation("DocumentUploaderMembership")
-  documentStatusHistory DocumentStatusHistory[] @relation("DocumentStatusHistoryActor")
-  auditEvents           AuditEvent[]            @relation("AuditActorMembership")
-  reimbursementClaims   ReimbursementClaim[]    @relation("ReimbursementClaimantMembership")
-  approvalDecisions     ApprovalDecision[]      @relation("ApprovalReviewerMembership")
+  business                     Business                     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user                         User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedTransactions         Transaction[]                @relation("TransactionApproverMembership")
+  uploadedDocuments            Document[]                   @relation("DocumentUploaderMembership")
+  documentStatusHistory        DocumentStatusHistory[]      @relation("DocumentStatusHistoryActor")
+  auditEvents                  AuditEvent[]                 @relation("AuditActorMembership")
+  reimbursementClaims          ReimbursementClaim[]         @relation("ReimbursementClaimantMembership")
+  approvalDecisions            ApprovalDecision[]           @relation("ApprovalReviewerMembership")
+  linkedTransactionDocuments   TransactionDocument[]        @relation("TransactionDocumentLinkedBy")
+  unlinkedTransactionDocuments TransactionDocument[]        @relation("TransactionDocumentUnlinkedBy")
+  transactionDocumentHistory   TransactionDocumentHistory[] @relation("TransactionDocumentHistoryActor")
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -453,18 +462,43 @@ model DocumentStatusHistory {
 }
 
 model TransactionDocument {
-  businessId    String
-  transactionId String
-  documentId    String
-  attachedAt    DateTime @default(now())
-  version       Int      @default(1)
+  id               String    @id @default(cuid())
+  businessId       String
+  transactionId    String
+  documentId       String
+  attachedAt       DateTime  @default(now())
+  linkedByUserId   String
+  unlinkedAt       DateTime?
+  unlinkedByUserId String?
+  unlinkReason     String?
+  version          Int       @default(1)
 
-  business    Business    @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  transaction Transaction @relation(fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
-  document    Document    @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  business    Business                     @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  transaction Transaction                  @relation(fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+  document    Document                     @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  linkedBy    BusinessMember               @relation("TransactionDocumentLinkedBy", fields: [businessId, linkedByUserId], references: [businessId, userId], onDelete: Restrict)
+  unlinkedBy  BusinessMember?              @relation("TransactionDocumentUnlinkedBy", fields: [businessId, unlinkedByUserId], references: [businessId, userId], onDelete: Restrict)
+  history     TransactionDocumentHistory[]
 
-  @@id([businessId, transactionId, documentId])
-  @@index([businessId, documentId])
+  @@unique([businessId, id])
+  @@index([businessId, transactionId, attachedAt])
+  @@index([businessId, documentId, attachedAt])
+}
+
+model TransactionDocumentHistory {
+  id                    String                        @id @default(cuid())
+  businessId            String
+  transactionDocumentId String
+  action                TransactionDocumentLinkAction
+  actorUserId           String
+  note                  String?
+  createdAt             DateTime                      @default(now())
+
+  business Business            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  link     TransactionDocument @relation(fields: [businessId, transactionDocumentId], references: [businessId, id], onDelete: Restrict)
+  actor    BusinessMember      @relation("TransactionDocumentHistoryActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@index([businessId, transactionDocumentId, createdAt])
 }
 
 /// USER events require a membership; SYSTEM events must not reference one.

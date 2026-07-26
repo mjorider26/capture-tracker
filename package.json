@@ -32,6 +32,7 @@
     "check:accounting": "npm run fullpg:prepare && npm run fullpg:seed && npm run postgres:verify && npm run test:integration:postgres && npm run postgres:write:validate",
     "today:verify": "tsx scripts/verify-today-dashboard.ts",
     "documents:verify": "node scripts/verify-documents-foundation.mjs",
+    "document-links:verify": "node scripts/verify-document-links.mjs",
     "cloud:migrate": "tsx scripts/cloud-migrate.ts",
     "cloud:build": "opennextjs-cloudflare build",
     "cloud:deploy:preview": "tsx scripts/deploy-free-preview.ts",

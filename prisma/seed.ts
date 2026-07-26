@@ -25,6 +25,10 @@ const ids = {
   reimbursementPayment: "demo-transaction-reimbursement-payment",
   distribution: "demo-transaction-owner-distribution",
   pendingReview: "demo-transaction-pending-review",
+  officeReceipt: "demo-document-office-receipt",
+  julyStatement: "demo-document-july-statement",
+  sharedClientReceipt: "demo-document-shared-client-receipt",
+  unlinkedReceipt: "demo-document-unlinked-receipt",
   mixedBusinessSplit: "demo-split-mixed-business",
   mixedPersonalSplit: "demo-split-mixed-personal",
   claim: "demo-reimbursement-claim-july",
@@ -111,10 +115,67 @@ async function assertNoUnexpectedDevelopmentData(): Promise<void> {
   }
 }
 
+async function restoreDemoDocumentLinks(): Promise<void> {
+  const documents = [
+    [ids.officeReceipt, "field-office-supplies-receipt.pdf", "Field office supplies receipt", "RECEIPT", "RECEIPT", "2026-07-05", "1"],
+    [ids.julyStatement, "northstar-july-statement.pdf", "July business checking statement", "BANK_STATEMENT", "BANK_STATEMENT", "2026-07-31", "2"],
+    [ids.sharedClientReceipt, "client-site-travel-receipt.pdf", "Client-site travel receipt", "RECEIPT", "RECEIPT", "2026-07-10", "3"],
+    [ids.unlinkedReceipt, "unfiled-field-receipt.pdf", "Unfiled field receipt", "RECEIPT", "RECEIPT", "2026-07-19", "4"],
+  ] as const;
+  await prisma.$transaction(async (tx) => {
+    for (const [id, originalFilename, displayName, type, category, documentDate, suffix] of documents) {
+      await tx.document.upsert({
+        where: { id },
+        create: {
+          id, businessId: ids.business, uploadedByMembershipId: ids.user,
+          storageKey: `fictional-demo/document-${suffix}`,
+          originalFilename, displayName, mimeType: "application/pdf", detectedMimeType: "application/pdf",
+          sizeBytes: BigInt(2048), storedSizeBytes: BigInt(2048), sha256: suffix.repeat(64), type, category,
+          status: "ACTIVE", storageState: "STORED_PRIVATE", storageProvider: "fictional-demo",
+          uploadCompletedAt: date(documentDate), privateReadEligible: true, documentDate: date(documentDate),
+          malwareScanStatus: "CLEAN", malwareScanProvider: "fictional-demo", malwareScannedAt: date(documentDate),
+          retentionClass: "GENERAL_TAX_SEVEN_YEARS", retentionUntil: date("2033-12-31"), activatedAt: date(documentDate),
+        },
+        update: { displayName, originalFilename, category, type, status: "ACTIVE", storageState: "STORED_PRIVATE", privateReadEligible: true, malwareScanStatus: "CLEAN", deletedAt: null },
+      });
+      await tx.documentStatusHistory.upsert({
+        where: { id: `demo-document-status-${suffix}` },
+        create: { id: `demo-document-status-${suffix}`, businessId: ids.business, documentId: id, newStatus: "ACTIVE", actorUserId: ids.user, note: "Fictional deterministic demo document." },
+        update: {},
+      });
+    }
+    const links = [
+      ["demo-link-office-receipt-old", ids.office, ids.officeReceipt, "2026-07-05", "2026-07-06"],
+      ["demo-link-office-receipt-current", ids.office, ids.officeReceipt, "2026-07-07", null],
+      ["demo-link-internet-statement", ids.internet, ids.julyStatement, "2026-07-12", null],
+      ["demo-link-internet-shared-receipt", ids.internet, ids.sharedClientReceipt, "2026-07-12", null],
+      ["demo-link-personally-paid-shared-receipt", ids.personallyPaid, ids.sharedClientReceipt, "2026-07-10", null],
+    ] as const;
+    for (const [id, transactionId, documentId, attached, unlinked] of links) {
+      await tx.transactionDocument.upsert({
+        where: { id },
+        create: { id, businessId: ids.business, transactionId, documentId, attachedAt: date(attached), linkedByUserId: ids.user, unlinkedAt: unlinked ? date(unlinked) : null, unlinkedByUserId: unlinked ? ids.user : null, unlinkReason: unlinked ? "Fictional demo relink." : null },
+        update: { unlinkedAt: unlinked ? date(unlinked) : null, unlinkedByUserId: unlinked ? ids.user : null, unlinkReason: unlinked ? "Fictional demo relink." : null },
+      });
+      await tx.transactionDocumentHistory.upsert({
+        where: { id: `demo-history-linked-${id}` },
+        create: { id: `demo-history-linked-${id}`, businessId: ids.business, transactionDocumentId: id, action: "LINKED", actorUserId: ids.user, createdAt: date(attached) },
+        update: {},
+      });
+      if (unlinked) await tx.transactionDocumentHistory.upsert({
+        where: { id: `demo-history-unlinked-${id}` },
+        create: { id: `demo-history-unlinked-${id}`, businessId: ids.business, transactionDocumentId: id, action: "UNLINKED", actorUserId: ids.user, note: "Fictional demo relink.", createdAt: date(unlinked) },
+        update: {},
+      });
+    }
+  });
+}
+
 async function seed(): Promise<void> {
   const existingCount = await existingDemoRecordCount();
   if (existingCount > 0) {
     await restoreDemoMoneyBaseline(prisma);
+    await restoreDemoDocumentLinks();
     await verifyDemoSeed(prisma);
     console.log(
       "Restored the mutable deterministic Money baseline and verified demo data.",
@@ -762,6 +823,8 @@ async function seed(): Promise<void> {
       },
     });
   });
+
+  await restoreDemoDocumentLinks();
 
   await verifyDemoSeed(prisma);
   console.log(

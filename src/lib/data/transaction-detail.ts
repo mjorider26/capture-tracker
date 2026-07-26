@@ -61,7 +61,7 @@ export async function getTransactionDetailForBusiness(
         orderBy: [{ intent: "asc" }, { id: "asc" }],
         select: { id: true, intent: true, amount: true, memo: true },
       },
-      documents: { select: { documentId: true } },
+      documents: { where: { unlinkedAt: null }, select: { documentId: true } },
       reimbursementExpenses: { select: { id: true } },
       reimbursementPayments: { select: { id: true } },
       journalEntry: {

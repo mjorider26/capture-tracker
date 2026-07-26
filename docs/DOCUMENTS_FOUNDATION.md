@@ -10,4 +10,14 @@ Private content requires normal authenticated business resolution plus a compact
 
 The repository includes an inactive Worker-compatible R2 adapter boundary using only a future R2 binding contract. It supports pending/active/quarantine namespaces, private puts/gets/heads, copy-and-delete promotion with compensation, and cleanup. There is no real binding, bucket name, account ID, key, provider call, or public URL; it fails closed when the binding is absent.
 
-The retention target remains seven calendar years from the document date (or creation baseline), not legal or tax advice. Phase 10C may add transaction linking only after separate approval. OCR, extraction, AI, email ingestion, retention deletion, provider activation, deployment, and real-document use remain out of scope.
+The retention target remains seven calendar years from the document date (or creation baseline), not legal or tax advice.
+
+## Phase 10C — transaction links
+
+Documents and transactions are related through append-only relationship rows. Each relationship has a stable ID, actor, link timestamp, optional unlink metadata, and immutable `LINKED` / `UNLINKED` history. PostgreSQL enforces one active relationship for a `(businessId, transactionId, documentId)` pair with a partial unique index. Unlinking closes that relationship without deleting document bytes or the transaction; relinking creates a new relationship and a new `LINKED` event, retaining all earlier rows and events.
+
+Both foreign-key paths use the business ID as part of their composite keys, so a relationship, actor, history event, document, and transaction cannot cross a business boundary. Only active, clean, privately stored, read-eligible documents may be newly linked. Detail selectors are business-scoped and capped at 50 records; they never return storage keys, local paths, or permanent URLs.
+
+Authenticated document and Money detail pages can link, unlink, and relink. Linked-document opens reuse the existing five-minute actor/business/document-bound private read grant; no new public URL or browser storage access is introduced. Link changes do not mutate transactions, journal entries, journal lines, accounts, reconciliation state, or accounting values.
+
+The deterministic fictional demo includes a receipt link, a transaction with two documents, a clean active unlinked document, a document shared by two transactions, and a preserved unlink/relink history. It includes no uploaded binary files. OCR, extraction, automatic matching, AI suggestions, email ingestion, retention deletion, provider activation, deployment, and real-document use remain out of scope.

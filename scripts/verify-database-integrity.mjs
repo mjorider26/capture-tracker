@@ -67,6 +67,7 @@ const expectedConstraints = [
   "journal_line_number_positive",
   "posting_rule_accounts_differ",
   "reconciliation_statement_date_order",
+  "TransactionDocument_unlink_integrity",
 ];
 
 const expectedFunctions = [
