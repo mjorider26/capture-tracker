@@ -45,6 +45,7 @@
     "pilot:verify": "node scripts/verify-pilot-readiness.mjs pilot",
     "pilot:smoke": "node scripts/pilot-smoke.mjs",
     "v1:verify": "npm run check:phase && npm run check:accounting && npm run activity:verify && npm run pilot:smoke && npm run data-boundary:verify && npm run client-secret:verify",
+    "rehearsal:backup-restore": "node scripts/phase14a-backup-restore.mjs",
     "cloud:migrate": "tsx scripts/cloud-migrate.ts",
     "cloud:build": "opennextjs-cloudflare build",
     "cloud:deploy:preview": "tsx scripts/deploy-free-preview.ts",

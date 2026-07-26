@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-This is a local, fictional, non-deploy rehearsal at commit `991bcbf`. Functional v1 is complete, but no staging or production resource is authorized. The repository and local validation gates pass; the authoritative runtime-audit endpoint remains unavailable and blocks staging. The local backup/restore proof was safely attempted but is **not ready** because this workstation lacks `pg_dump`, `pg_restore`, and `psql`; no database was destroyed.
+This is a local, fictional, non-deploy rehearsal at commit `991bcbf`. Functional v1 is complete, but no staging or production resource is authorized. The repository and local validation gates pass; the authoritative runtime-audit endpoint remains unavailable and blocks staging. The local backup/restore proof passed with PostgreSQL 17.10 client tools and a disposable local rehearsal database.
 
 ## Evidence and local inventory
 
@@ -10,18 +10,18 @@ This is a local, fictional, non-deploy rehearsal at commit `991bcbf`. Functional
 | --- | --- |
 | Node / npm / Prisma | v24.18.0 / 11.16.0 / 7.9.0 |
 | Wrangler / OpenNext | 4.114.0 / 1.20.2 (locked build tooling) |
-| PostgreSQL client tools | Not installed: `pg_dump`, `pg_restore`, `psql` unavailable |
+| PostgreSQL client tools | Absolute PostgreSQL 17.10 executables supplied and used |
 | Repository boundary scan | Pass; fictional data only, no detected credentials |
 | Git ignores | `.artifacts/`, `.document-storage/`, and `.env*` ignored |
 | Cloud state | No Cloudflare, Neon, R2, AWS, provider account, credential, or deployment accessed |
 
-## 1. Database backup and restore proof — NOT READY
+## 1. Database backup and restore proof — READY
 
 **Procedure planned:** create only `capture_tracker_phase14a_rehearsal` on localhost; migrate and seed fictional data; record a sanitized aggregate manifest; run `pg_dump --format=custom --no-owner --no-privileges`; SHA-256 the archive; inspect with `pg_restore --list`; terminate only rehearsal connections; drop/recreate that exact database; restore; `ANALYZE`; compare migration, row-count, ledger, report, history, and integrity manifests.
 
 **Destructive guard:** host must be localhost/127.0.0.1/local socket; database name must contain `phase14a_rehearsal`; environment must not be production; real-data approval must be false; `ALLOW_PHASE14A_DATABASE_DESTROY=true` and a disposable-fictional confirmation must both be supplied. Generic `DATABASE_URL`, remote hosts, and normal development databases are rejected by design.
 
-**Attempt and timing:** 2026-07-26 UTC preflight completed in under one minute. The proof stopped before creating or dropping a database because all required PostgreSQL client executables were absent from `PATH`. No dump, archive, log, private storage output, or restored file exists.
+**Result and timing:** 2026-07-26 UTC proof passed in 1,310 ms. It created/destroyed only `capture_tracker_phase14a_rehearsal`, produced a 262,418-byte custom archive, inspected its table of contents, restored it, ran `ANALYZE`, and reconciled manifests. Sanitized totals: 49 tables; 1 business; 9 transactions; 6 journal entries; 18 lines; $9,263.00 debits and credits; 4 documents; 1 Weekly Review; migration hash `a2c4a528e0470327`. The archive was removed from ignored `.artifacts/` after verification.
 
 **Provisional human targets:** RPO ≤24 hours, RTO ≤4 hours, daily logical export plus provider PITR where available, 30-day operational retention, quarterly restore test, encrypted owner-controlled backup, and an off-provider copy after approval. These are recommendations, not policy.
 
@@ -69,7 +69,7 @@ Public pricing checked 2026-07-26: Cloudflare publishes Workers Free at 100,000 
 
 | Workstream | Status | Evidence | Remaining blocker |
 | --- | --- | --- | --- |
-| Database backup/restore | NOT READY | guard designed; client tools absent | Install approved PostgreSQL clients, then perform fictional proof |
+| Database backup/restore | READY | guarded local custom-archive destroy/restore proof passed | provider backup/PITR plan still needs human approval |
 | Deployment rehearsal | READY FOR AUTHORIZED PHASE 14B | local builds/scans/synths | audit endpoint and human authorization |
 | Monitoring design | READY FOR IMPLEMENTATION | signal/severity/log design above | owners/channels/provider approval |
 | Incident response | READY FOR HUMAN APPROVAL | four playbooks above | incident commander and communications approval |
@@ -80,7 +80,7 @@ Public pricing checked 2026-07-26: Cloudflare publishes Workers Free at 100,000 
 
 Required approvals: architecture, account/billing owners, pilot/production cost caps, database/storage regions, residency/privacy/retention, RPO/RTO/backup/off-provider policy, monitoring provider/channels/recipients, incident commander, secrets owner/rotation, scanning/OCR/Ask-AI provider decisions, fictional staging, production, real-data use, and pilot onboarding. No decision is implied by this report.
 
-**Phase 14B entry:** explicit written authorization; reviewed passing authoritative runtime audit; provider/budget/owner/region decisions; approved PostgreSQL client installation and a passing fictional restore proof; approved alert/incident ownership; signed fictional-staging checklist; and confirmation that real-data approval remains false. Phase 14B is not authorized by this phase.
+**Phase 14B entry:** explicit written authorization; reviewed passing authoritative runtime audit; provider/budget/owner/region decisions; the passing fictional restore proof recorded above; approved alert/incident ownership; signed fictional-staging checklist; and confirmation that real-data approval remains false. Phase 14B is not authorized by this phase.
 
 ## Confirmation
 
