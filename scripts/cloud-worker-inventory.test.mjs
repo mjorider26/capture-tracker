@@ -34,7 +34,7 @@ try {
   assert(result(report, "prisma").classification === "build-time only", "Prisma CLI fixture must be excluded from the artifact.");
   assert(result(report, "aws-cdk-lib").classification === "absent", "AWS CDK fixture must be absent.");
   assert(result(report, "vitest").classification === "absent", "Test tooling fixture must be absent.");
-  assert(result(report, "pg-cloudflare").classification === "copied runtime package" && result(report, "pg-cloudflare").requestTimeReachability === "unresolved", "Copied pg-cloudflare without an executable reference must remain unresolved.");
+  assert(result(report, "pg-cloudflare").classification === "copied runtime package" && result(report, "pg-cloudflare").requestTimeReachability === "reachable", "Copied pg-cloudflare must be treated as reachable Worker runtime evidence.");
   assert(!JSON.stringify(report).includes(root), "Inventory report must not include an absolute fixture path.");
   let rejected = false;
   try { verifyReachabilityReport(report); } catch { rejected = true; }

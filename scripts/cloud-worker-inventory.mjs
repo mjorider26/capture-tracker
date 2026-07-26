@@ -136,10 +136,15 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
     else if (manifestEvidence.length > 0) classification = "referenced only by a build manifest";
     else if (installedVersion) classification = "build-time only";
 
+    // A package manifest copied beneath a generated server function is runtime
+    // evidence, not merely a lockfile or source-map mention. OpenNext creates
+    // that tree for Worker request handling; treating it as unresolved would
+    // hide a copied high-severity package from the release gate. This remains
+    // deliberately stricter than manifest/source-map evidence, which is not
+    // executable and stays not-reachable.
     let requestTimeReachability = "not-reachable";
     if (classification === "unresolved") requestTimeReachability = "unresolved";
-    else if (classification === "bundled in Worker executable code" || codeEvidence.length > 0) requestTimeReachability = "reachable";
-    else if (classification === "copied runtime package") requestTimeReachability = "unresolved";
+    else if (classification === "bundled in Worker executable code" || classification === "copied runtime package" || codeEvidence.length > 0) requestTimeReachability = "reachable";
 
     return {
       package: target.name,
