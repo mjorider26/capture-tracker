@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -16,6 +16,48 @@ function command() {
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
+function hasAuditSchema(value) {
+  return Boolean(value && typeof value === "object" && value.metadata?.vulnerabilities && value.vulnerabilities && typeof value.vulnerabilities === "object");
+}
+function extractJsonObjects(output) {
+  const objects = [];
+  for (let start = output.indexOf("{"); start >= 0; start = output.indexOf("{", start + 1)) {
+    let depth = 0;
+    let quote = false;
+    let escaped = false;
+    for (let index = start; index < output.length; index += 1) {
+      const character = output[index];
+      if (quote) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === '"') quote = false;
+        continue;
+      }
+      if (character === '"') quote = true;
+      else if (character === "{") depth += 1;
+      else if (character === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          try { objects.push(JSON.parse(output.slice(start, index + 1))); } catch { /* Continue searching for a complete JSON object. */ }
+          break;
+        }
+      }
+    }
+  }
+  return objects;
+}
+function unavailableAuditResponse(values) {
+  return /(?:EAI_AGAIN|ECONNREFUSED|ENETUNREACH|ENOTFOUND|ETIMEDOUT|EAUDIT|audit (?:endpoint|service).*(?:unavailable|failed)|registry.*unavailable)/i.test(values.filter(Boolean).join("\n"));
+}
+export function parseAuditCommandResult({ stdout = "", stderr = "", exitCode = 0, spawnError = null }) {
+  const candidates = extractJsonObjects(String(stdout));
+  const payload = candidates.find(hasAuditSchema);
+  if (payload) return { endpointStatus: "available", payload };
+  if (unavailableAuditResponse([stdout, stderr, spawnError])) return { endpointStatus: "unavailable", payload: null };
+  if (candidates.length > 0 || String(stdout).trim()) return { endpointStatus: "malformed", payload: null };
+  if (spawnError || exitCode !== 0 || String(stderr).trim()) return { endpointStatus: "unavailable", payload: null };
+  return { endpointStatus: "malformed", payload: null };
+}
 function sanitized(value, state) {
   if (typeof value !== "string") return value;
   if (!prohibited.test(value)) return value;
@@ -23,6 +65,7 @@ function sanitized(value, state) {
   return "[redacted]";
 }
 function advisoryId(via) {
+  if (Number.isInteger(via.source)) return `NPM-AUDIT-${via.source}`;
   const candidates = [via.url, via.source, via.name].filter((value) => typeof value === "string");
   for (const value of candidates) {
     const match = value.match(/GHSA-[\w-]+/i);
@@ -68,7 +111,7 @@ export function classifyPackage(packageName, inventory) {
   if (runtimeWithoutTarget.has(packageName)) return "server/runtime dependency outside the Worker entry path";
   return "absent from deployed artifact";
 }
-export function createRuntimeAuditReport({ payload, inventory, now = new Date(), nodeVersion = process.version, npmVersion = "unknown", lockfileVersion = null, lockfileClean = true }) {
+export function createRuntimeAuditReport({ payload, endpointStatus, inventory, now = new Date(), nodeVersion = process.version, npmVersion = "unknown", lockfileVersion = null, lockfileClean = true }) {
   const state = { redactions: 0 };
   const base = {
     schemaVersion: 2,
@@ -79,8 +122,9 @@ export function createRuntimeAuditReport({ payload, inventory, now = new Date(),
     command: "npm audit --omit=dev --json",
     lockfileClean,
   };
-  if (payload === null) return { ...base, endpointStatus: "unavailable", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-unavailable" };
-  if (!payload || typeof payload !== "object" || !payload.metadata?.vulnerabilities || !payload.vulnerabilities || typeof payload.vulnerabilities !== "object") {
+  const status = endpointStatus ?? (payload === null ? "unavailable" : "available");
+  if (status === "unavailable") return { ...base, endpointStatus: "unavailable", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-unavailable" };
+  if (status === "malformed" || !hasAuditSchema(payload)) {
     return { ...base, endpointStatus: "malformed", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed" };
   }
   assert(inventory?.schemaVersion === 1 && inventory.reportSanitized === true && Array.isArray(inventory.packages), "Sanitized Worker inventory is missing or invalid.");
@@ -128,12 +172,13 @@ export function verifyRuntimeAuditReport(report) {
   return report;
 }
 function auditPayload() {
-  try {
-    return JSON.parse(execFileSync(command(), ["audit", "--omit=dev", "--json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
-  } catch (error) {
-    const output = `${error.stdout ?? ""}`;
-    try { return JSON.parse(output); } catch { return null; }
-  }
+  const result = spawnSync(command(), ["audit", "--omit=dev", "--json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  return parseAuditCommandResult({
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    exitCode: result.status ?? 1,
+    spawnError: result.error?.code ?? null,
+  });
 }
 function npmVersion() {
   try { return execFileSync(command(), ["--version"], { encoding: "utf8" }).trim(); } catch { return "unknown"; }
@@ -158,7 +203,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const inventory = existsSync(inventoryPath) ? readJson(inventoryPath) : null;
   let report;
   try {
-    report = createRuntimeAuditReport({ payload: auditPayload(), inventory, npmVersion: npmVersion(), lockfileVersion: lock.lockfileVersion ?? null, lockfileClean: lockfileClean() });
+    const audit = auditPayload();
+    report = createRuntimeAuditReport({ ...audit, inventory, npmVersion: npmVersion(), lockfileVersion: lock.lockfileVersion ?? null, lockfileClean: lockfileClean() });
   } catch (error) {
     report = { schemaVersion: 2, endpointStatus: "malformed", command: "npm audit --omit=dev --json", advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed", error: "sanitized-report-construction-failed" };
     writeReport(report);
