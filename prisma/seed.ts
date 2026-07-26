@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { type JournalEntrySourceType } from "../src/generated/prisma/client";
 import { createPrismaClient } from "../src/lib/database/create-prisma-client";
 import { requireSafeDemoDatabase } from "../scripts/demo-seed-safety";
@@ -128,7 +130,7 @@ async function restoreDemoDocumentLinks(): Promise<void> {
         where: { id },
         create: {
           id, businessId: ids.business, uploadedByMembershipId: ids.user,
-          storageKey: `fictional-demo/document-${suffix}`,
+          storageKey: `fictional-demo-document-${suffix}`,
           originalFilename, displayName, mimeType: "application/pdf", detectedMimeType: "application/pdf",
           sizeBytes: BigInt(2048), storedSizeBytes: BigInt(2048), sha256: suffix.repeat(64), type, category,
           status: "ACTIVE", storageState: "STORED_PRIVATE", storageProvider: "fictional-demo",
@@ -136,7 +138,7 @@ async function restoreDemoDocumentLinks(): Promise<void> {
           malwareScanStatus: "CLEAN", malwareScanProvider: "fictional-demo", malwareScannedAt: date(documentDate),
           retentionClass: "GENERAL_TAX_SEVEN_YEARS", retentionUntil: date("2033-12-31"), activatedAt: date(documentDate),
         },
-        update: { displayName, originalFilename, category, type, status: "ACTIVE", storageState: "STORED_PRIVATE", privateReadEligible: true, malwareScanStatus: "CLEAN", deletedAt: null },
+        update: { displayName, originalFilename, category, type, storageKey: `fictional-demo-document-${suffix}`, status: "ACTIVE", storageState: "STORED_PRIVATE", privateReadEligible: true, malwareScanStatus: "CLEAN", deletedAt: null },
       });
       await tx.documentStatusHistory.upsert({
         where: { id: `demo-document-status-${suffix}` },
@@ -169,6 +171,12 @@ async function restoreDemoDocumentLinks(): Promise<void> {
       });
     }
   });
+  const activeRoot = join(process.cwd(), ".document-storage", "active");
+  await mkdir(activeRoot, { recursive: true });
+  await Promise.all(["1", "2", "3", "4"].map(async (suffix) => {
+    try { await writeFile(join(activeRoot, `fictional-demo-document-${suffix}`), "%PDF-1.4\n% fictional Capture Tracker extraction fixture\n", { flag: "wx" }); }
+    catch (error) { if (!(typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST")) throw error; }
+  }));
 }
 
 async function seed(): Promise<void> {

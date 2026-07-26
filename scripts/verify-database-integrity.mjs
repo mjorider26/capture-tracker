@@ -68,6 +68,8 @@ const expectedConstraints = [
   "posting_rule_accounts_differ",
   "reconciliation_statement_date_order",
   "TransactionDocument_unlink_integrity",
+  "DocumentExtractionCandidate_confidence_range",
+  "DocumentExtractionCandidate_review_integrity",
 ];
 
 const expectedFunctions = [

@@ -84,6 +84,45 @@ enum TransactionDocumentLinkAction {
   UNLINKED
 }
 
+enum DocumentExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  STALE
+}
+
+enum DocumentExtractionFieldType {
+  MERCHANT_NAME
+  DOCUMENT_DATE
+  TOTAL_AMOUNT
+  SUBTOTAL_AMOUNT
+  SALES_TAX_AMOUNT
+  TIP_AMOUNT
+  REFERENCE_NUMBER
+  CURRENCY
+  PAYMENT_METHOD
+  MASKED_ACCOUNT_REFERENCE
+  DOCUMENT_DESCRIPTION
+}
+
+enum DocumentExtractionReviewState {
+  UNREVIEWED
+  ACCEPTED
+  CORRECTED
+  REJECTED
+}
+
+enum DocumentExtractionHistoryAction {
+  REQUESTED
+  COMPLETED
+  FAILED
+  STALE
+  ACCEPTED
+  CORRECTED
+  REJECTED
+}
+
 enum MalwareScanStatus {
   NOT_STARTED
   PENDING
@@ -252,6 +291,8 @@ model Business {
   documentStatusHistory      DocumentStatusHistory[]
   transactionDocuments       TransactionDocument[]
   transactionDocumentHistory TransactionDocumentHistory[]
+  documentExtractionAttempts DocumentExtractionAttempt[]
+  documentExtractionHistory  DocumentExtractionHistory[]
   auditEvents                AuditEvent[]
   reimbursementClaims        ReimbursementClaim[]
   reimbursementExpenses      ReimbursementExpense[]
@@ -282,17 +323,20 @@ model BusinessMember {
   updatedAt  DateTime     @updatedAt
   version    Int          @default(1)
 
-  business                     Business                     @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user                         User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approvedTransactions         Transaction[]                @relation("TransactionApproverMembership")
-  uploadedDocuments            Document[]                   @relation("DocumentUploaderMembership")
-  documentStatusHistory        DocumentStatusHistory[]      @relation("DocumentStatusHistoryActor")
-  auditEvents                  AuditEvent[]                 @relation("AuditActorMembership")
-  reimbursementClaims          ReimbursementClaim[]         @relation("ReimbursementClaimantMembership")
-  approvalDecisions            ApprovalDecision[]           @relation("ApprovalReviewerMembership")
-  linkedTransactionDocuments   TransactionDocument[]        @relation("TransactionDocumentLinkedBy")
-  unlinkedTransactionDocuments TransactionDocument[]        @relation("TransactionDocumentUnlinkedBy")
-  transactionDocumentHistory   TransactionDocumentHistory[] @relation("TransactionDocumentHistoryActor")
+  business                     Business                      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user                         User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedTransactions         Transaction[]                 @relation("TransactionApproverMembership")
+  uploadedDocuments            Document[]                    @relation("DocumentUploaderMembership")
+  documentStatusHistory        DocumentStatusHistory[]       @relation("DocumentStatusHistoryActor")
+  auditEvents                  AuditEvent[]                  @relation("AuditActorMembership")
+  reimbursementClaims          ReimbursementClaim[]          @relation("ReimbursementClaimantMembership")
+  approvalDecisions            ApprovalDecision[]            @relation("ApprovalReviewerMembership")
+  linkedTransactionDocuments   TransactionDocument[]         @relation("TransactionDocumentLinkedBy")
+  unlinkedTransactionDocuments TransactionDocument[]         @relation("TransactionDocumentUnlinkedBy")
+  transactionDocumentHistory   TransactionDocumentHistory[]  @relation("TransactionDocumentHistoryActor")
+  requestedDocumentExtractions DocumentExtractionAttempt[]   @relation("DocumentExtractionRequestedBy")
+  reviewedDocumentCandidates   DocumentExtractionCandidate[] @relation("DocumentExtractionReviewedBy")
+  documentExtractionHistory    DocumentExtractionHistory[]   @relation("DocumentExtractionHistoryActor")
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -422,15 +466,16 @@ model Document {
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
-  business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  uploadedByMembership  BusinessMember          @relation("DocumentUploaderMembership", fields: [businessId, uploadedByMembershipId], references: [businessId, userId], onDelete: Restrict)
-  replacedBy            Document?               @relation("DocumentVersions", fields: [businessId, replacedById], references: [businessId, id], onDelete: Restrict)
-  previousVersions      Document[]              @relation("DocumentVersions")
+  business              Business                    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  uploadedByMembership  BusinessMember              @relation("DocumentUploaderMembership", fields: [businessId, uploadedByMembershipId], references: [businessId, userId], onDelete: Restrict)
+  replacedBy            Document?                   @relation("DocumentVersions", fields: [businessId, replacedById], references: [businessId, id], onDelete: Restrict)
+  previousVersions      Document[]                  @relation("DocumentVersions")
   transactions          TransactionDocument[]
-  reimbursementExpenses ReimbursementExpense[]  @relation("ReimbursementExpenseDocument")
-  payrollRuns           PayrollRun[]            @relation("PayrollRunDocument")
-  taxPayments           TaxPaymentRecord[]      @relation("TaxPaymentDocument")
+  reimbursementExpenses ReimbursementExpense[]      @relation("ReimbursementExpenseDocument")
+  payrollRuns           PayrollRun[]                @relation("PayrollRunDocument")
+  taxPayments           TaxPaymentRecord[]          @relation("TaxPaymentDocument")
   statusHistory         DocumentStatusHistory[]
+  extractionAttempts    DocumentExtractionAttempt[]
 
   @@unique([businessId, id])
   @@unique([businessId, replacedById])
@@ -499,6 +544,75 @@ model TransactionDocumentHistory {
   actor    BusinessMember      @relation("TransactionDocumentHistoryActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
 
   @@index([businessId, transactionDocumentId, createdAt])
+}
+
+model DocumentExtractionAttempt {
+  id                  String                   @id @default(cuid())
+  businessId          String
+  documentId          String
+  sourceSha256        String
+  sourceObjectVersion String?
+  adapterId           String
+  adapterVersion      String
+  status              DocumentExtractionStatus @default(PENDING)
+  requestedByUserId   String
+  requestedAt         DateTime                 @default(now())
+  completedAt         DateTime?
+  failureCode         String?
+  pageCount           Int?
+  createdAt           DateTime                 @default(now())
+
+  business    Business                      @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  document    Document                      @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+  requestedBy BusinessMember                @relation("DocumentExtractionRequestedBy", fields: [businessId, requestedByUserId], references: [businessId, userId], onDelete: Restrict)
+  candidates  DocumentExtractionCandidate[]
+  history     DocumentExtractionHistory[]
+
+  @@unique([businessId, id])
+  @@index([businessId, documentId, requestedAt])
+}
+
+model DocumentExtractionCandidate {
+  id                  String                        @id @default(cuid())
+  businessId          String
+  extractionAttemptId String
+  fieldType           DocumentExtractionFieldType
+  originalValue       String
+  normalizedValue     String?
+  confidence          Decimal                       @db.Decimal(5, 4)
+  pageNumber          Int?
+  sourceReference     String?
+  reviewState         DocumentExtractionReviewState @default(UNREVIEWED)
+  correctedValue      String?
+  reviewedByUserId    String?
+  reviewedAt          DateTime?
+  createdAt           DateTime                      @default(now())
+
+  attempt    DocumentExtractionAttempt   @relation(fields: [businessId, extractionAttemptId], references: [businessId, id], onDelete: Restrict)
+  reviewedBy BusinessMember?             @relation("DocumentExtractionReviewedBy", fields: [businessId, reviewedByUserId], references: [businessId, userId], onDelete: Restrict)
+  history    DocumentExtractionHistory[]
+
+  @@unique([businessId, id])
+  @@index([businessId, extractionAttemptId, fieldType])
+}
+
+model DocumentExtractionHistory {
+  id                  String                          @id @default(cuid())
+  businessId          String
+  extractionAttemptId String
+  candidateId         String?
+  action              DocumentExtractionHistoryAction
+  actorUserId         String
+  note                String?
+  createdAt           DateTime                        @default(now())
+
+  business  Business                     @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  attempt   DocumentExtractionAttempt    @relation(fields: [businessId, extractionAttemptId], references: [businessId, id], onDelete: Restrict)
+  candidate DocumentExtractionCandidate? @relation(fields: [businessId, candidateId], references: [businessId, id], onDelete: Restrict)
+  actor     BusinessMember               @relation("DocumentExtractionHistoryActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, extractionAttemptId, createdAt])
 }
 
 /// USER events require a membership; SYSTEM events must not reference one.

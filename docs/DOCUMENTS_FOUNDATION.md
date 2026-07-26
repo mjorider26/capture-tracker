@@ -21,3 +21,9 @@ Both foreign-key paths use the business ID as part of their composite keys, so a
 Authenticated document and Money detail pages can link, unlink, and relink. Linked-document opens reuse the existing five-minute actor/business/document-bound private read grant; no new public URL or browser storage access is introduced. Link changes do not mutate transactions, journal entries, journal lines, accounts, reconciliation state, or accounting values.
 
 The deterministic fictional demo includes a receipt link, a transaction with two documents, a clean active unlinked document, a document shared by two transactions, and a preserved unlink/relink history. It includes no uploaded binary files. OCR, extraction, automatic matching, AI suggestions, email ingestion, retention deletion, provider activation, deployment, and real-document use remain out of scope.
+
+## Phase 10D — extraction review
+
+Active, clean, privately stored PDF, JPEG, and PNG documents can receive a business-scoped extraction attempt tied to their exact SHA-256 and object-version identity. A provider-neutral interface currently exposes only a deterministic, no-network fictional local adapter. Production and real-data-approved execution fail closed because no production provider, credential, endpoint, or SDK is configured.
+
+Attempts, structured candidates, and actor-aware extraction/review history are immutable evidence. Candidates retain original text, safe normalization, bounded confidence, and optional page/source references. A human may accept, correct, or reject an unreviewed candidate; corrections use the same field validation. Changed source identity makes an attempt stale and blocks review. Extraction never writes transactions, links, journal entries, accounts, reconciliation, tax, payroll, or owner-compensation records. Automatic matching and Ask AI remain future, review-gated work.

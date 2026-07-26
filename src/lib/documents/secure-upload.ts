@@ -63,6 +63,16 @@ export async function readLocalActive(key: string) {
   return readFile(join(localStorageRoot, "active", key));
 }
 
+export async function ensureFictionalDemoActive(key: string) {
+  assertLocalFictionalStorage();
+  await mkdir(join(localStorageRoot, "active"), { recursive: true });
+  try {
+    await writeFile(join(localStorageRoot, "active", key), "%PDF-1.4\n% fictional Capture Tracker extraction fixture\n", { flag: "wx" });
+  } catch (error) {
+    if (!(typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST")) throw error;
+  }
+}
+
 export async function uploadFictionalDocument(actor: Actor, file: File) {
   try {
     assertLocalFictionalStorage();

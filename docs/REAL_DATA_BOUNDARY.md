@@ -10,6 +10,8 @@ Phase 10A document records are fictional metadata only. Phase 10B additionally p
 
 Document reads remain authenticated, business-scoped, short-lived, and server-authorized. The future R2 boundary is only a typed Worker binding contract; it does not activate R2 for fictional staging or create any resource. Real document storage requires a separate production-readiness decision with encrypted private storage, scanning operations, access review, recovery evidence, credentials, and explicit authorization.
 
+Phase 10D extraction is fictional-development-only. It has no OCR or AI provider selection, SDK, endpoint, account, credential, or network call. Production and real-data-approved execution reject extraction when no separately approved production provider is configured. Extracted candidates are human-reviewed document evidence only and cannot automatically update transactions, accounting, tax, payroll, or any other financial record.
+
 ## Enforced staging boundary
 
 `free-preview-cloudflare-neon` only accepts Cloudflare staging with fictional data, paid-service approval false, customer onboarding false, no R2 binding, a TLS-required Neon pooled runtime URL, and a separate TLS-required direct migration URL. It rejects production, real-data approval, localhost, Prisma Dev, unsafe database names, non-Neon targets, and local `DATABASE_URL` fallback.
