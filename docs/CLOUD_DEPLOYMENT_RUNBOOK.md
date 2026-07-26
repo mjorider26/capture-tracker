@@ -6,7 +6,7 @@ This is a later-session runbook. It performs no provider action merely by existi
 
 - Reconfirm Cloudflare Workers Free and Neon Free plan terms, limits, backup/restore controls, and that no paid activation or credit-card entry is authorized.
 - Confirm production is undeployed, real-data approval is false, fictional staging has no R2 binding, and no AWS resource is in scope.
-- Confirm `docs/DEPENDENCY_SECURITY_REVIEW.md` has a current passing separation check, passing `cloud:postgres:verify:installed` and `cloud:postgres:verify:artifact` evidence, and the reviewed Linux 2,278-byte OpenNext Worker entry. This gate is decision **B**, conditionally blocked: the next Linux run must upload a passing sanitized `cloud-worker-inventory.json` and audit summary with PostCSS, Sharp, `find-my-way`, and Valibot inventory/reachability evidence before any release decision.
+- Confirm `docs/DEPENDENCY_SECURITY_REVIEW.md` has a current passing separation check, passing `cloud:postgres:verify:installed` and `cloud:postgres:verify:artifact` evidence, and the reviewed Linux 2,278-byte OpenNext Worker entry. This gate is decision **C**, blocked: the `770668e` Linux reachability gate found a targeted high package request-time reachable. An authorized maintainer must first review the already-uploaded sanitized inventory, record the exact package/path, and obtain a succeeding remediated Linux artifact and fresh audit before any release decision.
 - Create only separately credentialed fictional staging resources after explicit authorization. Do not create R2 unless a later document-storage phase approves it.
 - Supply secrets only to provider runtime secret storage. Never commit them, put them in Wrangler configuration, or print them.
 
