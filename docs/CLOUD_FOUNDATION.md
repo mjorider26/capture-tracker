@@ -43,6 +43,8 @@ The attached report identifies the previous failure as Next's conditional Sharp 
 
 Linux verification for `8fa8f87` passed the OpenNext build, sanitized inventory/reachability, Worker size guard, driver packaging, secret/data-boundary scans, and isolated infrastructure checks. The new artifact has no unresolved target or request-time-reachable high target. A current authoritative audit could not be obtained, so fictional staging remains decision **B**, conditionally blocked pending that audit and separate later deployment authorization. No cloud resource, provider credential, real data, or deployment was used.
 
+Phase 9B.5 makes the remaining audit gate authoritative and fail closed. The Linux workflow runs the committed-lockfile production audit, verifies the lockfile remains unchanged, classifies every returned advisory against the sanitized Worker inventory, redacts and flags prohibited values, writes only `runtime-audit-report.json`, and uploads it without raw npm output. It rejects unavailable/malformed audit service data, unresolved runtime findings, and high/critical request-time Worker findings. No deployment/provider action is introduced.
+
 The application intentionally keeps its existing behavior. No Edge runtime export is added. Prisma uses `@prisma/adapter-pg`; Node compatibility is required for the Prisma/`pg`/Better Auth server dependency path. The readiness probe performs a bounded `SELECT 1`; it returns `503` without exposing failure details. Both health endpoints are dynamic, `no-store`, and `noindex`. Financial application/demo routes remain dynamic and noindex.
 
 ## Monitoring, usage, alerts, and logs

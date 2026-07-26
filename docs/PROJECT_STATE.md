@@ -14,6 +14,7 @@ Capture Tracker is a mobile-first S-corporation bookkeeping and financial-review
 - Phase 9B.3 adds sanitized Worker dependency inventory and request-entrypoint reachability tooling to the non-deploy Linux workflow. At `770668e`, Linux generated that inventory and the reachability gate rejected at least one targeted high package as request-time reachable. The private sanitized artifact must identify the exact package/path before a remediation claim; fictional staging is decision C blocked.
 - Phase 9B.4 reviewed the attached artifact: `sharp@0.34.5` is only Next's unresolved conditional image-optimizer import, with no Sharp code copied into the Worker. Fixed local brand images retain `next/image` but now use the supported `images.unoptimized` configuration, avoiding the unapproved Cloudflare Images binding. The corrected artifact gate is decision B pending new Linux evidence and a fresh audit.
 - Linux verification for `8fa8f87` passed the remediated OpenNext artifact inventory/reachability gate, size guard, driver packaging, secret/data scans, and isolated infrastructure checks. No Worker high is request-time reachable; fictional staging remains decision B only until a fresh authoritative audit and separately authorized deployment.
+- Phase 9B.5 adds a fail-closed authoritative Linux runtime-audit report and advisory-to-Worker classification. The local audit endpoint remains unavailable and is not treated as clean; decision B remains until the uploaded Linux report is reviewed.
 
 ## Current boundary
 
