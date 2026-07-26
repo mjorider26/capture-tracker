@@ -15,7 +15,8 @@ function payload(vulnerabilities) { return { metadata: { vulnerabilities: { info
 function finding({ severity = "moderate", via = [{ name: "package", url: "https://github.com/advisories/GHSA-aaaa-bbbb-cccc" }], direct = false } = {}) { return { severity, via, isDirect: direct, range: "<=1.0.0", fixAvailable: { name: "package", version: "1.0.1", isSemVerMajor: false } }; }
 
 const cleanPayload = payload({});
-assert(parseAuditCommandResult({ stdout: JSON.stringify(cleanPayload) }).endpointStatus === "available", "Valid clean npm audit JSON must be accepted.");
+const cleanCapture = parseAuditCommandResult({ stdout: JSON.stringify(cleanPayload) });
+assert(cleanCapture.endpointStatus === "available" && cleanCapture.captureResult === "valid-audit-json", "Valid clean npm audit JSON must be accepted.");
 const vulnerablePayload = payload({ pg: finding({ severity: "high" }) });
 const nonzeroVulnerable = parseAuditCommandResult({ stdout: JSON.stringify(vulnerablePayload), stderr: "npm error code EEXIT", exitCode: 1 });
 assert(nonzeroVulnerable.endpointStatus === "available" && nonzeroVulnerable.payload.vulnerabilities.pg, "Valid vulnerable JSON must be accepted despite npm's nonzero exit code.");
@@ -25,8 +26,10 @@ const stderrDiagnostic = parseAuditCommandResult({ stdout: JSON.stringify(cleanP
 assert(stderrDiagnostic.endpointStatus === "available", "Diagnostics on stderr must not replace valid stdout audit JSON.");
 const escapedJson = payload({ postcss: { ...finding({ via: [{ source: 123456, name: "postcss", title: 'escaped quote " and brace }' }] }), severity: "high" } });
 assert(parseAuditCommandResult({ stdout: `npm warn fixture\n${JSON.stringify(escapedJson)}` }).endpointStatus === "available", "Escaped JSON strings must not terminate JSON extraction early.");
-assert(parseAuditCommandResult({ stdout: '{"metadata":' }).endpointStatus === "malformed", "Truncated audit JSON must be malformed.");
-assert(parseAuditCommandResult({ stderr: "npm error code EAI_AGAIN", exitCode: 1 }).endpointStatus === "unavailable", "Unavailable audit endpoints must remain unavailable.");
+const truncated = parseAuditCommandResult({ stdout: '{"metadata":' });
+assert(truncated.endpointStatus === "malformed" && truncated.captureResult === "no-complete-json-on-stdout", "Truncated audit JSON must be malformed.");
+const unavailableCapture = parseAuditCommandResult({ stderr: "npm error code EAI_AGAIN", exitCode: 1 });
+assert(unavailableCapture.endpointStatus === "unavailable" && unavailableCapture.captureResult === "audit-service-unavailable", "Unavailable audit endpoints must remain unavailable.");
 
 const clean = createRuntimeAuditReport({ payload: payload({ postcss: finding() }), inventory, now: new Date("2026-07-26T00:00:00.000Z"), npmVersion: "11.0.0", lockfileVersion: 3 });
 assert(clean.endpointStatus === "available" && clean.releaseGate === "clear-runtime", "Clean/non-runtime audit must clear the runtime gate.");

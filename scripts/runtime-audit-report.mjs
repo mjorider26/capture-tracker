@@ -52,11 +52,12 @@ function unavailableAuditResponse(values) {
 export function parseAuditCommandResult({ stdout = "", stderr = "", exitCode = 0, spawnError = null }) {
   const candidates = extractJsonObjects(String(stdout));
   const payload = candidates.find(hasAuditSchema);
-  if (payload) return { endpointStatus: "available", payload };
-  if (unavailableAuditResponse([stdout, stderr, spawnError])) return { endpointStatus: "unavailable", payload: null };
-  if (candidates.length > 0 || String(stdout).trim()) return { endpointStatus: "malformed", payload: null };
-  if (spawnError || exitCode !== 0 || String(stderr).trim()) return { endpointStatus: "unavailable", payload: null };
-  return { endpointStatus: "malformed", payload: null };
+  if (payload) return { endpointStatus: "available", captureResult: "valid-audit-json", payload };
+  if (unavailableAuditResponse([stdout, stderr, spawnError])) return { endpointStatus: "unavailable", captureResult: "audit-service-unavailable", payload: null };
+  if (candidates.length > 0) return { endpointStatus: "malformed", captureResult: "json-without-audit-schema", payload: null };
+  if (String(stdout).trim()) return { endpointStatus: "malformed", captureResult: "no-complete-json-on-stdout", payload: null };
+  if (spawnError || exitCode !== 0 || String(stderr).trim()) return { endpointStatus: "unavailable", captureResult: "audit-command-no-json-response", payload: null };
+  return { endpointStatus: "malformed", captureResult: "empty-audit-response", payload: null };
 }
 function sanitized(value, state) {
   if (typeof value !== "string") return value;
@@ -111,7 +112,7 @@ export function classifyPackage(packageName, inventory) {
   if (runtimeWithoutTarget.has(packageName)) return "server/runtime dependency outside the Worker entry path";
   return "absent from deployed artifact";
 }
-export function createRuntimeAuditReport({ payload, endpointStatus, inventory, now = new Date(), nodeVersion = process.version, npmVersion = "unknown", lockfileVersion = null, lockfileClean = true }) {
+export function createRuntimeAuditReport({ payload, endpointStatus, captureResult, inventory, now = new Date(), nodeVersion = process.version, npmVersion = "unknown", lockfileVersion = null, lockfileClean = true }) {
   const state = { redactions: 0 };
   const base = {
     schemaVersion: 2,
@@ -123,9 +124,9 @@ export function createRuntimeAuditReport({ payload, endpointStatus, inventory, n
     lockfileClean,
   };
   const status = endpointStatus ?? (payload === null ? "unavailable" : "available");
-  if (status === "unavailable") return { ...base, endpointStatus: "unavailable", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-unavailable" };
+  if (status === "unavailable") return { ...base, endpointStatus: "unavailable", captureResult: captureResult ?? "audit-service-unavailable", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-unavailable" };
   if (status === "malformed" || !hasAuditSchema(payload)) {
-    return { ...base, endpointStatus: "malformed", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed" };
+    return { ...base, endpointStatus: "malformed", captureResult: captureResult ?? "json-without-audit-schema", totals: null, advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed" };
   }
   assert(inventory?.schemaVersion === 1 && inventory.reportSanitized === true && Array.isArray(inventory.packages), "Sanitized Worker inventory is missing or invalid.");
   const advisories = Object.entries(payload.vulnerabilities).map(([packageName, finding]) => {
@@ -151,6 +152,7 @@ export function createRuntimeAuditReport({ payload, endpointStatus, inventory, n
   const report = {
     ...base,
     endpointStatus: "available",
+    captureResult: captureResult ?? "valid-audit-json",
     totals: payload.metadata.vulnerabilities,
     advisories,
     sanitizationDetected: state.redactions > 0,
@@ -194,7 +196,7 @@ function publishSummary(report) {
   const summaryPath = process.env.GITHUB_STEP_SUMMARY;
   if (!summaryPath) return;
   const totals = report.totals ? Object.entries(report.totals).map(([severity, count]) => `${severity}=${count}`).join(", ") : "unavailable";
-  writeFileSync(summaryPath, `## Runtime dependency audit\n\n- Endpoint: ${report.endpointStatus}\n- Totals: ${totals}\n- Findings: ${report.advisories.length}\n- Gate: ${report.releaseGate}\n`, { encoding: "utf8", flag: "a" });
+  writeFileSync(summaryPath, `## Runtime dependency audit\n\n- Endpoint: ${report.endpointStatus}\n- Capture: ${report.captureResult}\n- Totals: ${totals}\n- Findings: ${report.advisories.length}\n- Gate: ${report.releaseGate}\n`, { encoding: "utf8", flag: "a" });
 }
 
 const args = new Set(process.argv.slice(2));
@@ -206,7 +208,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const audit = auditPayload();
     report = createRuntimeAuditReport({ ...audit, inventory, npmVersion: npmVersion(), lockfileVersion: lock.lockfileVersion ?? null, lockfileClean: lockfileClean() });
   } catch (error) {
-    report = { schemaVersion: 2, endpointStatus: "malformed", command: "npm audit --omit=dev --json", advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed", error: "sanitized-report-construction-failed" };
+    report = { schemaVersion: 2, endpointStatus: "malformed", captureResult: "sanitized-report-construction-failed", command: "npm audit --omit=dev --json", advisories: [], sanitizationDetected: false, releaseGate: "blocked-audit-malformed", error: "sanitized-report-construction-failed" };
     writeReport(report);
     throw error;
   }
