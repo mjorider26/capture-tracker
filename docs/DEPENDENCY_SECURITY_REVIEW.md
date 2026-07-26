@@ -2,6 +2,8 @@
 
 Audit dates: 2026-07-25. The baseline `npm.cmd audit --omit=dev --json` reported **12 high / 1 moderate** findings. After the supported remediation below, the same command reports **6 high / 1 moderate** findings (245 production packages). The full installation audit is intentionally broader because it includes build and test tooling.
 
+Phase 9B.1 refresh recheck: Next `16.2.12`, OpenNext Cloudflare `1.20.2`, Prisma `7.9.0`, Wrangler `4.114.0`, and `pg` `8.22.0` remain current for their declared compatible ranges. No `@neondatabase/serverless` package is installed; application database access uses `pg` through `@prisma/adapter-pg`. Better Auth and its Prisma adapter were updated from `1.6.24` to compatible `1.6.25`, and `eslint-config-next` now matches Next `16.2.12`. The fresh production audit remains 6 high / 1 moderate; no unsupported remediation was applied.
+
 ## Remediation performed
 
 - Updated pinned Next from `16.2.11` to the compatible patch `16.2.12`. The audit still includes it, so this is a supported maintenance patch, not a claimed advisory fix.

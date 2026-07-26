@@ -53,10 +53,10 @@
     "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run lint && npm run build"
   },
   "dependencies": {
-    "@better-auth/prisma-adapter": "^1.6.24",
+    "@better-auth/prisma-adapter": "^1.6.25",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
-    "better-auth": "^1.6.24",
+    "better-auth": "^1.6.25",
     "dotenv": "^17.4.2",
     "next": "16.2.12",
     "pg": "^8.22.0",
@@ -73,7 +73,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.11",
+    "eslint-config-next": "16.2.12",
     "prettier": "^3.9.6",
     "prisma": "^7.9.0",
     "tailwindcss": "^4",
