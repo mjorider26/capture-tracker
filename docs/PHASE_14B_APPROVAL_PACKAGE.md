@@ -37,7 +37,7 @@ Recommendations, not approvals: fictional pilot ceiling **$50/month**; modest-pr
 
 ## Audit gate
 
-**BLOCKED.** The repository’s authoritative sanitized runtime-audit endpoint was previously unavailable. No ordinary local audit substitutes for it; no gate criteria or audit tooling was changed. A reviewed, provenance-verified Linux artifact and passing authoritative report—with no unresolved high/critical request-time findings—are mandatory before Phase 14B.
+**BLOCKED.** Phase 14A.6 pushed the reviewed documentation baseline through `f598095` to `main`; the approved `.github/workflows/ci.yml` workflow runs `cloud:audit:report` on push. Available unauthenticated retrieval tooling could not fetch the workflow result or sanitized artifact, so no ordinary local audit substitutes for it and no gate criteria or audit tooling changed. A reviewed, provenance-verified Linux artifact and passing authoritative report—with no unresolved high/critical request-time findings—are mandatory before Phase 14B.
 
 ## Exact Phase 14B scope and stop conditions
 
