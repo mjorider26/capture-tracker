@@ -37,6 +37,7 @@ const expectedTables = new Set([
   "QuarterlyTaxEstimate",
   "TaxPaymentRecord",
   "WeeklyReview",
+  "WeeklyReviewHistory",
   "ReviewTask",
   "AIRecommendation",
   "ApprovalDecision",

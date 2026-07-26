@@ -73,6 +73,7 @@ const expectedConstraints = [
   "DocumentMatchSuggestion_score_range",
   "DocumentMatchSuggestion_rank_positive",
   "DocumentMatchSuggestion_decision_integrity",
+  "WeeklyReview_completion_integrity",
 ];
 
 const expectedFunctions = [

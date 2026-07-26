@@ -7,6 +7,8 @@ export const destinations = [
   { slug: "money", label: "Money", mark: "\u25c6" },
   { slug: "taxes", label: "Taxes", mark: "\u25b3" },
   { slug: "documents", label: "Documents", mark: "\u25a1" },
+  { slug: "review", label: "Review", mark: "\u2713" },
+  { slug: "reports", label: "Reports", mark: "\u2261" },
   { slug: "ask-ai", label: "Ask AI", mark: "\u2726" },
 ] as const;
 

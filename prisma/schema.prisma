@@ -330,6 +330,7 @@ model Business {
   quarterlyTaxEstimates      QuarterlyTaxEstimate[]
   taxPaymentRecords          TaxPaymentRecord[]
   weeklyReviews              WeeklyReview[]
+  weeklyReviewHistory        WeeklyReviewHistory[]
   aiRecommendations          AIRecommendation[]
   approvalDecisions          ApprovalDecision[]
   ledgerAccounts             LedgerAccount[]
@@ -368,6 +369,9 @@ model BusinessMember {
   documentExtractionHistory    DocumentExtractionHistory[]   @relation("DocumentExtractionHistoryActor")
   requestedDocumentMatchRuns   DocumentMatchRun[]            @relation("DocumentMatchRequestedBy")
   documentMatchHistory         DocumentMatchHistory[]        @relation("DocumentMatchHistoryActor")
+  startedWeeklyReviews         WeeklyReview[]                @relation("WeeklyReviewStartedBy")
+  completedWeeklyReviews       WeeklyReview[]                @relation("WeeklyReviewCompletedBy")
+  weeklyReviewHistory          WeeklyReviewHistory[]         @relation("WeeklyReviewHistoryActor")
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -812,6 +816,13 @@ enum ReviewStatus {
   DISMISSED
 }
 
+enum WeeklyReviewHistoryAction {
+  STARTED
+  SECTION_ACKNOWLEDGED
+  COMPLETED
+  REOPENED
+}
+
 enum ReviewTaskCategory {
   RECEIPT
   TRANSACTION_REVIEW
@@ -1052,17 +1063,44 @@ model WeeklyReview {
   weekEnd                    DateTime
   status                     ReviewStatus @default(OPEN)
   estimatedCompletionMinutes Int          @default(10)
+  startedByUserId            String?
+  startedAt                  DateTime?
   completedAt                DateTime?
+  completedByUserId          String?
+  completionNote             String?
+  unresolvedItemCount        Int?
   createdAt                  DateTime     @default(now())
   updatedAt                  DateTime     @updatedAt
   version                    Int          @default(1)
 
-  business Business     @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  tasks    ReviewTask[]
+  business    Business              @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  startedBy   BusinessMember?       @relation("WeeklyReviewStartedBy", fields: [businessId, startedByUserId], references: [businessId, userId], onDelete: Restrict)
+  completedBy BusinessMember?       @relation("WeeklyReviewCompletedBy", fields: [businessId, completedByUserId], references: [businessId, userId], onDelete: Restrict)
+  tasks       ReviewTask[]
+  history     WeeklyReviewHistory[]
 
   @@unique([businessId, id])
   @@unique([businessId, weekStart])
   @@index([businessId, status])
+}
+
+model WeeklyReviewHistory {
+  id                  String                    @id @default(cuid())
+  businessId          String
+  weeklyReviewId      String
+  action              WeeklyReviewHistoryAction
+  actorUserId         String
+  section             String?
+  unresolvedItemCount Int?
+  note                String?
+  createdAt           DateTime                  @default(now())
+
+  business     Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  weeklyReview WeeklyReview   @relation(fields: [businessId, weeklyReviewId], references: [businessId, id], onDelete: Restrict)
+  actor        BusinessMember @relation("WeeklyReviewHistoryActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, weeklyReviewId, createdAt])
 }
 
 model ReviewTask {
