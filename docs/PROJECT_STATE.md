@@ -23,6 +23,7 @@ Capture Tracker is a mobile-first S-corporation bookkeeping and financial-review
 - Phase 11 adds a business-scoped Weekly Review with immutable start/completion/reopen evidence, unresolved-item acknowledgement, and read-only ledger-backed Profit and Loss, Balance Sheet, Trial Balance, and cash-activity reports. Reports use posted journal lines only and remain separate from accounting writes; CSV is a guarded future-export boundary.
 - Phase 12 adds a business-scoped, read-only Ask AI conversation boundary with immutable run/evidence/feedback audit records, bounded trusted report and operational context, and a deterministic no-network fictional adapter. No AI provider, SDK, credential, endpoint, deployment, or real-data activation is configured; production fails closed pending separate approval.
 - Phase 13 adds fictional-only onboarding, business settings with immutable change history, a bounded activity viewer, and authenticated audited safe CSV exports. These product-readiness surfaces never modify accounting records or relax provider, deployment, or real-data gates.
+- Phase 13B completes Functional v1 with validated, business-scoped Activity filtering and stable bounded pagination plus a deterministic fictional pilot smoke verifier. Functional v1 is complete; deployment and real-data boundaries remain unchanged.
 
 ## Current boundary
 

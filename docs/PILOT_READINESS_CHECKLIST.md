@@ -7,3 +7,5 @@
 - Do not deploy, connect a provider, use real data, or onboard a real customer.
 
 Production remains blocked on authoritative audit evidence, approved provider decisions, separate cloud provisioning/deployment authorization, backup/restore proof, live-cost verification, and formal real-data approval.
+
+Activity filters are URL-backed, validated, and paginated by a stable timestamp-plus-event-key order. Run `npm run pilot:smoke` for the coordinated fictional workflow integrity check and `npm run v1:verify` for the final functional-v1 gate.
