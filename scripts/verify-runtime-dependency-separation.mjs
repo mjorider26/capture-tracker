@@ -25,12 +25,26 @@ function filesUnder(directory) {
 const manifest = JSON.parse(text("package.json"));
 const runtime = manifest.dependencies ?? {};
 const tooling = manifest.devDependencies ?? {};
+const applicationTsconfig = JSON.parse(text("tsconfig.json"));
+const infrastructureManifest = JSON.parse(text("infra/aws/package.json"));
+const infrastructureTsconfig = JSON.parse(text("infra/aws/tsconfig.json"));
 
 assert(!runtime["@opennextjs/cloudflare"] && tooling["@opennextjs/cloudflare"] === "1.20.2", "OpenNext must remain an exact build-only dependency.");
 for (const dependency of ["prisma", "wrangler", "vitest", "typescript", "eslint"]) {
   assert(!runtime[dependency] && tooling[dependency], `${dependency} must remain build, validation, or local tooling only.`);
 }
 assert(!runtime["aws-cdk-lib"] && !runtime["constructs"], "AWS infrastructure dependencies must not enter application runtime dependencies.");
+for (const directory of ["infra/aws", "infra/aws/.test-dist", "infra/aws/cdk.out"]) {
+  assert(applicationTsconfig.exclude?.includes(directory), `The root Next.js TypeScript project must exclude ${directory}.`);
+}
+assert(infrastructureManifest.dependencies?.["aws-cdk-lib"] && infrastructureManifest.dependencies?.constructs, "AWS CDK dependencies must remain isolated in infra/aws.");
+assert(infrastructureTsconfig.include?.includes("bin") && infrastructureTsconfig.include?.includes("lib") && infrastructureTsconfig.include?.includes("test"), "Infrastructure TypeScript must retain its dedicated CDK project coverage.");
+const gitignore = text(".gitignore");
+for (const directory of ["/infra/aws/.test-dist/", "/infra/aws/cdk.out/", "/infra/aws/node_modules/"]) {
+  assert(gitignore.includes(directory), `Generated infrastructure output must remain ignored: ${directory}.`);
+}
+const workflow = text(".github/workflows/ci.yml");
+assert(workflow.indexOf("npm run cloud:build") < workflow.indexOf("npm --prefix infra/aws ci"), "CI must build the application/Worker before installing isolated AWS infrastructure dependencies.");
 
 const source = filesUnder("src");
 const forbiddenImports = /from\s*["'](?:aws-cdk-lib|constructs|@aws-sdk\/|@opennextjs\/|vitest|prisma(?:\/|["']))/;
