@@ -31,6 +31,8 @@ The repository pins OpenNext exactly as build tooling and pins Wrangler, uses a 
 
 The first Linux verification run exposed a root TypeScript boundary defect before the OpenNext build: root Next type checking discovered the isolated `infra/aws` CDK entrypoint without its separate dependencies. The root project now excludes `infra/aws` and its generated CDK/test outputs, while `infra/aws/tsconfig.json` remains responsible for CDK compile/test/synthesis after the Worker build. The repository guard verifies this order and isolation. A new successful Linux run is still needed; no Linux Worker artifact is claimed by this correction.
 
+The second Linux run passed the ordinary Next build and reached OpenNext bundling. It found `pg-cloudflare@1.4.0` only with its manifest in the traced server-function tree, while the lockfile-installed package correctly contains its Workerd `dist/index.js` entry. This was a conditional-export tracing boundary, not a PostgreSQL, Prisma, or Neon architecture failure. `next.config.ts` now lists only `pg-cloudflare` in `serverExternalPackages`, activating OpenNext `1.20.2`'s supported full-package copy and Workerd-export rewrite. CI verifies the locked source package before build and the generated server-function package, Worker bundle, excluded tooling, secrets, and unresolved external after build. No direct dependency, custom copy script, or runtime/database behavior changed. Linux remains the artifact authority; no successful Worker artifact is claimed until the updated workflow passes.
+
 The application intentionally keeps its existing behavior. No Edge runtime export is added. Prisma uses `@prisma/adapter-pg`; Node compatibility is required for the Prisma/`pg`/Better Auth server dependency path. The readiness probe performs a bounded `SELECT 1`; it returns `503` without exposing failure details. Both health endpoints are dynamic, `no-store`, and `noindex`. Financial application/demo routes remain dynamic and noindex.
 
 ## Monitoring, usage, alerts, and logs
@@ -43,7 +45,7 @@ No external log export, production alert destination, provider account, Worker, 
 
 ## Security review
 
-Repository security controls and client/data-boundary scans pass. `npm audit --omit=dev` currently reports six high-severity upstream advisories through the latest available Prisma 7.9.0 and Next 16.2.11 dependency chains (including `@prisma/dev`/`find-my-way`, Next's bundled PostCSS, and Sharp). The registry reports no non-forced upgrade for either direct dependency. This does not authorize deployment: re-run the audit and apply an upstream fix before Phase 9B deployment. No audit finding introduced real data, credentials, or browser-visible secrets.
+Repository security controls and client/data-boundary scans pass. `npm audit --omit=dev` currently reports six high-severity upstream advisories through the latest available Prisma 7.9.0 and Next 16.2.12 dependency chains (including `@prisma/dev`/`find-my-way`, Next's bundled PostCSS, and Sharp). The registry reports no non-forced upgrade for either direct dependency. This does not authorize deployment: re-run the audit and apply an upstream fix before Phase 9B deployment. No audit finding introduced real data, credentials, or browser-visible secrets.
 
 ## Backup, recovery, and fictional-staging teardown
 

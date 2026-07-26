@@ -34,6 +34,8 @@ for (const dependency of ["prisma", "wrangler", "vitest", "typescript", "eslint"
   assert(!runtime[dependency] && tooling[dependency], `${dependency} must remain build, validation, or local tooling only.`);
 }
 assert(!runtime["aws-cdk-lib"] && !runtime["constructs"], "AWS infrastructure dependencies must not enter application runtime dependencies.");
+assert(runtime.pg && !tooling.pg, "The PostgreSQL driver must remain an application runtime dependency.");
+assert(!runtime["pg-cloudflare"] && !tooling["pg-cloudflare"], "pg-cloudflare must remain the locked pg optional dependency; do not add an unreviewed duplicate declaration.");
 for (const directory of ["infra/aws", "infra/aws/.test-dist", "infra/aws/cdk.out"]) {
   assert(applicationTsconfig.exclude?.includes(directory), `The root Next.js TypeScript project must exclude ${directory}.`);
 }
@@ -45,6 +47,8 @@ for (const directory of ["/infra/aws/.test-dist/", "/infra/aws/cdk.out/", "/infr
 }
 const workflow = text(".github/workflows/ci.yml");
 assert(workflow.indexOf("npm run cloud:build") < workflow.indexOf("npm --prefix infra/aws ci"), "CI must build the application/Worker before installing isolated AWS infrastructure dependencies.");
+const nextConfig = text("next.config.ts");
+assert(/serverExternalPackages:\s*\[\s*["']pg-cloudflare["']\s*\]/.test(nextConfig), "OpenNext Workerd package copying requires pg-cloudflare in serverExternalPackages.");
 
 const source = filesUnder("src");
 const forbiddenImports = /from\s*["'](?:aws-cdk-lib|constructs|@aws-sdk\/|@opennextjs\/|vitest|prisma(?:\/|["']))/;

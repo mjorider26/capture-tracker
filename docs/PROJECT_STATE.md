@@ -10,6 +10,7 @@ Capture Tracker is a mobile-first S-corporation bookkeeping and financial-review
 - Phase 9A established the Cloudflare/OpenNext/Neon repository foundation without creating a provider resource.
 - Phase 9B repository preparation added fictional-staging configuration guards, migration/bootstrap safeguards, future smoke and Neon verification tools, Linux CI preparation, bundle verification tooling, and boundary/recovery/cost documentation.
 - Phase 9B.1 updated Next to 16.2.12, moved OpenNext to exact build-only tooling, removed the deferred R2 binding from fictional staging, and added dependency-separation release checks. Production audit improved from 12 high/1 moderate to 6 high/1 moderate, but the staging gate is blocked by the remaining Next/Prisma findings and missing Linux Worker artifact evidence.
+- Phase 9B.2 isolated AWS CDK TypeScript from the root Next build. The next Linux run passed the standard Next build but exposed a conditional Workerd export packaging gap for locked `pg-cloudflare@1.4.0`; the supported OpenNext package-copy configuration and source/artifact checks are now prepared. No Linux Worker artifact has yet passed, so this does not change the release gate.
 
 ## Current boundary
 

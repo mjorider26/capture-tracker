@@ -11,6 +11,10 @@ if (process.env.NODE_ENV === "development") {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // OpenNext copies listed external packages with a `workerd` export condition
+  // into the server-function tree. `pg` conditionally requires this package
+  // when it runs in Cloudflare Workers.
+  serverExternalPackages: ["pg-cloudflare"],
   // Keep Turbopack within this repository when a parent directory has another
   // lockfile; it must not scan a user home directory during builds.
   turbopack: { root: projectRoot },
