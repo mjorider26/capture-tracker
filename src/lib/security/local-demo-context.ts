@@ -3,6 +3,7 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { prisma } from "../prisma";
+import { localDevOrigins } from "./local-dev-origins";
 
 const demoUserId = "demo-user-jordan-ellis";
 const demoBusinessId = "demo-business-northstar-field-solutions";
@@ -15,7 +16,11 @@ function isLocalHost(host: string): boolean {
 function parseRequestHost(value: string | null): boolean {
   if (!value) return false;
   try {
-    return isLocalHost(new URL(`http://${value}`).hostname);
+    const host = new URL(`http://${value}`).hostname;
+    return (
+      isLocalHost(host) ||
+      (process.env.NODE_ENV === "development" && localDevOrigins().includes(host))
+    );
   } catch {
     return false;
   }

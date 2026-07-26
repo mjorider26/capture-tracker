@@ -2,12 +2,17 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { localDevOrigins } from "./src/lib/security/local-dev-origins";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
 
 if (process.env.NODE_ENV === "development") {
   void initOpenNextCloudflareForDev();
 }
+
+const allowedDevOrigins = process.env.NODE_ENV !== "production"
+  ? localDevOrigins()
+  : [];
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -24,6 +29,9 @@ const nextConfig: NextConfig = {
   // Keep Turbopack within this repository when a parent directory has another
   // lockfile; it must not scan a user home directory during builds.
   turbopack: { root: projectRoot },
+  // Development-only Next resource access for explicitly configured private
+  // LAN addresses. This does not affect API CORS or production behavior.
+  ...(allowedDevOrigins.length ? { allowedDevOrigins } : {}),
   async headers() {
     return [{
       source: "/:path*",
