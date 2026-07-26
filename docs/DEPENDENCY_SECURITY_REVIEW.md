@@ -26,6 +26,12 @@ Phase 9B.5 execution evidence (2026-07-26): Linux verification runs `30188607900
 
 ## Remediation performed
 
+## Authoritative runtime audit pass — Phase 14A.6
+
+The approved Linux `.github/workflows/ci.yml` workflow completed successfully for `main` commit `24b8994` and produced one reviewed sanitized `runtime-audit-report.json` artifact. The endpoint was available; capture was `valid-audit-json` using the `standard-npm-audit-report` schema from `registry.npmjs.org`. It recorded 0 critical, 6 high, and 1 moderate findings. Existing Worker artifact inventory and request-reachability evidence classifies every reported advisory as build-time, absent from the deployed artifact, outside the Worker request path, or not request-time reachable. The runtime release gate is therefore **PASS — clear-runtime**.
+
+Two workflow warnings remain maintenance work only: GitHub Action Node 20 deprecation/forced Node 24 runtime, and an unused PowerShell helper warning. Neither is a runtime security finding or a Phase 14B authorization. The pass expires on the next dependency, lockfile, workflow-trust-model, or release-candidate change. Production, real data, and onboarding remain blocked; fictional staging still requires the separately signed Phase 14B approval register.
+
 - Updated pinned Next from `16.2.11` to the compatible patch `16.2.12`. The audit still includes it, so this is a supported maintenance patch, not a claimed advisory fix.
 - Moved the unchanged, exact `@opennextjs/cloudflare@1.20.2` from `dependencies` to `devDependencies`. It is imported only by build/development configuration and invoked by `cloud:build`; it is not application request code. This removes its six inherited findings from the production audit without an override, suppression, downgrade, or lockfile edit.
 - Added `dependency:separation:verify`. It guards package placement; excludes OpenNext, AWS CDK, test, local-DB and Prisma CLI tooling from application runtime declarations/source; rejects unsafe dynamic package loading and process spawning in `src`; checks client/server boundaries, secret-free Worker config, no R2 staging binding, and no development server/tooling in the container runtime. It is static source/package evidence only and does **not** prove a Linux Worker artifact.

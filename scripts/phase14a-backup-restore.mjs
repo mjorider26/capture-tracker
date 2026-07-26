@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { spawn } from "node:child_process";
-import { fullPostgresConfig, fullPostgresDatabases, sanitize, withClient } from "./full-postgres-config.mjs";
+import { fullPostgresConfig, sanitize, withClient } from "./full-postgres-config.mjs";
 
 const target = "capture_tracker_phase14a_rehearsal";
 const bin = "C:/Program Files/PostgreSQL/17/bin";

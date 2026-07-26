@@ -2,7 +2,7 @@
 
 ## Executive recommendation — NO-GO FOR PHASE 14B
 
-Approve only after every decision below is signed and a reviewed authoritative runtime-audit report passes. Functional v1 (`991bcbf`) and the local Phase 14A restore proof are sound, but audit evidence remains unavailable; production, real data, and real-user onboarding remain explicitly unapproved.
+Approve only after every decision below is signed. Functional v1 (`991bcbf`), the local Phase 14A restore proof, and the reviewed authoritative runtime audit are sound; production, real data, and real-user onboarding remain explicitly unapproved.
 
 ## Baseline and Phase 14A evidence
 
@@ -37,7 +37,7 @@ Recommendations, not approvals: fictional pilot ceiling **$50/month**; modest-pr
 
 ## Audit gate
 
-**BLOCKED.** Phase 14A.6 pushed the reviewed documentation baseline through `f598095` to `main`; the approved `.github/workflows/ci.yml` workflow runs `cloud:audit:report` on push. Available unauthenticated retrieval tooling could not fetch the workflow result or sanitized artifact, so no ordinary local audit substitutes for it and no gate criteria or audit tooling changed. A reviewed, provenance-verified Linux artifact and passing authoritative report—with no unresolved high/critical request-time findings—are mandatory before Phase 14B.
+**PASSED — READY FOR HUMAN APPROVAL.** Approved `.github/workflows/ci.yml` completed successfully on Linux for `main` commit `24b8994`; its reviewed sanitized `runtime-audit-report.json` artifact reported an available endpoint, valid standard npm audit JSON from `registry.npmjs.org`, and `clear-runtime`. The capture found 0 critical, 6 high, and 1 moderate advisories. Every finding is classified build-time, absent from the deployed artifact, outside the Worker request path, or not request-time reachable. The two nonblocking warnings—GitHub Action Node 20 deprecation/forced Node 24 runtime and an unused PowerShell helper—are maintenance items, not runtime security blockers. No audit criteria, artifact sanitizer, reachability rule, or release policy changed.
 
 ## Exact Phase 14B scope and stop conditions
 
