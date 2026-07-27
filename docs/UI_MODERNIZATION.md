@@ -20,7 +20,15 @@ Capture Tracker now uses a calm financial-command-center foundation: navy framin
 
 Desktop uses a compact 240px navy sidebar with the existing icon-only mark, a compact business identity, grouped workspace navigation, clear selected state, and discreet local-demo language. The full marketing lockup remains limited to the landing page. The expanded sidebar is now reserved for widths at or above 1180px; below that point the accessible compact navigation replaces it, so a 1024px workspace never has to compress desktop content around the rail.
 
-The responsive command bar supplies page context, business context, and the demo boundary. At compact widths, the sidebar is replaced by an accessible mobile drawer: a labeled open/close control, escape-key dismissal, selected state, and touch-sized destination links. The mobile bottom control preserves page context without attempting to duplicate every navigation item.
+The responsive command bar supplies page context, business context, and the demo boundary. At compact widths, it becomes a compact safe-area-aware CaptureTracker header with a subordinate current-section label and a single subdued demo/local indicator. The full desktop command bar retains workspace context without repeating the page title at every shell level.
+
+## Phase 13C, Pass 1B
+
+Mobile navigation uses a persistent five-tab bar: Today, Money, Review, Reports, and More. More opens an accessible, escape- and outside-click-dismissible sheet for Taxes, Documents, Ask AI, Activity, and Settings; it uses the same central destination list as the sidebar, so no supported module is hidden or duplicated. The selected route uses a teal treatment plus `aria-current` and a textual label. The fixed bar and header include iPhone safe-area spacing, while the application content reserves matching bottom space.
+
+The application shell uses the existing icon-only Capture Tracker asset, not the marketing lockup. The former small-avatar impression came from nesting that padded source in a second white padded badge. The desktop and mobile shell now use a larger proportional mark on navy framing, with CaptureTracker kept visually distinct from the selected fictional business.
+
+Teal is reserved for active navigation and purposeful product emphasis. The existing semantic success, warning, danger, information, locked, and neutral tokens remain responsible for financial and operational state.
 
 ## Today dashboard
 
