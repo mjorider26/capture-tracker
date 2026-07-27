@@ -52,6 +52,7 @@ jobs:
       - run: npm run cloud:bundle:verify
       - run: npm run client-secret:verify
       - run: npm run data-boundary:verify
+      - run: node scripts/prove-linux-opennext-gate1b.mjs
       - run: npm run cloud:audit:report
       - run: git diff --exit-code -- package-lock.json
       - uses: actions/upload-artifact@v4
@@ -61,6 +62,7 @@ jobs:
           path: |
             .artifacts/cloud-worker-inventory.json
             .artifacts/runtime-audit-report.json
+            .artifacts/linux-opennext-gate1b.json
           if-no-files-found: error
           retention-days: 7
       - run: npm run container:verify

@@ -47,6 +47,7 @@ next-env.d.ts
 /.open-next/
 /.artifacts/
 /.document-storage/
+/.wrangler/
 
 .env
 
