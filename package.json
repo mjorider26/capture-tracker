@@ -66,6 +66,7 @@
     "cloud:neon:verify": "tsx scripts/verify-neon-fictional-staging.ts",
     "cloud:bundle:verify": "node scripts/verify-worker-bundle.mjs",
     "cloud:bundle:verify:synthetic": "node scripts/verify-worker-bundle.mjs --synthetic",
+    "linux-proof:verify": "node --test scripts/linux-proof-lifecycle.test.mjs",
     "client-secret:verify": "node scripts/verify-client-secrets.mjs",
     "data-boundary:verify": "node scripts/verify-data-boundary.mjs",
     "container:verify": "npm run build && node scripts/verify-container.mjs",

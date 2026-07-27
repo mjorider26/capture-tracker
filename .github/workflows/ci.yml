@@ -8,6 +8,7 @@ on:
 jobs:
   application-and-cloud-foundation:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17

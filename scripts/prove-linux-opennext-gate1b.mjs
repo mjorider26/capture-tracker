@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { join } from "node:path";
-import { spawn, spawnSync } from "node:child_process";
+import { logStage, pollHealth, runBoundedCommand, startManagedProcess, stopManagedProcess } from "./linux-proof-lifecycle.mjs";
 
 const artifactRoot = ".open-next";
 const workerPath = join(artifactRoot, "worker.js");
@@ -10,112 +10,55 @@ const assetsRoot = join(artifactRoot, "assets");
 const reportPath = ".artifacts/linux-opennext-gate1b.json";
 const maxCompressedWorkerBytes = 3 * 1024 * 1024;
 const maxUncompressedWorkerBytes = 64 * 1024 * 1024;
+const previewTimeoutMs = 90_000;
+const dryRunTimeoutMs = 120_000;
+const totalTimeoutMs = 12 * 60_000;
 const forbidden = /(?:postgres(?:ql)?:\/\/|(?:api|access)[_-]?key\s*[=:]|password\s*[=:]|token\s*[=:]|secret\s*[=:]|[A-Z]:\\|\/(?:home|Users|tmp)\/)/i;
-const requiredEnvironmentNames = [
-  "BETTER_AUTH_SECRET",
-  "CAPTURE_TRACKER_STAGING_DATABASE_URL",
-  "CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL",
-  "CAPTURE_TRACKER_STAGING_DATABASE_NAME",
-  "DATABASE_URL",
-];
+const requiredEnvironmentNames = ["BETTER_AUTH_SECRET", "CAPTURE_TRACKER_STAGING_DATABASE_URL", "CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL", "CAPTURE_TRACKER_STAGING_DATABASE_NAME", "DATABASE_URL"];
+const activeProcesses = new Set();
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
-}
-
-function sha256(path) {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
-}
-
+function assert(condition, message) { if (!condition) throw new Error(message); }
+function sha256(path) { return createHash("sha256").update(readFileSync(path)).digest("hex"); }
 function filesUnder(directory) {
   if (!existsSync(directory)) return [];
   const files = [];
-  const visit = (current) => {
-    for (const entry of readdirSync(current, { withFileTypes: true })) {
-      const path = join(current, entry.name);
-      if (entry.isDirectory()) visit(path);
-      else if (entry.isFile()) files.push(path);
-    }
-  };
+  const visit = (current) => { for (const entry of readdirSync(current, { withFileTypes: true })) { const path = join(current, entry.name); if (entry.isDirectory()) visit(path); else if (entry.isFile()) files.push(path); } };
   visit(directory);
   return files;
 }
-
 function cleanEnvironment() {
   const environment = { ...process.env };
   for (const key of ["DATABASE_URL", "BETTER_AUTH_SECRET", "CAPTURE_TRACKER_STAGING_DATABASE_URL", "CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL"]) delete environment[key];
-  environment.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
-  environment.CAPTURE_TRACKER_ENVIRONMENT = "staging";
-  environment.CAPTURE_TRACKER_EXECUTION_CONTEXT = "cloudflare";
-  environment.CAPTURE_TRACKER_DEPLOYMENT_PROFILE = "free-preview-cloudflare-neon";
-  environment.CAPTURE_TRACKER_REAL_DATA_APPROVED = "false";
-  environment.CAPTURE_TRACKER_PAID_SERVICE_APPROVED = "false";
-  environment.CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED = "false";
-  environment.CAPTURE_TRACKER_DATA_MODE = "fictional";
+  Object.assign(environment, { CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false", CI: "true", CAPTURE_TRACKER_ENVIRONMENT: "staging", CAPTURE_TRACKER_EXECUTION_CONTEXT: "cloudflare", CAPTURE_TRACKER_DEPLOYMENT_PROFILE: "free-preview-cloudflare-neon", CAPTURE_TRACKER_REAL_DATA_APPROVED: "false", CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "false", CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "false", CAPTURE_TRACKER_DATA_MODE: "fictional" });
   return environment;
 }
-
-function safeOutput(value) {
-  return forbidden.test(value) ? "redacted-output" : value.slice(0, 500);
-}
-
+function safeOutput(value) { return forbidden.test(value) ? "redacted-output" : value.slice(0, 500); }
 async function previewWorker() {
   const port = 8791;
-  const child = spawn("npx", ["wrangler", "dev", "--local", "--config", "wrangler.jsonc", "--ip", "127.0.0.1", "--port", String(port), "--persist-to", ".artifacts/workerd-state"], {
-    cwd: process.cwd(),
-    env: cleanEnvironment(),
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let output = "";
-  child.stdout.on("data", (chunk) => { output += String(chunk); });
-  child.stderr.on("data", (chunk) => { output += String(chunk); });
+  logStage("workerd-preview", `starting local-only preview (timeout=${previewTimeoutMs}ms)`);
+  const managed = startManagedProcess({ command: "npx", args: ["wrangler", "dev", "--local", "--config", "wrangler.jsonc", "--ip", "127.0.0.1", "--port", String(port), "--persist-to", ".artifacts/workerd-state"], cwd: process.cwd(), env: cleanEnvironment() });
+  activeProcesses.add(managed);
   const started = Date.now();
-  const deadline = started + 45_000;
-  let liveStatus = null;
-  let readyStatus = null;
   try {
-    while (Date.now() < deadline) {
-      if (child.exitCode !== null) throw new Error("Workerd preview exited before it became ready.");
-      try {
-        const response = await fetch(`http://127.0.0.1:${port}/api/health/live`);
-        liveStatus = response.status;
-        if (liveStatus === 200) {
-          readyStatus = (await fetch(`http://127.0.0.1:${port}/api/health/ready`)).status;
-          break;
-        }
-      } catch { /* Workerd has not finished starting. */ }
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    assert(liveStatus === 200, "Workerd preview did not return a successful liveness response.");
-    assert(readyStatus === 503, "Workerd preview did not fail closed when its database binding was intentionally absent.");
-    return { result: "pass", durationMs: Date.now() - started, liveStatus, readyStatus, output: safeOutput(output) };
+    const live = await pollHealth({ url: `http://127.0.0.1:${port}/api/health/live`, attempts: 30, requestTimeoutMs: 1_000, intervalMs: 250 });
+    assert(live.result === "pass", `Workerd liveness did not become ready (${live.error ?? "status"}).`);
+    const ready = await pollHealth({ url: `http://127.0.0.1:${port}/api/health/ready`, attempts: 1, requestTimeoutMs: 1_500, intervalMs: 0 });
+    assert(ready.status === 503, "Workerd preview did not fail closed when its database binding was intentionally absent.");
+    assert(Date.now() - started <= previewTimeoutMs, "Workerd preview exceeded its deadline.");
+    return { result: "pass", durationMs: Date.now() - started, liveStatus: live.status, readyStatus: ready.status, output: safeOutput(managed.output()) };
   } catch (error) {
-    return { result: "fail", durationMs: Date.now() - started, liveStatus, readyStatus, output: safeOutput(output), error: error instanceof Error ? error.message : "Workerd preview failed." };
+    return { result: "fail", durationMs: Date.now() - started, liveStatus: null, readyStatus: null, output: safeOutput(managed.output()), error: error instanceof Error ? error.message : "Workerd preview failed." };
   } finally {
-    if (child.exitCode === null) {
-      child.kill("SIGTERM");
-      await new Promise((resolve) => child.once("exit", resolve));
-    }
+    const cleanup = await stopManagedProcess(managed);
+    activeProcesses.delete(managed);
+    logStage("workerd-preview", `stopped forced=${cleanup.forced}`);
   }
 }
-
-function dryRunWorker() {
-  const result = spawnSync("npx", ["wrangler", "deploy", "--config", "wrangler.jsonc", "--dry-run", "--no-autoconfig", "--outdir", ".artifacts/wrangler-dry-run"], {
-    cwd: process.cwd(),
-    env: cleanEnvironment(),
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-  const totalUpload = output.match(/Total Upload:\s*([^\n]+)/i)?.[1] ?? null;
-  return {
-    result: result.status === 0 ? "pass" : "fail",
-    exitCode: result.status,
-    totalUpload,
-    output: safeOutput(output),
-  };
+async function dryRunWorker() {
+  const result = await runBoundedCommand({ stage: "wrangler-dry-run", command: "npx", args: ["wrangler", "deploy", "--config", "wrangler.jsonc", "--dry-run", "--no-autoconfig", "--outdir", ".artifacts/wrangler-dry-run"], cwd: process.cwd(), env: cleanEnvironment(), timeoutMs: dryRunTimeoutMs });
+  const totalUpload = result.output.match(/Total Upload:\s*([^\n]+)/i)?.[1] ?? null;
+  return { result: result.result, exitCode: result.exitCode, totalUpload, output: safeOutput(result.output), cleanup: result.cleanup };
 }
-
 function createReport() {
   assert(process.platform === "linux", "Gate 1B proof must run on Linux.");
   assert(existsSync(workerPath), "OpenNext Worker entry is missing.");
@@ -123,45 +66,28 @@ function createReport() {
   assert(config.name === "capture-tracker-staging", "The reviewed Worker target name is incorrect.");
   assert(!config.routes && !config.route && !config.domains && !config.domain, "The dry-run configuration must not contain routes or custom domains.");
   const workerBytes = statSync(workerPath).size;
-  const compressedWorkerBytes = gzipSync(readFileSync(workerPath)).byteLength;
   const assetFiles = filesUnder(assetsRoot);
-  const packageManifests = filesUnder(artifactRoot).filter((path) => path.endsWith("package.json"));
-  const configText = readFileSync("open-next.config.ts", "utf8");
-  return {
-    schemaVersion: 1,
-    deploymentCandidateSha: process.env.GITHUB_SHA ?? null,
-    linux: { platform: process.platform, architecture: process.arch, nodeVersion: process.version, npmVersion: process.env.npm_config_user_agent?.match(/npm\/(\S+)/)?.[1] ?? null },
-    lockfileSha256: sha256("package-lock.json"),
-    worker: {
-      entry: "worker.js",
-      sha256: sha256(workerPath),
-      uncompressedBytes: workerBytes,
-      gzipBytes: compressedWorkerBytes,
-      fitsWorkersFree: workerBytes <= maxUncompressedWorkerBytes && compressedWorkerBytes <= maxCompressedWorkerBytes,
-      moduleFormat: "ESM",
-    },
-    staticAssets: { count: assetFiles.length, totalBytes: assetFiles.reduce((total, path) => total + statSync(path).size, 0) },
-    packagedRuntimeDependencyCount: packageManifests.length,
-    bindings: [...new Set([...(config.assets?.binding ? [config.assets.binding] : []), ...(config.services ?? []).map((service) => service.binding)])].sort(),
-    environmentVariableNames: [...new Set([...Object.keys(config.vars ?? {}), ...requiredEnvironmentNames])].sort(),
-    openNextConfiguration: { sha256: createHash("sha256").update(configText).digest("hex") },
-    limits: { compressedWorkerBytes: maxCompressedWorkerBytes, uncompressedWorkerBytes: maxUncompressedWorkerBytes, startupLimitMs: 1000 },
-  };
+  return { schemaVersion: 2, deploymentCandidateSha: process.env.GITHUB_SHA ?? null, linux: { platform: process.platform, architecture: process.arch, nodeVersion: process.version, npmVersion: process.env.npm_config_user_agent?.match(/npm\/(\S+)/)?.[1] ?? null }, lockfileSha256: sha256("package-lock.json"), worker: { entry: "worker.js", sha256: sha256(workerPath), uncompressedBytes: workerBytes, gzipBytes: gzipSync(readFileSync(workerPath)).byteLength, fitsWorkersFree: workerBytes <= maxUncompressedWorkerBytes && gzipSync(readFileSync(workerPath)).byteLength <= maxCompressedWorkerBytes, moduleFormat: "ESM" }, staticAssets: { count: assetFiles.length, totalBytes: assetFiles.reduce((total, path) => total + statSync(path).size, 0) }, packagedRuntimeDependencyCount: filesUnder(artifactRoot).filter((path) => path.endsWith("package.json")).length, bindings: [...new Set([...(config.assets?.binding ? [config.assets.binding] : []), ...(config.services ?? []).map((service) => service.binding)])].sort(), environmentVariableNames: [...new Set([...Object.keys(config.vars ?? {}), ...requiredEnvironmentNames])].sort(), openNextConfiguration: { sha256: createHash("sha256").update(readFileSync("open-next.config.ts", "utf8")).digest("hex") }, limits: { compressedWorkerBytes: maxCompressedWorkerBytes, uncompressedWorkerBytes: maxUncompressedWorkerBytes, startupLimitMs: 1000 } };
 }
-
+async function stopAll(reason) {
+  logStage("cleanup", reason);
+  await Promise.allSettled([...activeProcesses].map((managed) => stopManagedProcess(managed)));
+  activeProcesses.clear();
+}
 async function main() {
   const report = createReport();
   report.workerdPreview = await previewWorker();
-  report.wranglerDryRun = dryRunWorker();
-  const serialized = JSON.stringify(report);
-  assert(!forbidden.test(serialized), "Gate 1B report contains a prohibited value.");
+  assert(report.workerdPreview.result === "pass", "Workerd preview failed; sanitized evidence is withheld.");
+  report.wranglerDryRun = await dryRunWorker();
+  assert(report.wranglerDryRun.result === "pass", "Wrangler dry-run failed; sanitized evidence is withheld.");
+  assert(report.worker.fitsWorkersFree, "Worker artifact exceeds the Workers Free size limits.");
+  assert(!forbidden.test(JSON.stringify(report)), "Gate 1B report contains a prohibited value.");
   mkdirSync(".artifacts", { recursive: true });
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-  console.log(`LINUX OPENNEXT GATE 1B: preview=${report.workerdPreview.result}; dry-run=${report.wranglerDryRun.result}; gzip=${report.worker.gzipBytes} bytes.`);
-  if (!report.worker.fitsWorkersFree || report.workerdPreview.result !== "pass" || report.wranglerDryRun.result !== "pass") process.exitCode = 1;
+  logStage("complete", `preview=pass dry-run=pass gzip=${report.worker.gzipBytes} bytes`);
 }
-
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "Gate 1B Linux proof failed.");
-  process.exitCode = 1;
-});
+const totalTimer = setTimeout(() => { stopAll("total-timeout").finally(() => { console.error("Gate 1B total timeout exceeded."); process.exit(1); }); }, totalTimeoutMs);
+for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => { stopAll(`received-${signal}`).finally(() => process.exit(1)); });
+process.once("uncaughtException", (error) => { stopAll("uncaught-exception").finally(() => { console.error(error.message); process.exit(1); }); });
+process.once("unhandledRejection", (reason) => { stopAll("unhandled-rejection").finally(() => { console.error(reason instanceof Error ? reason.message : "Unhandled rejection."); process.exit(1); }); });
+main().then(() => { clearTimeout(totalTimer); process.exit(0); }).catch(async (error) => { clearTimeout(totalTimer); await stopAll("proof-failed"); console.error(error instanceof Error ? error.message : "Gate 1B Linux proof failed."); process.exit(1); });
