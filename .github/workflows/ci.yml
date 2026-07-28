@@ -54,6 +54,7 @@ jobs:
       - run: npm run client-secret:verify
       - run: npm run data-boundary:verify
       - run: npm run cloud:audit:report
+      - run: node scripts/probe-linux-opennext-health.mjs
       - run: node scripts/prove-linux-opennext-gate1b.mjs
       - run: git diff --exit-code -- package-lock.json
       - name: Collect PostgreSQL service diagnostics
@@ -79,6 +80,7 @@ jobs:
           path: |
             .artifacts/cloud-worker-inventory.json
             .artifacts/runtime-audit-report.json
+            .artifacts/linux-opennext-health-preflight.json
             .artifacts/linux-opennext-gate1b.json
           if-no-files-found: warn
           retention-days: 7

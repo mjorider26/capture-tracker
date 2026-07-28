@@ -4,7 +4,8 @@ import { gzipSync } from "node:zlib";
 import { join } from "node:path";
 import { logStage, runBoundedCommand, startManagedProcess, stopManagedProcess } from "./linux-proof-lifecycle.mjs";
 import { assertSanitizedReport, summarizeOutput } from "./linux-proof-report-sanitizer.mjs";
-import { pollHealthContract } from "./linux-proof-health-contract.mjs";
+import { probeWorkerdHealth } from "./linux-workerd-health-probe.mjs";
+import { cleanWorkerdEnvironment, workerdPreviewArgs } from "./linux-workerd-preview.mjs";
 
 const artifactRoot = ".open-next";
 const workerPath = join(artifactRoot, "worker.js");
@@ -27,12 +28,6 @@ function filesUnder(directory) {
   visit(directory);
   return files;
 }
-function cleanEnvironment() {
-  const environment = { ...process.env };
-  for (const key of ["DATABASE_URL", "BETTER_AUTH_SECRET", "CAPTURE_TRACKER_STAGING_DATABASE_URL", "CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL"]) delete environment[key];
-  Object.assign(environment, { CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false", CI: "true", CAPTURE_TRACKER_ENVIRONMENT: "staging", CAPTURE_TRACKER_EXECUTION_CONTEXT: "cloudflare", CAPTURE_TRACKER_DEPLOYMENT_PROFILE: "free-preview-cloudflare-neon", CAPTURE_TRACKER_REAL_DATA_APPROVED: "false", CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "false", CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "false", CAPTURE_TRACKER_DATA_MODE: "fictional" });
-  return environment;
-}
 function previewDiagnostics(managed, started) {
   return {
     childExitCode: managed.child.exitCode,
@@ -42,20 +37,21 @@ function previewDiagnostics(managed, started) {
     elapsedMs: Date.now() - started,
   };
 }
-async function previewWorker() {
+async function previewWorker(persistHealthResult) {
   const port = 8791;
   logStage("workerd-preview", `starting local-only preview (timeout=${previewTimeoutMs}ms)`);
-  const managed = startManagedProcess({ command: "npx", args: ["wrangler", "dev", "--local", "--config", "wrangler.jsonc", "--ip", "127.0.0.1", "--port", String(port), "--persist-to", ".artifacts/workerd-state"], cwd: process.cwd(), env: cleanEnvironment() });
+  const managed = startManagedProcess({ command: "npx", args: workerdPreviewArgs(port), cwd: process.cwd(), env: cleanWorkerdEnvironment() });
   activeProcesses.add(managed);
   const started = Date.now();
-  const result = { previewResult: "fail", liveStatus: null, liveContractResult: "not-run", liveFailureCode: null, liveState: null, liveTopLevelFields: [], liveDurationMs: null, readyStatus: null, readyContractResult: "not-run", readyFailureCode: null, readyState: null, readyTopLevelFields: [], readyDurationMs: null, diagnostics: null, cleanupResult: null };
+  const result = { previewResult: "fail", liveStatus: null, liveContentType: "missing", liveContractResult: "not-run", liveFailureCode: null, liveState: null, liveCode: null, liveTopLevelFields: [], liveDurationMs: null, readyStatus: null, readyContentType: "missing", readyContractResult: "not-run", readyFailureCode: null, readyState: null, readyCode: null, readyTopLevelFields: [], readyDurationMs: null, diagnostics: null, cleanupResult: null };
   try {
-    const live = await pollHealthContract({ url: `http://127.0.0.1:${port}/api/health/live`, contractName: "live", attempts: 30, requestTimeoutMs: 1_000, intervalMs: 250, stopWhen: () => managed.child.exitCode !== null ? "PREVIEW_CHILD_EXITED" : null });
-    Object.assign(result, { liveStatus: live.status, liveContractResult: live.contractResult, liveFailureCode: live.failureCode, liveState: live.state, liveTopLevelFields: live.topLevelFields, liveDurationMs: live.durationMs });
-    assert(live.contractResult === "pass", `Workerd liveness contract failed (${live.failureCode}).`);
-    const ready = await pollHealthContract({ url: `http://127.0.0.1:${port}/api/health/ready`, contractName: "readyFailClosed", attempts: 1, requestTimeoutMs: 1_500, intervalMs: 0, stopWhen: () => managed.child.exitCode !== null ? "PREVIEW_CHILD_EXITED" : null });
-    Object.assign(result, { readyStatus: ready.status, readyContractResult: ready.contractResult, readyFailureCode: ready.failureCode, readyState: ready.state, readyTopLevelFields: ready.topLevelFields, readyDurationMs: ready.durationMs });
-    assert(ready.contractResult === "pass", `Workerd fail-closed readiness contract failed (${ready.failureCode}).`);
+    const health = await probeWorkerdHealth({ baseUrl: `http://127.0.0.1:${port}`, stopWhen: () => managed.child.exitCode !== null ? "PREVIEW_CHILD_EXITED" : null });
+    const live = health.live;
+    const ready = health.ready;
+    Object.assign(result, { liveStatus: live.httpStatus, liveContentType: live.contentType, liveContractResult: live.contractResult, liveFailureCode: live.failureCode, liveState: live.state, liveCode: live.code, liveTopLevelFields: live.topLevelFields, liveDurationMs: live.durationMs });
+    if (ready) Object.assign(result, { readyStatus: ready.httpStatus, readyContentType: ready.contentType, readyContractResult: ready.contractResult, readyFailureCode: ready.failureCode, readyState: ready.state, readyCode: ready.code, readyTopLevelFields: ready.topLevelFields, readyDurationMs: ready.durationMs });
+    persistHealthResult(result);
+    assert(health.result === "pass", `Workerd health contract failed at ${health.failedEndpoint}.`);
     assert(Date.now() - started <= previewTimeoutMs, "Workerd preview exceeded its deadline.");
     result.previewResult = "pass";
   } catch (error) {
@@ -72,7 +68,7 @@ async function previewWorker() {
   return result;
 }
 async function dryRunWorker() {
-  const result = await runBoundedCommand({ stage: "wrangler-dry-run", command: "npx", args: ["wrangler", "deploy", "--config", "wrangler.jsonc", "--dry-run", "--no-autoconfig", "--outdir", ".artifacts/wrangler-dry-run"], cwd: process.cwd(), env: cleanEnvironment(), timeoutMs: dryRunTimeoutMs });
+  const result = await runBoundedCommand({ stage: "wrangler-dry-run", command: "npx", args: ["wrangler", "deploy", "--config", "wrangler.jsonc", "--dry-run", "--no-autoconfig", "--outdir", ".artifacts/wrangler-dry-run"], cwd: process.cwd(), env: cleanWorkerdEnvironment(), timeoutMs: dryRunTimeoutMs });
   const totalUpload = result.output.match(/Total Upload:\s*([^\n]+)/i)?.[1] ?? null;
   return { result: result.result, exitCode: result.exitCode, signal: result.signal, totalUpload, stdout: summarizeOutput(result.stdout), stderr: summarizeOutput(result.stderr), cleanup: result.cleanup };
 }
@@ -108,7 +104,7 @@ function persistReport(report) {
 async function main() {
   const report = createReport();
   report.status = "running";
-  report.workerdPreview = await previewWorker();
+  report.workerdPreview = await previewWorker((healthResult) => { report.workerdPreview = healthResult; persistReport(report); });
   if (report.workerdPreview.previewResult !== "pass") {
     report.status = "failure";
     report.failedStage = "workerd-preview";

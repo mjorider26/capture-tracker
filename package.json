@@ -69,6 +69,7 @@
     "linux-proof:verify": "node --test scripts/linux-proof-lifecycle.test.mjs",
     "linux-proof:sanitizer:verify": "node --test scripts/linux-proof-report-sanitizer.test.mjs",
     "linux-proof:health:verify": "node --test scripts/linux-proof-health-contract.test.mjs",
+    "linux-proof:preflight:verify": "node --test scripts/linux-workerd-health-probe.test.mjs",
     "ci:workflow:verify": "node scripts/verify-ci-workflow.mjs",
     "client-secret:verify": "node scripts/verify-client-secrets.mjs",
     "data-boundary:verify": "node scripts/verify-data-boundary.mjs",

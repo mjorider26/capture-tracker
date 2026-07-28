@@ -15,6 +15,7 @@ const live = text("src/app/api/health/live/route.ts");
 const ready = text("src/app/api/health/ready/route.ts");
 const robots = text("public/robots.txt");
 const prisma = text("src/lib/prisma.ts");
+const healthContract = text("src/lib/health-contract.mjs");
 const auth = text("src/lib/auth.ts");
 
 assert(wrangler.includes('"nodejs_compat"'), "Cloudflare Node compatibility flag is required.");
@@ -32,7 +33,9 @@ assert(!openNext.includes("r2IncrementalCache"), "Financial application routes m
 for (const [label, route] of [["liveness", live], ["readiness", ready]]) {
   assert(route.includes('dynamic = "force-dynamic"') && route.includes('"Cache-Control": "no-store"'), `${label} endpoint must be dynamic and no-store.`);
 }
-assert(ready.includes("SELECT 1") && ready.includes("status: 503"), "Readiness must check PostgreSQL and fail closed.");
+assert(ready.includes("SELECT 1") && ready.includes("healthContracts.readyFailClosed.httpStatus"), "Readiness must check PostgreSQL and fail closed.");
+assert(live.includes("healthContracts.live") && ready.includes("healthContracts.readyFailClosed") && ready.includes('import("@/lib/prisma")'), "Health routes must use the shared contract and lazily load Prisma so absent configuration fails closed.");
+assert(healthContract.includes("inspectHealthResponse") && healthContract.includes("READY_FAIL_CLOSED_CONTRACT_MISMATCH"), "The shared health contract must validate safe response metadata and the documented fail-closed readiness response.");
 assert(robots.includes("Disallow: /app/") && robots.includes("Disallow: /demo/") && robots.includes("Disallow: /api/"), "Financial paths must be excluded from crawling.");
 assert(prisma.includes('import "server-only"') && auth.includes('import "server-only"'), "Prisma and Better Auth must be server-only.");
 assert(text("src/app/app/money/[transactionId]/actions.ts").startsWith('"use server"') && text("src/app/app/taxes/estimates/[estimateId]/actions.ts").startsWith('"use server"'), "Transaction and payment write entry points must be Server Actions.");
