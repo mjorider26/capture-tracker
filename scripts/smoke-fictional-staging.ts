@@ -1,3 +1,4 @@
+import "./load-local-staging-environment";
 import { readCloudEnvironment } from "../src/lib/cloud/environment";
 import { pathToFileURL } from "node:url";
 

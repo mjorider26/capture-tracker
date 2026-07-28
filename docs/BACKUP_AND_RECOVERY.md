@@ -2,7 +2,7 @@
 
 ## Truthful current posture
 
-There is no deployed database, Worker, R2 bucket, provider account, backup, restore point, or restore drill. Neon backup, point-in-time recovery, branch, and restore capabilities have not been verified on any plan. No live cost has been verified. R2 is deferred and no document objects may be uploaded.
+Gate 2B completed one manual logical-recovery proof for the fictional Neon staging database. PostgreSQL 18.4 custom-format backup and PostgreSQL 18.4 local restore matched sanitized manifests exactly; the temporary `257,409`-byte archive was deleted after verification. This establishes neither automated daily backups nor retention, provider point-in-time recovery, or production recovery. No Worker or R2 resource exists; R2 remains blocked.
 
 ## Later fictional-staging recovery drill
 

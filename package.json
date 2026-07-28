@@ -64,6 +64,8 @@
     "cloud:bootstrap:fictional": "tsx scripts/bootstrap-fictional-staging.ts",
     "cloud:smoke:fictional": "tsx scripts/smoke-fictional-staging.ts",
     "cloud:neon:verify": "tsx scripts/verify-neon-fictional-staging.ts",
+    "cloud:neon:preflight": "tsx scripts/preflight-neon-fictional-staging.ts",
+    "cloud:gate2b:catalog": "tsx scripts/gate2b-neon-catalog-preflight.ts",
     "cloud:bundle:verify": "node scripts/verify-worker-bundle.mjs",
     "cloud:bundle:verify:synthetic": "node scripts/verify-worker-bundle.mjs --synthetic",
     "linux-proof:verify": "node --test scripts/linux-proof-lifecycle.test.mjs",
