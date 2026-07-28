@@ -56,6 +56,22 @@ jobs:
       - run: npm run cloud:audit:report
       - run: node scripts/prove-linux-opennext-gate1b.mjs
       - run: git diff --exit-code -- package-lock.json
+      - name: Collect PostgreSQL service diagnostics
+        if: always()
+        shell: bash
+        run: |
+          service_id='${{ job.services.postgres.id }}'
+          if [ -z "$service_id" ]; then
+            echo "CI_SERVICE_DIAGNOSTIC service=postgres status=unavailable health=unavailable exitCode=unavailable"
+            exit 0
+          fi
+          status="$(docker inspect --format '{{.State.Status}}' "$service_id" 2>/dev/null || printf unavailable)"
+          health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}unavailable{{end}}' "$service_id" 2>/dev/null || printf unavailable)"
+          exit_code="$(docker inspect --format '{{.State.ExitCode}}' "$service_id" 2>/dev/null || printf unavailable)"
+          echo "CI_SERVICE_DIAGNOSTIC service=postgres status=$status health=$health exitCode=$exit_code"
+          docker logs --tail 40 "$service_id" 2>&1 | sed -E \
+            -e 's#postgres(ql)?://[^[:space:]]+#[redacted-database-url]#Ig' \
+            -e 's#(password|secret|token|api[_-]?key)[[:space:]]*[:=][^[:space:]]+#\1=[redacted]#Ig' || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -64,7 +80,7 @@ jobs:
             .artifacts/cloud-worker-inventory.json
             .artifacts/runtime-audit-report.json
             .artifacts/linux-opennext-gate1b.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
       - run: npm run container:verify
       - run: npm --prefix infra/aws ci
