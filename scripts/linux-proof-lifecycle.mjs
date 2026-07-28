@@ -29,10 +29,11 @@ export function startManagedProcess({ command, args, cwd, env, spawnImpl = spawn
     detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
-  let output = "";
-  child.stdout?.on("data", (chunk) => { output = appendOutput(output, chunk); });
-  child.stderr?.on("data", (chunk) => { output = appendOutput(output, chunk); });
-  return { child, completion: completion(child), output: () => output };
+  let stdout = "";
+  let stderr = "";
+  child.stdout?.on("data", (chunk) => { stdout = appendOutput(stdout, chunk); });
+  child.stderr?.on("data", (chunk) => { stderr = appendOutput(stderr, chunk); });
+  return { child, completion: completion(child), output: () => `${stdout}\n${stderr}`, stdout: () => stdout, stderr: () => stderr };
 }
 
 export async function stopManagedProcess(managed, { graceMs = 1_000, closeMs = 3_000 } = {}) {
@@ -65,10 +66,10 @@ export async function runBoundedCommand({ stage, command, args, cwd, env, timeou
   if (result?.timedOut) {
     const cleanup = await stopManagedProcess(managed);
     logStage(stage, `timed out; cleanup forced=${cleanup.forced}`);
-    return { result: "timeout", exitCode: null, signal: null, output: managed.output(), cleanup };
+    return { result: "timeout", exitCode: null, signal: null, stdout: managed.stdout(), stderr: managed.stderr(), output: managed.output(), cleanup };
   }
   logStage(stage, `completed exitCode=${result.exitCode ?? "null"} signal=${result.signal ?? "none"}`);
-  return { result: result.exitCode === 0 ? "pass" : "fail", exitCode: result.exitCode, signal: result.signal, output: managed.output(), cleanup: { stopped: true, forced: false } };
+  return { result: result.exitCode === 0 ? "pass" : "fail", exitCode: result.exitCode, signal: result.signal, stdout: managed.stdout(), stderr: managed.stderr(), output: managed.output(), cleanup: { stopped: true, forced: false } };
 }
 
 export async function fetchWithTimeout(url, { timeoutMs, fetchImpl = fetch }) {
@@ -81,10 +82,12 @@ export async function fetchWithTimeout(url, { timeoutMs, fetchImpl = fetch }) {
   }
 }
 
-export async function pollHealth({ url, attempts, requestTimeoutMs, intervalMs, fetchImpl = fetch }) {
+export async function pollHealth({ url, attempts, requestTimeoutMs, intervalMs, fetchImpl = fetch, stopWhen = null }) {
   let lastStatus = null;
   let lastError = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const stop = stopWhen?.();
+    if (stop) return { result: "fail", attempts: attempt - 1, status: lastStatus, error: stop };
     try {
       const response = await fetchWithTimeout(url, { timeoutMs: requestTimeoutMs, fetchImpl });
       lastStatus = response.status;

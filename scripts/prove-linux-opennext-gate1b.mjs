@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { gzipSync } from "node:zlib";
 import { join } from "node:path";
 import { logStage, pollHealth, runBoundedCommand, startManagedProcess, stopManagedProcess } from "./linux-proof-lifecycle.mjs";
+import { assertSanitizedReport, summarizeOutput } from "./linux-proof-report-sanitizer.mjs";
 
 const artifactRoot = ".open-next";
 const workerPath = join(artifactRoot, "worker.js");
@@ -13,7 +14,6 @@ const maxUncompressedWorkerBytes = 64 * 1024 * 1024;
 const previewTimeoutMs = 90_000;
 const dryRunTimeoutMs = 120_000;
 const totalTimeoutMs = 12 * 60_000;
-const forbidden = /(?:postgres(?:ql)?:\/\/|(?:api|access)[_-]?key\s*[=:]|password\s*[=:]|token\s*[=:]|secret\s*[=:]|[A-Z]:\\|\/(?:home|Users|tmp)\/)/i;
 const requiredEnvironmentNames = ["BETTER_AUTH_SECRET", "CAPTURE_TRACKER_STAGING_DATABASE_URL", "CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL", "CAPTURE_TRACKER_STAGING_DATABASE_NAME", "DATABASE_URL"];
 const activeProcesses = new Set();
 
@@ -32,7 +32,15 @@ function cleanEnvironment() {
   Object.assign(environment, { CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false", CI: "true", CAPTURE_TRACKER_ENVIRONMENT: "staging", CAPTURE_TRACKER_EXECUTION_CONTEXT: "cloudflare", CAPTURE_TRACKER_DEPLOYMENT_PROFILE: "free-preview-cloudflare-neon", CAPTURE_TRACKER_REAL_DATA_APPROVED: "false", CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "false", CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "false", CAPTURE_TRACKER_DATA_MODE: "fictional" });
   return environment;
 }
-function safeOutput(value) { return forbidden.test(value) ? "redacted-output" : value.slice(0, 500); }
+function previewDiagnostics(managed, started) {
+  return {
+    childExitCode: managed.child.exitCode,
+    childSignal: managed.child.signalCode,
+    stdout: summarizeOutput(managed.stdout()),
+    stderr: summarizeOutput(managed.stderr()),
+    elapsedMs: Date.now() - started,
+  };
+}
 async function previewWorker() {
   const port = 8791;
   logStage("workerd-preview", `starting local-only preview (timeout=${previewTimeoutMs}ms)`);
@@ -40,14 +48,14 @@ async function previewWorker() {
   activeProcesses.add(managed);
   const started = Date.now();
   try {
-    const live = await pollHealth({ url: `http://127.0.0.1:${port}/api/health/live`, attempts: 30, requestTimeoutMs: 1_000, intervalMs: 250 });
+    const live = await pollHealth({ url: `http://127.0.0.1:${port}/api/health/live`, attempts: 30, requestTimeoutMs: 1_000, intervalMs: 250, stopWhen: () => managed.child.exitCode !== null ? "preview-child-exited" : null });
     assert(live.result === "pass", `Workerd liveness did not become ready (${live.error ?? "status"}).`);
     const ready = await pollHealth({ url: `http://127.0.0.1:${port}/api/health/ready`, attempts: 1, requestTimeoutMs: 1_500, intervalMs: 0 });
     assert(ready.status === 503, "Workerd preview did not fail closed when its database binding was intentionally absent.");
     assert(Date.now() - started <= previewTimeoutMs, "Workerd preview exceeded its deadline.");
-    return { result: "pass", durationMs: Date.now() - started, liveStatus: live.status, readyStatus: ready.status, output: safeOutput(managed.output()) };
+    return { result: "pass", durationMs: Date.now() - started, liveStatus: live.status, readyStatus: ready.status, diagnostics: previewDiagnostics(managed, started) };
   } catch (error) {
-    return { result: "fail", durationMs: Date.now() - started, liveStatus: null, readyStatus: null, output: safeOutput(managed.output()), error: error instanceof Error ? error.message : "Workerd preview failed." };
+    return { result: "fail", durationMs: Date.now() - started, liveStatus: null, readyStatus: null, errorCode: error instanceof Error && error.message.includes("preview-child-exited") ? "PREVIEW_CHILD_EXITED" : "PREVIEW_HEALTH_PROOF_FAILED", diagnostics: previewDiagnostics(managed, started) };
   } finally {
     const cleanup = await stopManagedProcess(managed);
     activeProcesses.delete(managed);
@@ -57,7 +65,7 @@ async function previewWorker() {
 async function dryRunWorker() {
   const result = await runBoundedCommand({ stage: "wrangler-dry-run", command: "npx", args: ["wrangler", "deploy", "--config", "wrangler.jsonc", "--dry-run", "--no-autoconfig", "--outdir", ".artifacts/wrangler-dry-run"], cwd: process.cwd(), env: cleanEnvironment(), timeoutMs: dryRunTimeoutMs });
   const totalUpload = result.output.match(/Total Upload:\s*([^\n]+)/i)?.[1] ?? null;
-  return { result: result.result, exitCode: result.exitCode, totalUpload, output: safeOutput(result.output), cleanup: result.cleanup };
+  return { result: result.result, exitCode: result.exitCode, signal: result.signal, totalUpload, stdout: summarizeOutput(result.stdout), stderr: summarizeOutput(result.stderr), cleanup: result.cleanup };
 }
 function createReport() {
   assert(process.platform === "linux", "Gate 1B proof must run on Linux.");
@@ -74,16 +82,40 @@ async function stopAll(reason) {
   await Promise.allSettled([...activeProcesses].map((managed) => stopManagedProcess(managed)));
   activeProcesses.clear();
 }
-async function main() {
-  const report = createReport();
-  report.workerdPreview = await previewWorker();
-  assert(report.workerdPreview.result === "pass", "Workerd preview failed; sanitized evidence is withheld.");
-  report.wranglerDryRun = await dryRunWorker();
-  assert(report.wranglerDryRun.result === "pass", "Wrangler dry-run failed; sanitized evidence is withheld.");
-  assert(report.worker.fitsWorkersFree, "Worker artifact exceeds the Workers Free size limits.");
-  assert(!forbidden.test(JSON.stringify(report)), "Gate 1B report contains a prohibited value.");
+function writeReport(report) {
+  assertSanitizedReport(report);
   mkdirSync(".artifacts", { recursive: true });
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
+function writeValidationFailureReport(report, error) {
+  const finding = error?.finding ?? { path: "report", category: "UNKNOWN", reason: "SANITIZED_OUTPUT_POLICY" };
+  const safeFailure = { schemaVersion: 2, status: "failure", deploymentCandidateSha: report.deploymentCandidateSha, failedStage: "report-validation", diagnostic: { path: finding.path, category: finding.category, reason: finding.reason } };
+  mkdirSync(".artifacts", { recursive: true });
+  writeFileSync(reportPath, `${JSON.stringify(safeFailure, null, 2)}\n`, "utf8");
+}
+function persistReport(report) {
+  try { writeReport(report); } catch (error) { writeValidationFailureReport(report, error); throw error; }
+}
+async function main() {
+  const report = createReport();
+  report.status = "running";
+  report.workerdPreview = await previewWorker();
+  if (report.workerdPreview.result !== "pass") {
+    report.status = "failure";
+    report.failedStage = "workerd-preview";
+    persistReport(report);
+    throw new Error("Workerd preview failed; safe failure evidence was recorded.");
+  }
+  report.wranglerDryRun = await dryRunWorker();
+  if (report.wranglerDryRun.result !== "pass") {
+    report.status = "failure";
+    report.failedStage = "wrangler-dry-run";
+    persistReport(report);
+    throw new Error("Wrangler dry-run failed; safe failure evidence was recorded.");
+  }
+  assert(report.worker.fitsWorkersFree, "Worker artifact exceeds the Workers Free size limits.");
+  report.status = "success";
+  persistReport(report);
   logStage("complete", `preview=pass dry-run=pass gzip=${report.worker.gzipBytes} bytes`);
 }
 const totalTimer = setTimeout(() => { stopAll("total-timeout").finally(() => { console.error("Gate 1B total timeout exceeded."); process.exit(1); }); }, totalTimeoutMs);
