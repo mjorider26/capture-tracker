@@ -68,6 +68,7 @@
     "cloud:bundle:verify:synthetic": "node scripts/verify-worker-bundle.mjs --synthetic",
     "linux-proof:verify": "node --test scripts/linux-proof-lifecycle.test.mjs",
     "linux-proof:sanitizer:verify": "node --test scripts/linux-proof-report-sanitizer.test.mjs",
+    "linux-proof:health:verify": "node --test scripts/linux-proof-health-contract.test.mjs",
     "client-secret:verify": "node scripts/verify-client-secrets.mjs",
     "data-boundary:verify": "node scripts/verify-data-boundary.mjs",
     "container:verify": "npm run build && node scripts/verify-container.mjs",

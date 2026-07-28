@@ -53,8 +53,8 @@ jobs:
       - run: npm run cloud:bundle:verify
       - run: npm run client-secret:verify
       - run: npm run data-boundary:verify
-      - run: node scripts/prove-linux-opennext-gate1b.mjs
       - run: npm run cloud:audit:report
+      - run: node scripts/prove-linux-opennext-gate1b.mjs
       - run: git diff --exit-code -- package-lock.json
       - uses: actions/upload-artifact@v4
         if: always()

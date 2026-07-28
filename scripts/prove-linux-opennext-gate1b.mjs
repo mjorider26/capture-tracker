@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { join } from "node:path";
-import { logStage, pollHealth, runBoundedCommand, startManagedProcess, stopManagedProcess } from "./linux-proof-lifecycle.mjs";
+import { logStage, runBoundedCommand, startManagedProcess, stopManagedProcess } from "./linux-proof-lifecycle.mjs";
 import { assertSanitizedReport, summarizeOutput } from "./linux-proof-report-sanitizer.mjs";
+import { pollHealthContract } from "./linux-proof-health-contract.mjs";
 
 const artifactRoot = ".open-next";
 const workerPath = join(artifactRoot, "worker.js");
@@ -47,20 +48,28 @@ async function previewWorker() {
   const managed = startManagedProcess({ command: "npx", args: ["wrangler", "dev", "--local", "--config", "wrangler.jsonc", "--ip", "127.0.0.1", "--port", String(port), "--persist-to", ".artifacts/workerd-state"], cwd: process.cwd(), env: cleanEnvironment() });
   activeProcesses.add(managed);
   const started = Date.now();
+  const result = { previewResult: "fail", liveStatus: null, liveContractResult: "not-run", liveFailureCode: null, liveState: null, liveTopLevelFields: [], liveDurationMs: null, readyStatus: null, readyContractResult: "not-run", readyFailureCode: null, readyState: null, readyTopLevelFields: [], readyDurationMs: null, diagnostics: null, cleanupResult: null };
   try {
-    const live = await pollHealth({ url: `http://127.0.0.1:${port}/api/health/live`, attempts: 30, requestTimeoutMs: 1_000, intervalMs: 250, stopWhen: () => managed.child.exitCode !== null ? "preview-child-exited" : null });
-    assert(live.result === "pass", `Workerd liveness did not become ready (${live.error ?? "status"}).`);
-    const ready = await pollHealth({ url: `http://127.0.0.1:${port}/api/health/ready`, attempts: 1, requestTimeoutMs: 1_500, intervalMs: 0 });
-    assert(ready.status === 503, "Workerd preview did not fail closed when its database binding was intentionally absent.");
+    const live = await pollHealthContract({ url: `http://127.0.0.1:${port}/api/health/live`, contractName: "live", attempts: 30, requestTimeoutMs: 1_000, intervalMs: 250, stopWhen: () => managed.child.exitCode !== null ? "PREVIEW_CHILD_EXITED" : null });
+    Object.assign(result, { liveStatus: live.status, liveContractResult: live.contractResult, liveFailureCode: live.failureCode, liveState: live.state, liveTopLevelFields: live.topLevelFields, liveDurationMs: live.durationMs });
+    assert(live.contractResult === "pass", `Workerd liveness contract failed (${live.failureCode}).`);
+    const ready = await pollHealthContract({ url: `http://127.0.0.1:${port}/api/health/ready`, contractName: "readyFailClosed", attempts: 1, requestTimeoutMs: 1_500, intervalMs: 0, stopWhen: () => managed.child.exitCode !== null ? "PREVIEW_CHILD_EXITED" : null });
+    Object.assign(result, { readyStatus: ready.status, readyContractResult: ready.contractResult, readyFailureCode: ready.failureCode, readyState: ready.state, readyTopLevelFields: ready.topLevelFields, readyDurationMs: ready.durationMs });
+    assert(ready.contractResult === "pass", `Workerd fail-closed readiness contract failed (${ready.failureCode}).`);
     assert(Date.now() - started <= previewTimeoutMs, "Workerd preview exceeded its deadline.");
-    return { result: "pass", durationMs: Date.now() - started, liveStatus: live.status, readyStatus: ready.status, diagnostics: previewDiagnostics(managed, started) };
+    result.previewResult = "pass";
   } catch (error) {
-    return { result: "fail", durationMs: Date.now() - started, liveStatus: null, readyStatus: null, errorCode: error instanceof Error && error.message.includes("preview-child-exited") ? "PREVIEW_CHILD_EXITED" : "PREVIEW_HEALTH_PROOF_FAILED", diagnostics: previewDiagnostics(managed, started) };
+    result.previewResult = "fail";
+    result.errorCode = error instanceof Error && /PREVIEW_CHILD_EXITED/.test(error.message) ? "PREVIEW_CHILD_EXITED" : "PREVIEW_HEALTH_PROOF_FAILED";
   } finally {
     const cleanup = await stopManagedProcess(managed);
     activeProcesses.delete(managed);
+    result.cleanupResult = cleanup.forced ? "forced" : "clean";
+    result.durationMs = Date.now() - started;
+    result.diagnostics = previewDiagnostics(managed, started);
     logStage("workerd-preview", `stopped forced=${cleanup.forced}`);
   }
+  return result;
 }
 async function dryRunWorker() {
   const result = await runBoundedCommand({ stage: "wrangler-dry-run", command: "npx", args: ["wrangler", "deploy", "--config", "wrangler.jsonc", "--dry-run", "--no-autoconfig", "--outdir", ".artifacts/wrangler-dry-run"], cwd: process.cwd(), env: cleanEnvironment(), timeoutMs: dryRunTimeoutMs });
@@ -100,7 +109,7 @@ async function main() {
   const report = createReport();
   report.status = "running";
   report.workerdPreview = await previewWorker();
-  if (report.workerdPreview.result !== "pass") {
+  if (report.workerdPreview.previewResult !== "pass") {
     report.status = "failure";
     report.failedStage = "workerd-preview";
     persistReport(report);
