@@ -10,4 +10,4 @@ No connection information, local password, provider ID, branch ID, document byte
 
 ## Status
 
-Database technical proof: **PASS**. Gate 2C readiness: **NOT READY** until the operator manually confirms the Neon plan remains Free, no payment method or paid add-on exists, usage remains in Free limits, and the current/estimated charge is `$0`. A separate explicit authorization is also required before any Gate 2C Worker deployment.
+Database technical proof: **PASS**. The post-proof Neon Billing console confirms the Free plan, `$0/month` displayed cost, no paid plan or add-on, and no payment method. **Gate 2B is complete and ready for Gate 2C authorization.** A separate explicit authorization is still required before any Gate 2C Worker deployment.

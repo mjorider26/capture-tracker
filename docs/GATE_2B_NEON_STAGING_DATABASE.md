@@ -35,6 +35,6 @@ The proof used only the direct TLS staging connection for the source and never r
 
 ## Boundary and remaining decisions
 
-R2 remains **BLOCKED** and unused; no Worker, bucket, Cloudflare secret, production resource, real data, or real user was created or used. Neon remains manually confirmed Free with no payment method or paid feature. A fresh provider-console confirmation that post-proof storage, compute, and current/estimated charge remain `$0` is still required before Gate 2C readiness can be claimed.
+R2 remains **BLOCKED** and unused; no Worker, bucket, Cloudflare secret, production resource, real data, or real user was created or used. The post-proof Neon Billing console confirmation records the Free plan, `$0/month` displayed cost, no paid plan or add-on, no payment method, and no proof-related charge.
 
-**Gate 2B status: NOT READY FOR GATE 2C pending the manual $0 cost checkpoint.** Even after that checkpoint, Gate 2C requires separate explicit authorization for a fictional Cloudflare Worker deployment; it does not authorize R2, production, real data, or real users.
+**Gate 2B status: COMPLETE — READY FOR GATE 2C AUTHORIZATION.** Gate 2C still requires separate explicit authorization for a fictional Cloudflare Worker deployment; it does not authorize R2, production, real data, or real users.
