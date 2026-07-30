@@ -19,7 +19,11 @@ const nextConfig: NextConfig = {
   // OpenNext copies listed external packages with a `workerd` export condition
   // into the server-function tree. `pg` conditionally requires this package
   // when it runs in Cloudflare Workers.
-  serverExternalPackages: ["pg-cloudflare"],
+  serverExternalPackages: [
+    "pg-cloudflare",
+    "@prisma/adapter-neon",
+    "@neondatabase/serverless",
+  ],
   // Capture Tracker uses only fixed local brand assets. OpenNext's runtime
   // image optimizer requires a separate Cloudflare Images binding, which is
   // intentionally out of scope for the fictional no-cost preview. Keep the

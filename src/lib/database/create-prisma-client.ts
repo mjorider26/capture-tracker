@@ -1,4 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { neonConfig } from "@neondatabase/serverless";
 
 import { PrismaClient } from "../../generated/prisma/client";
 
@@ -14,11 +16,21 @@ export function normalizePrismaConnectionString(connectionString: string) {
   return url.toString();
 }
 
+function runsInWorkerd() {
+  return typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== "undefined";
+}
+
 // Framework-neutral construction is shared by CLI tools and server modules.
 export function createPrismaClient(connectionString: string): PrismaClient {
   const normalizedConnectionString = normalizePrismaConnectionString(connectionString);
+  const adapter = runsInWorkerd()
+    ? (() => {
+      neonConfig.webSocketConstructor = WebSocket;
+      return new PrismaNeon({ connectionString: normalizedConnectionString });
+    })()
+    : new PrismaPg({ connectionString: normalizedConnectionString });
 
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString: normalizedConnectionString }),
+    adapter,
   });
 }

@@ -48,7 +48,9 @@ for (const directory of ["/infra/aws/.test-dist/", "/infra/aws/cdk.out/", "/infr
 const workflow = text(".github/workflows/ci.yml");
 assert(workflow.indexOf("npm run cloud:build") < workflow.indexOf("npm --prefix infra/aws ci"), "CI must build the application/Worker before installing isolated AWS infrastructure dependencies.");
 const nextConfig = text("next.config.ts");
-assert(/serverExternalPackages:\s*\[\s*["']pg-cloudflare["']\s*\]/.test(nextConfig), "OpenNext Workerd package copying requires pg-cloudflare in serverExternalPackages.");
+for (const packageName of ["pg-cloudflare", "@prisma/adapter-neon", "@neondatabase/serverless"]) {
+  assert(nextConfig.includes(`"${packageName}"`), `OpenNext Workerd package copying requires ${packageName} in serverExternalPackages.`);
+}
 
 const source = filesUnder("src");
 const forbiddenImports = /from\s*["'](?:aws-cdk-lib|constructs|@aws-sdk\/|@opennextjs\/|vitest|prisma(?:\/|["']))/;

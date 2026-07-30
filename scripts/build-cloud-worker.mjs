@@ -21,7 +21,7 @@ try {
   run("prisma", ["generate", "--generator", "cloudflare"]);
   rmSync(nodeClient, { force: true, recursive: true });
   cpSync(workerdClient, nodeClient, { recursive: true });
-  run("next", ["build", "--webpack"]);
+  run("next", ["build", "--turbopack"]);
 } catch (error) {
   buildError = error;
 } finally {
