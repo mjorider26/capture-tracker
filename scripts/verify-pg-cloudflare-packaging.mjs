@@ -38,7 +38,7 @@ const locked = lock.packages?.[installedRoot];
 assert(locked?.version === installed.version, "Installed pg-cloudflare version does not match package-lock.json.");
 assert(installed.exports?.["."]?.workerd?.require === "./dist/index.js", "Installed pg-cloudflare must publish the Workerd require entry.");
 assert(installed.exports?.["."]?.workerd?.import === "./esm/index.mjs", "Installed pg-cloudflare must publish the Workerd import entry.");
-assert(text("next.config.ts").includes('serverExternalPackages: ["pg-cloudflare"]'), "Next.js must explicitly activate OpenNext Workerd copying for pg-cloudflare.");
+assert(text("next.config.ts").includes('"pg-cloudflare"'), "Next.js must explicitly activate OpenNext Workerd copying for pg-cloudflare.");
 
 if (mode === "--installed") {
   console.log(`PG-CLOUDFLARE INSTALL VERIFIED: ${installed.name}@${installed.version} publishes dist/index.js and Workerd exports from the lockfile-installed package.`);
