@@ -15,7 +15,7 @@
     }
   ],
   "vars": {
-    "BETTER_AUTH_URL": "https://capture-tracker-staging.lizethmadrigal33.workers.dev",
+    "BETTER_AUTH_URL": "https://capture-tracker-staging.mjorider.workers.dev",
     "CAPTURE_TRACKER_ENVIRONMENT": "staging",
     "CAPTURE_TRACKER_EXECUTION_CONTEXT": "cloudflare",
     "CAPTURE_TRACKER_DEPLOYMENT_PROFILE": "free-preview-cloudflare-neon",
