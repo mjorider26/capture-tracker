@@ -113,6 +113,9 @@ function imageOptimizationDisabled(manifests) {
     }
   });
 }
+function nextBuildOnlyReference(path) {
+  return /(?:^|\/)node_modules\/next\/dist\/(?:build\/|compiled\/(?:cssnano-simple|postcss-flexbugs-fixes|postcss-preset-env|postcss-scss)\/)/.test(path);
+}
 export function assertSanitizedReport(report) {
   const text = JSON.stringify(report);
   assert(!prohibited.test(text), "Sanitized artifact report contains a secret, URL, or absolute path pattern.");
@@ -138,6 +141,14 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
     const manifestEvidence = manifests.filter((item) => matchesTarget(target, item.text)).map((item) => item.relative).sort();
     const sourceMapEvidence = sourceMaps.filter((item) => matchesTarget(target, item.text)).map((item) => item.relative).sort();
     const installedVersion = packageVersion(workspaceRoot, target);
+    // Webpack tracing copies PostCSS below Next's build implementation. Those
+    // modules run while compiling CSS and cannot execute on a Worker request.
+    // Keep this narrow: any PostCSS reference outside those Next build paths
+    // remains request-reachable and fails the gate.
+    const copiedNextBuildTooling = target.name === "postcss"
+      && copiedEvidence.length > 0
+      && codeEvidence.length > 0
+      && codeEvidence.every((path) => nextBuildOnlyReference(path));
     const disabledImageOptimizerReference = target.name === "sharp"
       && imageOptimizerIsDisabled
       && codeEvidence.length > 0
@@ -146,6 +157,7 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
     let classification = "absent";
     if (unresolved) classification = "unresolved";
     else if (bundledEvidence.length > 0) classification = "bundled in Worker executable code";
+    else if (copiedNextBuildTooling) classification = "copied build-time package";
     else if (copiedEvidence.length > 0) classification = "copied runtime package";
     else if (disabledImageOptimizerReference) classification = "conditional runtime package";
     else if (manifestEvidence.length > 0) classification = "referenced only by a build manifest";
@@ -159,7 +171,7 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
     // executable and stays not-reachable.
     let requestTimeReachability = "not-reachable";
     if (classification === "unresolved") requestTimeReachability = "unresolved";
-    else if (classification === "bundled in Worker executable code" || classification === "copied runtime package" || (classification !== "conditional runtime package" && codeEvidence.length > 0)) requestTimeReachability = "reachable";
+    else if (classification === "bundled in Worker executable code" || classification === "copied runtime package" || (classification !== "conditional runtime package" && classification !== "copied build-time package" && codeEvidence.length > 0)) requestTimeReachability = "reachable";
 
     return {
       package: target.name,
@@ -174,7 +186,7 @@ export function inspectWorkerArtifact({ artifactRoot = artifactDefault, workspac
         manifestOnlyReferences: manifestEvidence,
         sourceMapOnlyReferences: sourceMapEvidence,
       },
-      evidenceRule: bundledEvidence.length ? "METAFILE_EXECUTABLE_INPUT" : copiedEvidence.length ? "COPIED_RUNTIME_PACKAGE" : disabledImageOptimizerReference ? "DISABLED_IMAGE_OPTIMIZER_CONDITIONAL" : manifestEvidence.length ? "MANIFEST_NON_EXECUTABLE" : sourceMapEvidence.length ? "SOURCE_MAP_NON_EXECUTABLE" : installedVersion ? "INSTALLED_NOT_ARTIFACT" : "NO_ARTIFACT_EVIDENCE",
+      evidenceRule: bundledEvidence.length ? "METAFILE_EXECUTABLE_INPUT" : copiedNextBuildTooling ? "COPIED_NEXT_BUILD_TOOLING" : copiedEvidence.length ? "COPIED_RUNTIME_PACKAGE" : disabledImageOptimizerReference ? "DISABLED_IMAGE_OPTIMIZER_CONDITIONAL" : manifestEvidence.length ? "MANIFEST_NON_EXECUTABLE" : sourceMapEvidence.length ? "SOURCE_MAP_NON_EXECUTABLE" : installedVersion ? "INSTALLED_NOT_ARTIFACT" : "NO_ARTIFACT_EVIDENCE",
     };
   });
 

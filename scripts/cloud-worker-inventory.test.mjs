@@ -50,6 +50,17 @@ try {
   assert(result(unoptimizedImage, "sharp").requestTimeReachability === "not-reachable", "Disabled image optimization must make Sharp's conditional import unreachable.");
   verifyReachabilityReport(unoptimizedImage);
 
+  const copiedNextBuildToolingArtifact = join(root, ".open-next-copied-next-build-tooling");
+  write(join(copiedNextBuildToolingArtifact, "worker.js"), 'import "./server-functions/default/handler.mjs";');
+  write(join(copiedNextBuildToolingArtifact, "server-functions/default/handler.mjs"), "export default {}; ");
+  write(join(copiedNextBuildToolingArtifact, "server-functions/default/node_modules/next/dist/build/webpack/config/blocks/css/index.js"), 'require("postcss");');
+  packageJson(copiedNextBuildToolingArtifact + "/server-functions/default/node_modules/next", "postcss");
+  const copiedNextBuildTooling = inspectWorkerArtifact({ artifactRoot: copiedNextBuildToolingArtifact, workspaceRoot: root });
+  assert(result(copiedNextBuildTooling, "postcss").classification === "copied build-time package", "PostCSS copied solely below Next build tooling must not be runtime reachable.");
+  assert(result(copiedNextBuildTooling, "postcss").requestTimeReachability === "not-reachable", "Next build-only PostCSS must stay outside the request path.");
+  assert(result(copiedNextBuildTooling, "postcss").evidenceRule === "COPIED_NEXT_BUILD_TOOLING", "Next build-only PostCSS must retain its narrow evidence rule.");
+  verifyReachabilityReport(copiedNextBuildTooling);
+
   const buildOnlyArtifact = join(root, ".open-next-build-only");
   write(join(buildOnlyArtifact, "worker.js"), 'import "./server-functions/default/handler.mjs";');
   write(join(buildOnlyArtifact, "server-functions/default/handler.mjs"), "export default {}; ");
