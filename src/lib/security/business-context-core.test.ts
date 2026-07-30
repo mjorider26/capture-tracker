@@ -45,7 +45,7 @@ function createMembership(
 }
 
 describe("resolveBusinessContext", () => {
-  it("denies an authenticated user with no business membership", async () => {
+  it("denies an authenticated user with no business membership, including incomplete provisioning", async () => {
     const loadMemberships = vi.fn().mockResolvedValue([]);
 
     await expect(

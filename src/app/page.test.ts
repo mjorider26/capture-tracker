@@ -12,7 +12,7 @@ describe("root page entry actions", () => {
     getSession.mockReset();
   });
 
-  it("offers a visible sign-in action without exposing a local demo route", async () => {
+  it("offers visible sign-in and practice-account actions without exposing a local demo route", async () => {
     getSession.mockResolvedValue(null);
     const { default: Home } = await import("./page");
 
@@ -20,6 +20,8 @@ describe("root page entry actions", () => {
 
     expect(html).toContain('href="/sign-in"');
     expect(html).toContain("Sign in");
+    expect(html).toContain('href="/create-account"');
+    expect(html).toContain("Create practice account");
     expect(html).toContain("fictional staging environment");
     expect(html).not.toContain("/demo/");
     expect(html).not.toContain("Open application");

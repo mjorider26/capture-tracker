@@ -33,6 +33,13 @@ export default async function Home() {
             >
               Sign in
             </Link>
+            <Link
+              href="/create-account"
+              aria-label="Create a fictional Capture Tracker practice account"
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-sm)] border border-border-strong bg-surface-primary px-5 text-sm font-bold text-text-primary transition hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal"
+            >
+              Create practice account
+            </Link>
             {session ? (
               <Link
                 href="/app"
