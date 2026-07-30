@@ -17,6 +17,8 @@ assert(rejects(() => assertFictionalStagingBootstrap(staging, ["node"])), "Boots
 assert(rejects(() => assertFictionalStagingBootstrap({ ...staging, CAPTURE_TRACKER_REAL_DATA_APPROVED: "true", CAPTURE_TRACKER_FICTIONAL_LOGIN_EMAIL: "preview@capture-tracker.demo", CAPTURE_TRACKER_FICTIONAL_LOGIN_PASSWORD: "fictional-only-password" }, ["node", "BOOTSTRAP_FICTIONAL_STAGING"])), "Bootstrap must reject real data.");
 assert(validateFictionalStagingUrl("https://capture-tracker-fictional-staging.example", staging).protocol === "https:", "HTTPS staging URL should be accepted.");
 assert(rejects(() => validateFictionalStagingUrl("http://localhost:3000", staging)), "Smoke tooling must reject localhost.");
+const smoke = readFileSync("scripts/smoke-fictional-staging.ts", "utf8");
+assert(!smoke.includes('import "./load-local-staging-environment";') && smoke.includes('import("./load-local-staging-environment")'), "The static Phase 9B verifier must not load private staging configuration.");
 const migration = readFileSync("scripts/cloud-migrate.ts", "utf8");
 const migrationUsesPinnedPrismaCli = migration.includes('new URL("../node_modules/prisma/build/index.js", import.meta.url)');
 const migrationUsesDeployOnly = /\[prismaCli, "migrate", "deploy"\]/.test(migration);

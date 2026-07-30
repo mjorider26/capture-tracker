@@ -1,4 +1,3 @@
-import "./load-local-staging-environment";
 import { readCloudEnvironment } from "../src/lib/cloud/environment";
 import { pathToFileURL } from "node:url";
 
@@ -30,6 +29,8 @@ export async function smokeFictionalStaging(base: URL) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const target = validateFictionalStagingUrl(process.argv[2]);
-  smokeFictionalStaging(target).then(() => console.log("Fictional staging smoke checks passed.")).catch((error: unknown) => { console.error("Fictional staging smoke checks failed."); console.error(error instanceof Error ? error.message : "Unexpected failure."); process.exitCode = 1; });
+  void import("./load-local-staging-environment")
+    .then(() => smokeFictionalStaging(validateFictionalStagingUrl(process.argv[2])))
+    .then(() => console.log("Fictional staging smoke checks passed."))
+    .catch((error: unknown) => { console.error("Fictional staging smoke checks failed."); console.error(error instanceof Error ? error.message : "Unexpected failure."); process.exitCode = 1; });
 }
