@@ -3,7 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Capture Tracker", template: "%s | Capture Tracker" },
-  description: "A focused financial command center for a solo business owner.",
+  description:
+    "SPENDING TRACKED. BUSINESS GROWN. A focused financial command center for a solo business owner.",
   applicationName: "Capture Tracker",
   icons: {
     icon: "/brand/favicon-32.png",

@@ -9,7 +9,7 @@ The approved source is the supplied `capturetracker_logo.jpg`. Optimized faithfu
 - `capture-tracker-wordmark.png` — the original wordmark crop.
 - `favicon-16.png`, `favicon-32.png`, and `apple-touch-icon.png` — faithful icon derivatives.
 
-Do not redraw, recolor, distort, add effects to, or replace these assets. The tagline is **SPEND TRACKED. BUSINESS GROWN.** When the flattened lockup is used without separately rendered tagline text, its alt text must include that tagline.
+Do not redraw, recolor, distort, add effects to, or replace these assets. The tagline is **SPENDING TRACKED. BUSINESS GROWN.** When the flattened lockup is used without separately rendered tagline text, its alt text must include that tagline.
 
 ## Tokens
 

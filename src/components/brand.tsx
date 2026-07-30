@@ -11,7 +11,7 @@ export function BrandLockup({
     <Image
       className={`h-auto w-full object-contain ${className}`}
       src="/brand/capture-tracker-lockup.png"
-      alt="Capture Tracker. SPEND TRACKED. BUSINESS GROWN."
+      alt="Capture Tracker. SPENDING TRACKED. BUSINESS GROWN."
       width={1224}
       height={400}
       priority={priority}

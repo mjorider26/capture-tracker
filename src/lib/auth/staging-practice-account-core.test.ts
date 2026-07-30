@@ -74,11 +74,6 @@ describe("fictional staging practice-account guard", () => {
       CAPTURE_TRACKER_ENVIRONMENT: "production",
       CAPTURE_TRACKER_EXECUTION_CONTEXT: "aws",
       CAPTURE_TRACKER_DEPLOYMENT_PROFILE: "production-secure-aws",
-      CAPTURE_TRACKER_PRODUCTION_DATABASE_NAME: "capture_tracker_production",
-      CAPTURE_TRACKER_PRODUCTION_DATABASE_URL: "postgresql://fixture:fixture@capture-tracker-production-pooler.us-east-1.aws.neon.tech/capture_tracker_production?sslmode=require",
-      CAPTURE_TRACKER_PRODUCTION_DIRECT_DATABASE_URL: "postgresql://fixture:fixture@capture-tracker-production.us-east-1.aws.neon.tech/capture_tracker_production?sslmode=require",
-      CAPTURE_TRACKER_PRODUCTION_KMS_KEY_ARN: "arn:aws:kms:us-east-1:123456789012:key/fixture",
-      CAPTURE_TRACKER_PRODUCTION_SECRET_ARN: "arn:aws:secretsmanager:us-east-1:123456789012:secret:fixture",
     });
 
     expect(isFictionalStagingPracticeSignupEnabled(production)).toBe(false);
