@@ -23,7 +23,7 @@ export async function smokeFictionalStaging(base: URL) {
   await expect(await fetchPath("/api/health/ready"), true, "Readiness failed", true);
   await expect(await fetchPath("/sign-in"), true, "Login page is unreachable");
   const financial = await fetchPath("/app/money");
-  await expect(financial, financial.status === 302 || financial.status === 303 || financial.status === 401, "Unauthenticated financial route is not protected", true);
+  await expect(financial, [302, 303, 307, 308, 401].includes(financial.status), "Unauthenticated financial route is not protected", true);
   await expect(await fetchPath("/app/money/not-a-real-id"), true, "Malformed ID route failed");
   await expect(await fetchPath("/not-found-fictional-staging"), true, "Not-found route failed");
 }
