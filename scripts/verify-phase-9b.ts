@@ -18,7 +18,10 @@ assert(rejects(() => assertFictionalStagingBootstrap({ ...staging, CAPTURE_TRACK
 assert(validateFictionalStagingUrl("https://capture-tracker-fictional-staging.example", staging).protocol === "https:", "HTTPS staging URL should be accepted.");
 assert(rejects(() => validateFictionalStagingUrl("http://localhost:3000", staging)), "Smoke tooling must reject localhost.");
 const migration = readFileSync("scripts/cloud-migrate.ts", "utf8");
-assert(migration.includes('new URL("../node_modules/prisma/build/index.js", import.meta.url)') && /\[prismaCli, "migrate", "deploy"\]/.test(migration) && !/migrate dev|migrate reset|migrate resolve|db push|seed/.test(migration), "Migration command must only deploy migrations.");
+const migrationUsesPinnedPrismaCli = migration.includes('new URL("../node_modules/prisma/build/index.js", import.meta.url)');
+const migrationUsesDeployOnly = /\[prismaCli, "migrate", "deploy"\]/.test(migration);
+const migrationContainsForbiddenOperation = /migrate dev|migrate reset|migrate resolve|db push|seed/.test(migration);
+assert(migrationUsesPinnedPrismaCli && migrationUsesDeployOnly && !migrationContainsForbiddenOperation, `Migration command must only deploy migrations (pinnedCli=${migrationUsesPinnedPrismaCli}, deployOnly=${migrationUsesDeployOnly}, forbiddenOperation=${migrationContainsForbiddenOperation}).`);
 assert(migration.includes('stdio: "pipe"') && !migration.includes('stdio: "inherit"'), "Migration must not print a database URL or password through child output.");
 const bootstrap = readFileSync("scripts/bootstrap-fictional-staging.ts", "utf8");
 assert(!/api\/|route\.ts|fetch\(/.test(bootstrap), "Bootstrap must remain CLI-only.");
