@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
   // Keep Turbopack within this repository when a parent directory has another
   // lockfile; it must not scan a user home directory during builds.
   turbopack: { root: projectRoot },
+  // Prisma's Workerd client imports its query compiler as an async WASM module.
+  // This keeps it as a deployable module instead of embedding a base64 copy in
+  // the Worker bundle.
+  webpack(config) {
+    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    return config;
+  },
   // Development-only Next resource access for explicitly configured private
   // LAN addresses. This does not affect API CORS or production behavior.
   ...(allowedDevOrigins.length ? { allowedDevOrigins } : {}),

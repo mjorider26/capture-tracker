@@ -1,6 +1,18 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma"
+  compilerBuild = "small"
+}
+
+// The app runs the same schema through two supported Prisma runtimes:
+// Node.js for local development, tests, and migrations; Workerd for the
+// Cloudflare Worker build. Keeping both generated clients prevents a Worker
+// WASM module from being loaded by Node tooling.
+generator cloudflare {
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma-workerd"
+  compilerBuild = "small"
+  runtime       = "workerd"
 }
 
 datasource db {
