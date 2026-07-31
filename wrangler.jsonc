@@ -22,7 +22,8 @@
     "CAPTURE_TRACKER_REAL_DATA_APPROVED": "false",
     "CAPTURE_TRACKER_PAID_SERVICE_APPROVED": "false",
     "CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false",
-    "CAPTURE_TRACKER_DATA_MODE": "fictional"
+    "CAPTURE_TRACKER_DATA_MODE": "fictional",
+    "CAPTURE_TRACKER_STAGING_DATABASE_NAME": "capture_tracker_staging"
   },
   "observability": {
     "enabled": true,
