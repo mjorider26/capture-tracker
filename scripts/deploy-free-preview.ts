@@ -7,7 +7,9 @@ if (process.env.CAPTURE_TRACKER_PREVIEW_DEPLOY_CONFIRMATION !== "DEPLOY_FICTIONA
   throw new Error("Fictional staging deployment confirmation is missing.");
 }
 
+const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+
 for (const args of [["opennextjs-cloudflare", "build"], ["opennextjs-cloudflare", "deploy"]]) {
-  const result = spawnSync("npx", args, { stdio: "inherit", env: process.env });
+  const result = spawnSync(npx, args, { stdio: "inherit", env: process.env });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
