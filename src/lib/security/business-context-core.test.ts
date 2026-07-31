@@ -27,6 +27,9 @@ function createMembership(
       timezone: "America/Los_Angeles",
       currency: "USD",
       version: 1,
+      onboarding: {
+        status: "COMPLETED",
+      },
     },
   };
 
@@ -94,6 +97,29 @@ describe("resolveBusinessContext", () => {
     );
   });
 
+  it("denies a membership whose workspace provisioning is incomplete", async () => {
+    const membership = createMembership({
+      business: {
+        id: "business-one",
+        legalName: "Capture Tracker Demo LLC",
+        displayName: "Capture Tracker Demo",
+        timezone: "America/Los_Angeles",
+        currency: "USD",
+        version: 1,
+        onboarding: null,
+      },
+    });
+
+    await expect(resolveBusinessContext({
+      sessionId: "session-one",
+      userId: "authenticated-user",
+      loadMemberships: vi.fn().mockResolvedValue([membership]),
+    })).rejects.toMatchObject({
+      status: 403,
+      code: "BUSINESS_ACCESS_DENIED",
+    });
+  });
+
   it("refuses to guess when a user has multiple businesses", async () => {
     const firstMembership = createMembership();
 
@@ -106,6 +132,9 @@ describe("resolveBusinessContext", () => {
         timezone: "America/New_York",
         currency: "USD",
         version: 1,
+        onboarding: {
+          status: "COMPLETED",
+        },
       },
     });
 

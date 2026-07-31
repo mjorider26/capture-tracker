@@ -1,9 +1,11 @@
 import "server-only";
 
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
-import { practiceBusinessId } from "./staging-practice-account-core";
+import {
+  practiceBusinessId,
+  practiceWorkspaceAuditId,
+} from "./staging-practice-account-core";
 
 export class PracticeWorkspaceProvisionError extends Error {
   constructor() {
@@ -24,59 +26,74 @@ export async function provisionPracticeWorkspace({
   displayName: string;
 }) {
   const businessId = practiceBusinessId(userId);
+  const auditId = practiceWorkspaceAuditId(userId);
 
   try {
-    await prisma.$transaction(
-      async (tx) => {
-        const memberships = await tx.businessMember.findMany({
-          where: { userId },
-          select: { businessId: true },
-          take: 2,
-        });
+    const memberships = await prisma.businessMember.findMany({
+      where: { userId },
+      select: { businessId: true },
+      take: 2,
+    });
 
-        if (
-          memberships.some((membership) => membership.businessId !== businessId)
-        ) {
-          throw new PracticeWorkspaceProvisionError();
-        }
+    if (memberships.some((membership) => membership.businessId !== businessId)) {
+      throw new PracticeWorkspaceProvisionError();
+    }
 
-        const businessName = practiceBusinessName(displayName);
-        await tx.business.upsert({
-          where: { id: businessId },
-          create: {
-            id: businessId,
-            legalName: businessName,
-            displayName: businessName,
-            timezone: "America/Los_Angeles",
-            currency: "USD",
-          },
-          update: {},
-        });
-
-        await tx.businessMember.upsert({
-          where: {
-            businessId_userId: { businessId, userId },
-          },
-          create: { businessId, userId, role: "OWNER" },
-          update: {},
-        });
-
-        await tx.businessOnboarding.upsert({
-          where: { businessId },
-          create: {
-            businessId,
-            actorUserId: userId,
-            ownerDisplayName: displayName,
-            fictionalAcknowledged: true,
-            chartConfirmed: true,
-            status: "COMPLETED",
-            completedAt: new Date(),
-          },
-          update: {},
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+    const businessName = practiceBusinessName(displayName);
+    // The Neon HTTP adapter supports batch transactions but not Prisma's
+    // callback/interactive form. Every write uses a deterministic key, so a
+    // retry is both atomic and duplicate-safe in Workerd.
+    await prisma.$transaction([
+      prisma.business.upsert({
+        where: { id: businessId },
+        create: {
+          id: businessId,
+          legalName: businessName,
+          displayName: businessName,
+          timezone: "America/Los_Angeles",
+          currency: "USD",
+        },
+        update: {},
+      }),
+      prisma.businessMember.upsert({
+        where: { businessId_userId: { businessId, userId } },
+        create: { businessId, userId, role: "OWNER" },
+        update: {},
+      }),
+      prisma.businessOnboarding.upsert({
+        where: { businessId },
+        create: {
+          businessId,
+          actorUserId: userId,
+          ownerDisplayName: displayName,
+          fictionalAcknowledged: true,
+          chartConfirmed: true,
+          status: "COMPLETED",
+          completedAt: new Date(),
+        },
+        update: {},
+      }),
+      prisma.businessSettings.upsert({
+        where: { businessId },
+        create: { businessId },
+        update: {},
+      }),
+      prisma.auditEvent.upsert({
+        where: { id: auditId },
+        create: {
+          id: auditId,
+          actorType: "USER",
+          businessId,
+          actorMembershipId: userId,
+          action: "CREATE",
+          entityType: "PracticeWorkspace",
+          entityId: businessId,
+          afterJson: { provisioning: "COMPLETED" },
+          metadataJson: { executionMode: "fictional-staging-invitation" },
+        },
+        update: {},
+      }),
+    ]);
   } catch (error) {
     if (error instanceof PracticeWorkspaceProvisionError) throw error;
     throw new PracticeWorkspaceProvisionError();

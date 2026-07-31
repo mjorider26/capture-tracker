@@ -19,6 +19,9 @@ export type BusinessMembershipRecord = {
     timezone: string;
     currency: string;
     version: number;
+    onboarding: {
+      status: "COMPLETED" | "IN_PROGRESS";
+    } | null;
   };
 };
 
@@ -87,6 +90,14 @@ export async function resolveBusinessContext({
   }
 
   const membership = memberships[0];
+
+  if (membership.business.onboarding?.status !== "COMPLETED") {
+    throw new AccessControlError(
+      403,
+      "BUSINESS_ACCESS_DENIED",
+      "This account does not have access to a completed business workspace.",
+    );
+  }
 
   return {
     sessionId,

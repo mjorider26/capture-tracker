@@ -160,6 +160,8 @@ async function main() {
       TEST_DATABASE_URL: targetUrl,
       DATABASE_URL: targetUrl,
       SHADOW_DATABASE_URL: integrationUrl(preferredPorts.shadow),
+      BETTER_AUTH_URL: "http://localhost:3000",
+      BETTER_AUTH_SECRET: "local-integration-fictional-only-secret",
     };
     await run(process.execPath, [prismaCli, "migrate", "deploy"], childEnv);
     console.log("Integration migrations applied/current.");

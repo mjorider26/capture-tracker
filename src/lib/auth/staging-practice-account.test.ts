@@ -4,6 +4,8 @@ const database = vi.hoisted(() => ({
   businesses: new Map<string, unknown>(),
   memberships: new Map<string, { businessId: string; userId: string; role: string }>(),
   onboarding: new Map<string, unknown>(),
+  settings: new Map<string, unknown>(),
+  audits: new Map<string, unknown>(),
 }));
 
 const prisma = vi.hoisted(() => ({
@@ -18,19 +20,23 @@ const prisma = vi.hoisted(() => ({
   businessOnboarding: {
     upsert: vi.fn(),
   },
+  businessSettings: {
+    upsert: vi.fn(),
+  },
+  auditEvent: {
+    upsert: vi.fn(),
+  },
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({ prisma }));
-vi.mock("@/generated/prisma/client", () => ({
-  Prisma: { TransactionIsolationLevel: { Serializable: "Serializable" } },
-}));
-
 describe("practice workspace provisioning", () => {
   beforeEach(() => {
     database.businesses.clear();
     database.memberships.clear();
     database.onboarding.clear();
+    database.settings.clear();
+    database.audits.clear();
 
     prisma.businessMember.findMany.mockImplementation(async ({ where }: { where: { userId: string } }) =>
       [...database.memberships.values()]
@@ -48,10 +54,16 @@ describe("practice workspace provisioning", () => {
     prisma.businessOnboarding.upsert.mockImplementation(async ({ where, create }: { where: { businessId: string }; create: { businessId: string } }) => {
       if (!database.onboarding.has(where.businessId)) database.onboarding.set(where.businessId, create);
     });
-    prisma.$transaction.mockImplementation(async (operation: (tx: typeof prisma) => Promise<void>) => operation(prisma));
+    prisma.businessSettings.upsert.mockImplementation(async ({ where, create }: { where: { businessId: string }; create: { businessId: string } }) => {
+      if (!database.settings.has(where.businessId)) database.settings.set(where.businessId, create);
+    });
+    prisma.auditEvent.upsert.mockImplementation(async ({ where, create }: { where: { id: string }; create: { id: string } }) => {
+      if (!database.audits.has(where.id)) database.audits.set(where.id, create);
+    });
+    prisma.$transaction.mockImplementation(async (operations: Promise<unknown>[]) => Promise.all(operations));
   });
 
-  it("provisions one business, owner membership, and completed onboarding", async () => {
+  it("provisions one business, owner membership, defaults, onboarding, and audit event atomically", async () => {
     const { provisionPracticeWorkspace } = await import("./staging-practice-account");
 
     await provisionPracticeWorkspace({
@@ -62,6 +74,8 @@ describe("practice workspace provisioning", () => {
     expect(database.businesses.size).toBe(1);
     expect(database.memberships.size).toBe(1);
     expect(database.onboarding.size).toBe(1);
+    expect(database.settings.size).toBe(1);
+    expect(database.audits.size).toBe(1);
     expect([...database.memberships.values()][0]).toMatchObject({
       role: "OWNER",
       userId: "identity-one",
@@ -78,5 +92,7 @@ describe("practice workspace provisioning", () => {
     expect(database.businesses.size).toBe(1);
     expect(database.memberships.size).toBe(1);
     expect(database.onboarding.size).toBe(1);
+    expect(database.settings.size).toBe(1);
+    expect(database.audits.size).toBe(1);
   });
 });

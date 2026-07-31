@@ -65,6 +65,11 @@ export async function requireBusinessContext() {
               timezone: true,
               currency: true,
               version: true,
+              onboarding: {
+                select: {
+                  status: true,
+                },
+              },
             },
           },
         },

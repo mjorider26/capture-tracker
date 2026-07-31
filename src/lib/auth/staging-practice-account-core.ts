@@ -79,3 +79,7 @@ export async function validatePracticeAccountInput(
 export function practiceBusinessId(userId: string) {
   return `practice-${userId}`;
 }
+
+export function practiceWorkspaceAuditId(userId: string) {
+  return `practice-workspace-created-${userId}`;
+}
