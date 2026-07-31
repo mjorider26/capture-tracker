@@ -10,6 +10,10 @@ if (process.env.CAPTURE_TRACKER_PREVIEW_DEPLOY_CONFIRMATION !== "DEPLOY_FICTIONA
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 
 for (const args of [["opennextjs-cloudflare", "build"], ["opennextjs-cloudflare", "deploy"]]) {
-  const result = spawnSync(npx, args, { stdio: "inherit", env: process.env });
+  const result = spawnSync(npx, args, {
+    stdio: "inherit",
+    env: process.env,
+    shell: process.platform === "win32",
+  });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
