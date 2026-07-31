@@ -2,10 +2,17 @@ import { spawnSync } from "node:child_process";
 import { cpSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
-const command = (name) => process.platform === "win32" ? `${name}.cmd` : name;
+const command = (name) => resolve(
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? `${name}.cmd` : name,
+);
 
 function run(name, args) {
-  const result = spawnSync(command(name), args, { stdio: "inherit" });
+  const executable = command(name);
+  const result = process.platform === "win32"
+    ? spawnSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", executable, ...args], { stdio: "inherit" })
+    : spawnSync(executable, args, { stdio: "inherit" });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${name} failed with exit code ${result.status ?? "unknown"}.`);
 }
