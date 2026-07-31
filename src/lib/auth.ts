@@ -5,6 +5,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 
 import { prisma } from "@/lib/prisma";
+import { hashWorkerdPassword, verifyWorkerdPassword } from "@/lib/auth/workerd-password";
 
 const baseURL = process.env.BETTER_AUTH_URL;
 const secret = process.env.BETTER_AUTH_SECRET;
@@ -35,6 +36,10 @@ function createAuth({ allowSignUp, useNextCookies }: {
       disableSignUp: !allowSignUp,
       minPasswordLength: 12,
       maxPasswordLength: 128,
+      password: {
+        hash: hashWorkerdPassword,
+        verify: ({ hash, password }) => verifyWorkerdPassword(hash, password),
+      },
     },
 
     user: {

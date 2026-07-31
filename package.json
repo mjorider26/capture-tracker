@@ -83,6 +83,7 @@
     "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run lint && npm run build"
   },
   "dependencies": {
+    "@noble/hashes": "^2.2.0",
     "@better-auth/prisma-adapter": "^1.6.25",
     "@prisma/adapter-neon": "^7.9.1",
     "@prisma/adapter-pg": "^7.9.1",
