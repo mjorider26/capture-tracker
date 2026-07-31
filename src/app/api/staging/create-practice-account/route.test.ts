@@ -6,6 +6,7 @@ const auth = vi.hoisted(() => ({
 }));
 const validatePracticeAccountInput = vi.hoisted(() => vi.fn());
 const provisionPracticeWorkspace = vi.hoisted(() => vi.fn());
+const prisma = vi.hoisted(() => ({ user: { findUnique: vi.fn() } }));
 
 vi.mock("@/lib/auth", () => ({
   stagingPracticeAccountAuth: { api: auth },
@@ -18,6 +19,7 @@ vi.mock("@/lib/auth/staging-practice-account", () => ({
   PracticeWorkspaceProvisionError: class PracticeWorkspaceProvisionError extends Error {},
   provisionPracticeWorkspace,
 }));
+vi.mock("@/lib/prisma", () => ({ prisma }));
 
 const acceptedInput = {
   name: "Practice Owner",
@@ -48,6 +50,8 @@ describe("practice-account route", () => {
     auth.signInEmail.mockReset();
     validatePracticeAccountInput.mockReset();
     provisionPracticeWorkspace.mockReset();
+    prisma.user.findUnique.mockReset();
+    prisma.user.findUnique.mockResolvedValue(null);
   });
 
   it("returns a generic failure before identity creation when invitation validation fails", async () => {
@@ -109,5 +113,17 @@ describe("practice-account route", () => {
       userId: "identity-one",
       displayName: "Practice Owner",
     });
+  });
+
+  it("authenticates an existing identity before attempting another sign-up", async () => {
+    validatePracticeAccountInput.mockResolvedValue(acceptedInput);
+    prisma.user.findUnique.mockResolvedValue({ id: "identity-one" });
+    auth.signInEmail.mockResolvedValue(authResponse(200, "identity-one"));
+    provisionPracticeWorkspace.mockResolvedValue(undefined);
+    const { POST } = await import("./route");
+
+    await expect(POST(request())).resolves.toMatchObject({ ok: true });
+    expect(auth.signUpEmail).not.toHaveBeenCalled();
+    expect(auth.signInEmail).toHaveBeenCalledTimes(1);
   });
 });

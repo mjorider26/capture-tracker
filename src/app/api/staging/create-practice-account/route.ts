@@ -7,6 +7,7 @@ import {
   PracticeWorkspaceProvisionError,
   provisionPracticeWorkspace,
 } from "@/lib/auth/staging-practice-account";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,14 @@ async function createOrResumeIdentity({
   password: string;
   headers: Headers;
 }) {
+  const existingIdentity = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (existingIdentity) {
+    return signInExistingIdentity({ email, password, headers });
+  }
+
   const signUpResult: unknown = await stagingPracticeAccountAuth.api.signUpEmail({
     body: { name, email, password },
     headers,
@@ -85,6 +94,18 @@ async function createOrResumeIdentity({
   // when called in-process, rather than as a Fetch Response.
   if (!isExistingIdentityResult(signUpResult)) return null;
 
+  return signInExistingIdentity({ email, password, headers });
+}
+
+async function signInExistingIdentity({
+  email,
+  password,
+  headers,
+}: {
+  email: string;
+  password: string;
+  headers: Headers;
+}) {
   const signInResult: unknown = await stagingPracticeAccountAuth.api.signInEmail({
     body: { email, password },
     headers,
