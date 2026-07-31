@@ -5,6 +5,7 @@ const auth = vi.hoisted(() => ({
   signInEmail: vi.fn(),
 }));
 const validatePracticeAccountInput = vi.hoisted(() => vi.fn());
+const fictionalStagingPracticeSignupGuardStatus = vi.hoisted(() => vi.fn());
 const provisionPracticeWorkspace = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
@@ -12,6 +13,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/lib/auth/staging-practice-account-core", () => ({
   practiceAccountError: "Account creation could not be completed.",
+  fictionalStagingPracticeSignupGuardStatus,
   validatePracticeAccountInput,
 }));
 vi.mock("@/lib/auth/staging-practice-account", () => ({
@@ -47,6 +49,8 @@ describe("practice-account route", () => {
     auth.signUpEmail.mockReset();
     auth.signInEmail.mockReset();
     validatePracticeAccountInput.mockReset();
+    fictionalStagingPracticeSignupGuardStatus.mockReset();
+    fictionalStagingPracticeSignupGuardStatus.mockReturnValue("ENABLED");
     provisionPracticeWorkspace.mockReset();
   });
 

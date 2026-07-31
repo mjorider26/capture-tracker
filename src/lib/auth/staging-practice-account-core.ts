@@ -20,9 +20,14 @@ export type PracticeAccountInput = z.infer<typeof inputSchema>;
 
 export type PracticeAccountEnvironment = EnvironmentInput;
 
-export function isFictionalStagingPracticeSignupEnabled(
+export type PracticeSignupGuardStatus =
+  | "ENABLED"
+  | "CLOUD_CONFIGURATION_REJECTED"
+  | "STAGING_GUARD_REJECTED";
+
+export function fictionalStagingPracticeSignupGuardStatus(
   input: PracticeAccountEnvironment = process.env,
-) {
+): PracticeSignupGuardStatus {
   try {
     const config = readCloudEnvironment(input);
     return (
@@ -32,10 +37,16 @@ export function isFictionalStagingPracticeSignupEnabled(
       !config.realDataApproved &&
       input.CAPTURE_TRACKER_DATA_MODE === "fictional" &&
       input.CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED === "false"
-    );
+    ) ? "ENABLED" : "STAGING_GUARD_REJECTED";
   } catch {
-    return false;
+    return "CLOUD_CONFIGURATION_REJECTED";
   }
+}
+
+export function isFictionalStagingPracticeSignupEnabled(
+  input: PracticeAccountEnvironment = process.env,
+) {
+  return fictionalStagingPracticeSignupGuardStatus(input) === "ENABLED";
 }
 
 async function digest(value: string) {

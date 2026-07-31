@@ -1,6 +1,7 @@
 import { stagingPracticeAccountAuth } from "@/lib/auth";
 import {
   practiceAccountError,
+  fictionalStagingPracticeSignupGuardStatus,
   validatePracticeAccountInput,
 } from "@/lib/auth/staging-practice-account-core";
 import {
@@ -14,6 +15,10 @@ type AuthUser = { id: string };
 
 function genericError(status = 400) {
   return Response.json({ message: practiceAccountError }, { status });
+}
+
+function reportSafeFailure(stage: "VALIDATION" | "IDENTITY" | "PROVISIONING" | "SESSION", code: string) {
+  console.error(JSON.stringify({ event: "STAGING_PRACTICE_ACCOUNT_FAILURE", stage, code }));
 }
 
 function hasTrustedOrigin(request: Request) {
@@ -89,8 +94,17 @@ export async function POST(request: Request) {
     return genericError();
   }
 
+  const guardStatus = fictionalStagingPracticeSignupGuardStatus();
+  if (guardStatus !== "ENABLED") {
+    reportSafeFailure("VALIDATION", guardStatus);
+    return genericError();
+  }
+
   const input = await validatePracticeAccountInput(body);
-  if (!input) return genericError();
+  if (!input) {
+    reportSafeFailure("VALIDATION", "INPUT_OR_INVITATION_REJECTED");
+    return genericError();
+  }
 
   try {
     const identity = await createOrResumeIdentity({
@@ -99,7 +113,10 @@ export async function POST(request: Request) {
       password: input.password,
       headers: request.headers,
     });
-    if (!identity) return genericError();
+    if (!identity) {
+      reportSafeFailure("IDENTITY", "BETTER_AUTH_REJECTED");
+      return genericError();
+    }
 
     await provisionPracticeWorkspace({
       userId: identity.user.id,
@@ -111,7 +128,11 @@ export async function POST(request: Request) {
     for (const value of setCookies) headers.append("set-cookie", value);
     return Response.json({ ok: true }, { headers });
   } catch (error) {
-    if (error instanceof PracticeWorkspaceProvisionError) return genericError(503);
+    if (error instanceof PracticeWorkspaceProvisionError) {
+      reportSafeFailure("PROVISIONING", "WORKSPACE_TRANSACTION_FAILED");
+      return genericError(503);
+    }
+    reportSafeFailure("SESSION", "UNEXPECTED_ROUTE_FAILURE");
     return genericError(500);
   }
 }
