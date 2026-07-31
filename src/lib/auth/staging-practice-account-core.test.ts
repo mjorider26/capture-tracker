@@ -69,6 +69,26 @@ describe("fictional staging practice-account guard", () => {
     expect(result).not.toHaveProperty("configuredInvitationCode");
   });
 
+  it("normalizes CRLF configuration and surrounding submitted whitespace", async () => {
+    const result = await validatePracticeAccountInput(
+      { ...validInput, invitationCode: `  ${testInvitation}\r\n` },
+      fictionalStagingEnvironment({
+        CAPTURE_TRACKER_STAGING_INVITATION_CODE: `${testInvitation}\r\n`,
+      }),
+    );
+
+    expect(result?.invitationCode).toBe(testInvitation);
+  });
+
+  it("rejects a whitespace-only invitation", async () => {
+    await expect(
+      validatePracticeAccountInput(
+        { ...validInput, invitationCode: " \r\n " },
+        fictionalStagingEnvironment(),
+      ),
+    ).resolves.toBeNull();
+  });
+
   it("keeps production registration disabled even with an invitation configured", () => {
     const production = fictionalStagingEnvironment({
       CAPTURE_TRACKER_ENVIRONMENT: "production",
@@ -77,6 +97,16 @@ describe("fictional staging practice-account guard", () => {
     });
 
     expect(isFictionalStagingPracticeSignupEnabled(production)).toBe(false);
+  });
+
+  it("fails closed when the staging database identity is not explicit", () => {
+    expect(
+      isFictionalStagingPracticeSignupEnabled(
+        fictionalStagingEnvironment({
+          CAPTURE_TRACKER_STAGING_DATABASE_NAME: undefined,
+        }),
+      ),
+    ).toBe(false);
   });
 
   it("uses a deterministic business id for safe provisioning retries", () => {

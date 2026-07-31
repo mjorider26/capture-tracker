@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { readCloudEnvironment } from "@/lib/cloud/environment";
-
 type EnvironmentInput = Record<string, string | undefined>;
 
 export const practiceAccountError = "Account creation could not be completed.";
@@ -12,7 +10,7 @@ const inputSchema = z
     email: z.string().trim().toLowerCase().max(320).pipe(z.email()),
     password: z.string().min(12).max(128),
     confirmPassword: z.string(),
-    invitationCode: z.string().min(1).max(512),
+    invitationCode: z.string().trim().min(1).max(512),
   })
   .refine(({ password, confirmPassword }) => password === confirmPassword);
 
@@ -28,19 +26,19 @@ export type PracticeSignupGuardStatus =
 export function fictionalStagingPracticeSignupGuardStatus(
   input: PracticeAccountEnvironment = process.env,
 ): PracticeSignupGuardStatus {
-  try {
-    const config = readCloudEnvironment(input);
-    return (
-      config.environment === "staging" &&
-      config.executionContext === "cloudflare" &&
-      config.deploymentProfile === "free-preview-cloudflare-neon" &&
-      !config.realDataApproved &&
-      input.CAPTURE_TRACKER_DATA_MODE === "fictional" &&
-      input.CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED === "false"
-    ) ? "ENABLED" : "STAGING_GUARD_REJECTED";
-  } catch {
-    return "CLOUD_CONFIGURATION_REJECTED";
-  }
+  // This request executes with the application runtime connection, not the
+  // direct migration connection. Requiring migration-only configuration here
+  // rejects valid signups before Better Auth is reached.
+  return input.CAPTURE_TRACKER_ENVIRONMENT === "staging" &&
+    input.CAPTURE_TRACKER_EXECUTION_CONTEXT === "cloudflare" &&
+    input.CAPTURE_TRACKER_DEPLOYMENT_PROFILE === "free-preview-cloudflare-neon" &&
+    input.CAPTURE_TRACKER_REAL_DATA_APPROVED === "false" &&
+    input.CAPTURE_TRACKER_PAID_SERVICE_APPROVED === "false" &&
+    input.CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED === "false" &&
+    input.CAPTURE_TRACKER_DATA_MODE === "fictional" &&
+    input.CAPTURE_TRACKER_STAGING_DATABASE_NAME === "capture_tracker_staging"
+    ? "ENABLED"
+    : "STAGING_GUARD_REJECTED";
 }
 
 export function isFictionalStagingPracticeSignupEnabled(
