@@ -46,6 +46,17 @@ async function userFromAuthResponse(response: Response): Promise<AuthUser | null
   return { id: payload.user.id };
 }
 
+function isExistingIdentityResult(result: unknown) {
+  return (
+    result instanceof Response
+      ? result.status === 422
+      : typeof result === "object" &&
+        result !== null &&
+        "statusCode" in result &&
+        result.statusCode === 422
+  );
+}
+
 async function createOrResumeIdentity({
   name,
   email,
@@ -57,26 +68,31 @@ async function createOrResumeIdentity({
   password: string;
   headers: Headers;
 }) {
-  const signUpResponse = await stagingPracticeAccountAuth.api.signUpEmail({
+  const signUpResult: unknown = await stagingPracticeAccountAuth.api.signUpEmail({
     body: { name, email, password },
     headers,
     asResponse: true,
   });
 
-  const createdUser = await userFromAuthResponse(signUpResponse.clone());
-  if (createdUser) return { response: signUpResponse, user: createdUser };
+  if (signUpResult instanceof Response) {
+    const createdUser = await userFromAuthResponse(signUpResult.clone());
+    if (createdUser) return { response: signUpResult, user: createdUser };
+  }
 
   // A retry after identity creation can authenticate the same user and finish
   // the deterministic workspace provisioning without creating another record.
-  if (signUpResponse.status !== 422) return null;
+  // Better Auth returns its duplicate-user condition as an API-error object
+  // when called in-process, rather than as a Fetch Response.
+  if (!isExistingIdentityResult(signUpResult)) return null;
 
-  const signInResponse = await stagingPracticeAccountAuth.api.signInEmail({
+  const signInResult: unknown = await stagingPracticeAccountAuth.api.signInEmail({
     body: { email, password },
     headers,
     asResponse: true,
   });
-  const existingUser = await userFromAuthResponse(signInResponse.clone());
-  return existingUser ? { response: signInResponse, user: existingUser } : null;
+  if (!(signInResult instanceof Response)) return null;
+  const existingUser = await userFromAuthResponse(signInResult.clone());
+  return existingUser ? { response: signInResult, user: existingUser } : null;
 }
 
 export async function POST(request: Request) {

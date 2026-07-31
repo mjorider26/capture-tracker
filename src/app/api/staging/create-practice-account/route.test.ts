@@ -95,4 +95,19 @@ describe("practice-account route", () => {
       displayName: "Practice Owner",
     });
   });
+
+  it("handles Better Auth's in-process duplicate-identity error shape", async () => {
+    validatePracticeAccountInput.mockResolvedValue(acceptedInput);
+    auth.signUpEmail.mockResolvedValue({ statusCode: 422 });
+    auth.signInEmail.mockResolvedValue(authResponse(200, "identity-one"));
+    provisionPracticeWorkspace.mockResolvedValue(undefined);
+    const { POST } = await import("./route");
+
+    await expect(POST(request())).resolves.toMatchObject({ ok: true });
+    expect(auth.signInEmail).toHaveBeenCalledTimes(1);
+    expect(provisionPracticeWorkspace).toHaveBeenCalledWith({
+      userId: "identity-one",
+      displayName: "Practice Owner",
+    });
+  });
 });
