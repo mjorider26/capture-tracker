@@ -17,6 +17,7 @@ export type TransactionDetail = {
   description: string;
   merchantName: string | null;
   sourceReference: string | null;
+  notes: string | null;
   amount: string;
   amountDecimal: string;
   direction: "INFLOW" | "OUTFLOW";
@@ -32,7 +33,7 @@ export type TransactionDetail = {
   }>;
   documentCount: number;
   reimbursementCount: number;
-  journalStatus: string | null;
+  journal: { id: string; entryNumber: string; status: string; categories: string[] } | null;
   editable: boolean;
   lockExplanation: string | null;
 };
@@ -51,6 +52,7 @@ export async function getTransactionDetailForBusiness(
       description: true,
       merchantName: true,
       sourceReference: true,
+      notes: true,
       amount: true,
       direction: true,
       intent: true,
@@ -66,8 +68,11 @@ export async function getTransactionDetailForBusiness(
       reimbursementPayments: { select: { id: true } },
       journalEntry: {
         select: {
+          id: true,
+          entryNumber: true,
           status: true,
           accountingPeriod: { select: { status: true } },
+          lines: { select: { ledgerAccount: { select: { name: true, type: true } } } },
         },
       },
     },
@@ -91,6 +96,7 @@ export async function getTransactionDetailForBusiness(
     description: transaction.description,
     merchantName: transaction.merchantName,
     sourceReference: transaction.sourceReference,
+    notes: transaction.notes,
     amount: serializeMoneyAmount(transaction.amount),
     amountDecimal: transaction.amount.toFixed(2),
     direction: transaction.direction,
@@ -108,7 +114,12 @@ export async function getTransactionDetailForBusiness(
     reimbursementCount:
       transaction.reimbursementExpenses.length +
       transaction.reimbursementPayments.length,
-    journalStatus: transaction.journalEntry?.status ?? null,
+    journal: transaction.journalEntry ? {
+      id: transaction.journalEntry.id,
+      entryNumber: transaction.journalEntry.entryNumber,
+      status: transaction.journalEntry.status,
+      categories: [...new Set(transaction.journalEntry.lines.filter((line) => line.ledgerAccount.type !== "ASSET").map((line) => line.ledgerAccount.name))],
+    } : null,
     editable,
     lockExplanation,
   };

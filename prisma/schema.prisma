@@ -448,6 +448,7 @@ model Transaction {
   intent                 TransactionIntent    @default(UNREVIEWED)
   status                 TransactionStatus    @default(PENDING_REVIEW)
   sourceReference        String?
+  manualEntryKey        String?
   notes                  String?
   approvedAt             DateTime?
   approvedByMembershipId String?
@@ -470,6 +471,7 @@ model Transaction {
 
   @@unique([businessId, id])
   @@unique([accountId, sourceReference])
+  @@unique([businessId, manualEntryKey])
   @@index([businessId, postedAt])
   @@index([businessId, status])
   @@index([businessId, intent])

@@ -60,19 +60,23 @@ export function TransactionDetailExperience({
           label="Source reference"
           value={detail.sourceReference ?? "Not available"}
         />
+        <Info label="Classification" value={detail.intent.replaceAll("_", " ")} />
+        <Info label="Category" value={detail.journal?.categories.join(" · ") || "Not available"} />
         <Info
           label="Supporting records"
           value={`${detail.documentCount} document${detail.documentCount === 1 ? "" : "s"} · ${detail.reimbursementCount} reimbursement link${detail.reimbursementCount === 1 ? "" : "s"}`}
         />
         <Info
           label="Accounting status"
-          value={detail.journalStatus ?? "No journal entry"}
+          value={detail.journal ? `${detail.journal.entryNumber} · ${detail.journal.status}` : "No journal entry"}
         />
         <Info
           label="Account type"
           value={detail.account.type.replaceAll("_", " ")}
         />
       </Card>
+      {detail.notes && <Card className="mt-5 p-5"><h2 className="font-bold">Notes</h2><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-text-muted">{detail.notes}</p></Card>}
+      {detail.journal && <p className="mt-4 text-sm"><Link className="font-bold text-brand-teal underline underline-offset-4" href={`${basePath}/money/journal/${detail.journal.id}`}>Open journal entry {detail.journal.entryNumber}</Link></p>}
       {detail.splits.length > 0 && (
         <Card className="mt-5 p-5">
           <h2 className="font-bold">Current splits</h2>

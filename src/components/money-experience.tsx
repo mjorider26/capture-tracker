@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { MoneyDashboard } from "@/lib/data/money-dashboard";
 
 import { AccountingNav } from "./accounting-nav";
-import { EmptyState, PageHeader, StatusBadge } from "./ui";
+import { ButtonLink, EmptyState, PageHeader, StatusBadge } from "./ui";
 
 function date(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -35,11 +35,7 @@ export function MoneyExperience({
         eyebrow="Money workspace"
         title="Transaction review"
         description="Review current activity and evidence before any accounting decision. Posted records remain protected."
-        action={
-          <StatusBadge tone="warning">
-            {dashboard.summary.awaitingReviewCount} awaiting review
-          </StatusBadge>
-        }
+        action={<div className="flex flex-wrap items-center gap-3"><StatusBadge tone="warning">{dashboard.summary.awaitingReviewCount} awaiting review</StatusBadge><ButtonLink href={`${basePath}/money/new`}>Add transaction</ButtonLink></div>}
       />
 
       <section
@@ -133,8 +129,8 @@ export function MoneyExperience({
           </span>
         </div>
         {dashboard.transactions.length === 0 ? (
-          <EmptyState title="No transactions match">
-            Clear a filter or search a different description, merchant, or source reference.
+          <EmptyState title={hasFilters ? "No transactions match" : "No transactions yet."}>
+            {hasFilters ? "Clear a filter or search a different description, merchant, or source reference." : <><span>Record the first transaction for this account.</span><ButtonLink className="mt-4" href={`${basePath}/money/new`}>Add transaction</ButtonLink></>}
           </EmptyState>
         ) : (
           <>
