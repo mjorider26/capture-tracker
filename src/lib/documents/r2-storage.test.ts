@@ -2,21 +2,23 @@ import { describe, expect, it } from "vitest";
 
 import { createDocumentR2Storage, DocumentR2UnavailableError, type DocumentR2Bucket } from "./r2-storage";
 
-describe("future R2 document storage boundary", () => {
+describe("private R2 document storage", () => {
   it("fails closed when the Worker binding is absent", () => {
     expect(() => createDocumentR2Storage(undefined)).toThrow(DocumentR2UnavailableError);
   });
 
-  it("uses private namespaces and compensates a failed promotion", async () => {
+  it("uses an active-only private namespace", async () => {
     const operations: string[] = [];
     const bucket: DocumentR2Bucket = {
       put: async (key) => { operations.push(`put:${key}`); },
-      get: async (key) => key === "pending/key" ? { arrayBuffer: async () => new ArrayBuffer(1) } : null,
+      get: async (key) => { operations.push(`get:${key}`); return null; },
       head: async () => null,
-      delete: async (key) => { operations.push(`delete:${key}`); if (key === "pending/key") throw new Error("temporary delete failed"); },
+      delete: async (key) => { operations.push(`delete:${key}`); },
     };
     const storage = createDocumentR2Storage(bucket);
-    await expect(storage.promote("key", "active")).rejects.toThrow("temporary delete failed");
-    expect(operations).toEqual(["put:active/key", "delete:pending/key", "delete:active/key"]);
+    await storage.putActive("opaque", new Uint8Array([1]), { version: "1" }, "image/png");
+    await storage.getActive("opaque");
+    await storage.removeActive("opaque");
+    expect(operations).toEqual(["put:active/opaque", "get:active/opaque", "delete:active/opaque"]);
   });
 });

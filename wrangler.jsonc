@@ -18,6 +18,12 @@
       "service": "capture-tracker-staging"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "CAPTURE_TRACKER_DOCUMENTS",
+      "bucket_name": "capture-tracker-staging-documents"
+    }
+  ],
   "vars": {
     "BETTER_AUTH_URL": "https://capture-tracker-staging.mjorider.workers.dev",
     "CAPTURE_TRACKER_ENVIRONMENT": "staging",
@@ -27,6 +33,7 @@
     "CAPTURE_TRACKER_PAID_SERVICE_APPROVED": "false",
     "CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false",
     "CAPTURE_TRACKER_DATA_MODE": "fictional",
+    "CAPTURE_TRACKER_STAGING_DOCUMENT_BUCKET": "capture-tracker-staging-documents",
     "CAPTURE_TRACKER_STAGING_DATABASE_NAME": "capture_tracker_staging"
   },
   "observability": {

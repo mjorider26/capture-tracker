@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDocument } from "@/lib/documents/service";
-import { readLocalActive } from "@/lib/documents/secure-upload";
+import { getPrivateDocumentStorage } from "@/lib/documents/r2-storage";
 import { verifyDocumentReadGrant } from "@/lib/documents/read-grant";
 import { requireBusinessContext } from "@/lib/security/business-context";
 export const dynamic = "force-dynamic";
@@ -13,10 +13,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ docu
     if (!permitted) return new NextResponse(null, { status: 404 });
 
     const document = await getDocument(context.business.id, documentId);
-    if (!document || document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN" || !document.privateReadEligible || document.storageState !== "STORED_PRIVATE" || !document.storageKey) return new NextResponse(null, { status: 404 });
+    if (!document || document.status !== "ACTIVE" || !document.privateReadEligible || document.storageState !== "STORED_PRIVATE" || !document.storageKey || document.deletedAt) return new NextResponse(null, { status: 404 });
 
-    const bytes = await readLocalActive(document.storageKey);
-    return new NextResponse(bytes, { headers: {
+    const object = await (await getPrivateDocumentStorage()).getActive(document.storageKey);
+    if (!object) return new NextResponse(null, { status: 404 });
+    return new NextResponse(object.body ?? await object.arrayBuffer(), { headers: {
       "Content-Type": document.mimeType,
       "Content-Disposition": `inline; filename="${document.originalFilename.replaceAll('"', "")}"`,
       "Cache-Control": "private, no-store",

@@ -18,7 +18,7 @@ export default async function DocumentsPage() {
         <DocumentsExperience
           documents={documents}
           basePath="/app"
-          action={<ButtonLink href="#document-upload" tone="primary">Upload fictional document</ButtonLink>}
+          action={<ButtonLink href="#document-upload" tone="primary">Upload document</ButtonLink>}
         />
         <DocumentUploadForm />
       </div>

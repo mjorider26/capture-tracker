@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { uploadFictionalDocument } from "@/lib/documents/secure-upload";
+import { uploadPrivateDocument } from "@/lib/documents/secure-upload";
 import { extractDocument, reviewDocumentExtraction } from "@/lib/documents/extraction";
 import { decideDocumentTransactionMatch, dismissDocumentTransactionMatchRun, generateDocumentTransactionMatches } from "@/lib/documents/transaction-matching";
 import { requireBusinessContext } from "@/lib/security/business-context";
@@ -10,7 +10,7 @@ import { requireBusinessContext } from "@/lib/security/business-context";
 export type DocumentUploadState = {
   code?: "INVALID" | "STORAGE" | "UNAVAILABLE";
   documentId?: string;
-  outcome?: "ACTIVE" | "QUARANTINED" | "SCANNER_ERROR" | "EXISTING";
+  outcome?: "ACTIVE" | "EXISTING";
   message?: string;
   ok: boolean;
 };
@@ -20,7 +20,7 @@ const idPattern = /^[A-Za-z0-9_-]{1,191}$/;
 export async function runAuthenticatedExtraction(_: ExtractionActionState, formData: FormData): Promise<ExtractionActionState> {
   const documentId = String(formData.get("documentId") ?? "");
   if (!idPattern.test(documentId)) return { ok: false, message: "The extraction request is invalid." };
-  try { const context = await requireBusinessContext(); const result = await extractDocument({ businessId: context.business.id, actorUserId: context.user.id }, documentId); if (!result.ok) return { ok: false, message: result.code === "INELIGIBLE" ? "Extraction is available only for active, clean private PDF, JPEG, or PNG documents." : result.code === "NOT_FOUND" ? "Document not found." : "Fictional extraction could not complete safely." }; revalidatePath(`/app/documents/${documentId}`); revalidatePath("/app/documents"); return { ok: true, message: result.state === "EXISTING" ? "An extraction for this document version already exists." : "Fictional extraction completed. Review the evidence below." }; } catch { return { ok: false, message: "Extraction is unavailable because no approved production provider is configured." }; }
+  try { const context = await requireBusinessContext(); const result = await extractDocument({ businessId: context.business.id, actorUserId: context.user.id }, documentId); if (!result.ok) return { ok: false, message: result.code === "INELIGIBLE" ? "Extraction is available only for active private PDF, JPEG, or PNG documents." : result.code === "NOT_FOUND" ? "Document not found." : "Fictional extraction could not complete safely." }; revalidatePath(`/app/documents/${documentId}`); revalidatePath("/app/documents"); return { ok: true, message: result.state === "EXISTING" ? "An extraction for this document version already exists." : "Fictional extraction completed. Review the evidence below." }; } catch { return { ok: false, message: "Extraction could not complete safely." }; }
 }
 export async function reviewAuthenticatedExtraction(_: ExtractionActionState, formData: FormData): Promise<ExtractionActionState> {
   const candidateId = String(formData.get("candidateId") ?? ""); const documentId = String(formData.get("documentId") ?? ""); const review = String(formData.get("review") ?? ""); const correctedValue = String(formData.get("correctedValue") ?? "");
@@ -29,7 +29,7 @@ export async function reviewAuthenticatedExtraction(_: ExtractionActionState, fo
 }
 export async function runAuthenticatedDocumentMatching(_: DocumentMatchingActionState, formData: FormData): Promise<DocumentMatchingActionState> {
   const documentId = String(formData.get("documentId") ?? ""); if (!idPattern.test(documentId)) return { ok: false, message: "The matching request is invalid." };
-  try { const context = await requireBusinessContext(); const result = await generateDocumentTransactionMatches({ businessId: context.business.id, actorUserId: context.user.id }, documentId); if (!result.ok) return { ok: false, message: result.code === "INELIGIBLE" ? "Suggestions require current, reviewed extraction evidence on an active clean private document." : "Suggestions could not be generated safely." }; revalidatePath(`/app/documents/${documentId}`); return { ok: true, message: result.state === "EXISTING" ? "Current suggestions already exist for this reviewed evidence." : "Suggested transactions are ready for your review." }; } catch { return { ok: false, message: "Suggestions could not be authorized." }; }
+  try { const context = await requireBusinessContext(); const result = await generateDocumentTransactionMatches({ businessId: context.business.id, actorUserId: context.user.id }, documentId); if (!result.ok) return { ok: false, message: result.code === "INELIGIBLE" ? "Suggestions require current, reviewed extraction evidence on an active private document." : "Suggestions could not be generated safely." }; revalidatePath(`/app/documents/${documentId}`); return { ok: true, message: result.state === "EXISTING" ? "Current suggestions already exist for this reviewed evidence." : "Suggested transactions are ready for your review." }; } catch { return { ok: false, message: "Suggestions could not be authorized." }; }
 }
 export async function decideAuthenticatedDocumentMatching(_: DocumentMatchingActionState, formData: FormData): Promise<DocumentMatchingActionState> {
   const documentId = String(formData.get("documentId") ?? ""); const suggestionId = String(formData.get("suggestionId") ?? ""); const decision = String(formData.get("decision") ?? ""); if (!idPattern.test(documentId) || !idPattern.test(suggestionId) || !["APPROVE", "REJECT", "DISMISS"].includes(decision)) return { ok: false, message: "The suggestion decision is invalid." };
@@ -46,7 +46,7 @@ export async function uploadDocument(_: DocumentUploadState, formData: FormData)
 
   try {
     const context = await requireBusinessContext();
-    const result = await uploadFictionalDocument({ businessId: context.business.id, actorUserId: context.user.id }, file);
+    const result = await uploadPrivateDocument({ businessId: context.business.id, actorUserId: context.user.id }, file);
     if (!result.ok) {
       const code = result.code === "INVALID" || result.code === "STORAGE" ? result.code : "UNAVAILABLE";
       return { ok: false, code, message: result.message };
@@ -59,6 +59,6 @@ export async function uploadDocument(_: DocumentUploadState, formData: FormData)
       message: result.duplicate ? "This file already has a canonical document record." : undefined,
     };
   } catch {
-    return { ok: false, code: "UNAVAILABLE", message: "Secure fictional upload is unavailable." };
+    return { ok: false, code: "UNAVAILABLE", message: "Private document storage is unavailable. Please try again." };
   }
 }

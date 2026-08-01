@@ -14,7 +14,7 @@ export async function linkDocumentToTransactionInTransaction(client: LinkClient,
         client.document.findFirst({ where: { id: documentId, businessId: actor.businessId }, select: { id: true, status: true, malwareScanStatus: true, storageState: true, privateReadEligible: true, deletedAt: true } }),
   ]);
   if (!transaction || !document) return { ok: false as const, code: "NOT_FOUND" as const };
-  if (document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN" || document.storageState !== "STORED_PRIVATE" || !document.privateReadEligible || document.deletedAt) return { ok: false as const, code: "DOCUMENT_NOT_ELIGIBLE" as const };
+  if (document.status !== "ACTIVE" || document.storageState !== "STORED_PRIVATE" || !document.privateReadEligible || document.deletedAt) return { ok: false as const, code: "DOCUMENT_NOT_ELIGIBLE" as const };
   const existing = await client.transactionDocument.findFirst({ where: { businessId: actor.businessId, transactionId, documentId, unlinkedAt: null }, select: { id: true } });
   if (existing) return { ok: true as const, state: "ALREADY_LINKED" as const, linkId: existing.id };
   const link = await client.transactionDocument.create({ data: { businessId: actor.businessId, transactionId, documentId, linkedByUserId: actor.actorUserId, history: { create: { action: "LINKED", actorUserId: actor.actorUserId, note: note?.slice(0, 200) || null } } } });

@@ -14,8 +14,8 @@ export function documentWorkspaceMetrics(documents: DocumentWorkspaceState[]) {
 }
 
 export function documentValidationPresentation(document: Pick<DocumentWorkspaceState, "status" | "malwareScanStatus">) {
-  if (document.status === "ACTIVE" && document.malwareScanStatus === "CLEAN") {
-    return { tone: "success" as const, label: "Active and clean" };
+  if (document.status === "ACTIVE") {
+    return { tone: "success" as const, label: "Active and private" };
   }
   if (document.status === "PENDING_VALIDATION") {
     return { tone: "warning" as const, label: "Pending validation" };

@@ -22,6 +22,7 @@ const freePreview = {
   CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "false",
   CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "false",
   CAPTURE_TRACKER_DATA_MODE: "fictional",
+  CAPTURE_TRACKER_STAGING_DOCUMENT_BUCKET: "capture-tracker-staging-documents",
   CAPTURE_TRACKER_STAGING_DATABASE_URL: neonRuntime,
   CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL: neonMigration,
   CAPTURE_TRACKER_STAGING_DATABASE_NAME: "capture_tracker_staging",
@@ -62,5 +63,6 @@ try {
 }
 assert(assertRealDataPermitted({ ...awsProduction, CAPTURE_TRACKER_REAL_DATA_APPROVED: "true" }).realDataApproved, "Explicit AWS production approval must be recognized.");
 assert(!JSON.stringify(publicRuntimeConfiguration()).match(/DATABASE_URL|SECRET|PASSWORD|PRIVATE_KEY|API_KEY|TOKEN/), "Public configuration must contain no server secrets.");
-assert(previewConfig.documentBucket === undefined, "Fictional staging must not configure an R2 bucket.");
-console.log("CLOUD CONFIGURATION VERIFIED: no-deploy default, fictional Cloudflare/Neon staging without R2, guarded direct migrations, and optional AWS profile assertions passed.");
+assert(previewConfig.documentBucket === "capture-tracker-staging-documents", "Fictional staging must use its dedicated private R2 bucket.");
+assert(rejects({ ...freePreview, CAPTURE_TRACKER_STAGING_DOCUMENT_BUCKET: "another-bucket" }), "Fictional staging cannot target another document bucket.");
+console.log("CLOUD CONFIGURATION VERIFIED: no-deploy default, fictional Cloudflare/Neon staging with its dedicated private R2 bucket, guarded direct migrations, and optional AWS profile assertions passed.");

@@ -1,8 +1,5 @@
 import "server-only";
 
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { prisma } from "@/lib/prisma";
 
 import {
@@ -10,18 +7,29 @@ import {
   DOCUMENT_MAX_METADATA_BYTES,
   normalizeDocumentFilename,
 } from "./core";
+import { getPrivateDocumentStorage } from "./r2-storage";
 
 type Actor = { businessId: string; actorUserId: string };
-type ScannerResult = "CLEAN" | "INFECTED" | "FAILED";
+type ApprovedMimeType = "application/pdf" | "image/jpeg" | "image/png";
 
-const localStorageRoot = join(process.cwd(), ".document-storage");
 const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const extensions: Record<ApprovedMimeType, string> = {
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+};
 
-function detectMimeType(bytes: Uint8Array) {
-  if (new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-") return "application/pdf";
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
-  if (pngSignature.every((value, index) => bytes[index] === value)) return "image/png";
+function detectMimeType(bytes: Uint8Array): ApprovedMimeType | null {
+  const text = new TextDecoder().decode(bytes.slice(0, 5));
+  if (text === "%PDF-" && new TextDecoder().decode(bytes.slice(Math.max(0, bytes.length - 1024))).includes("%%EOF")) return "application/pdf";
+  if (bytes.length >= 24 && pngSignature.every((value, index) => bytes[index] === value) && new TextDecoder().decode(bytes.slice(12, 16)) === "IHDR") return "image/png";
+  if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9) return "image/jpeg";
   return null;
+}
+
+function extensionMatches(name: string, mimeType: ApprovedMimeType) {
+  const lower = name.toLowerCase();
+  return lower.endsWith(extensions[mimeType]) || (mimeType === "image/jpeg" && lower.endsWith(".jpeg"));
 }
 
 async function hashBytes(bytes: Uint8Array) {
@@ -31,64 +39,28 @@ async function hashBytes(bytes: Uint8Array) {
     .join("");
 }
 
-function assertLocalFictionalStorage() {
-  if (process.env.NODE_ENV === "production" || process.env.CAPTURE_TRACKER_REAL_DATA_APPROVED === "true") {
-    throw new Error("Secure upload storage is not approved for production.");
+async function cleanupOrphan(key: string, fingerprint: string) {
+  try {
+    const storage = await getPrivateDocumentStorage();
+    await storage.removeActive(key);
+  } catch {
+    // The fingerprint is intentionally non-reversible and is only for controlled recovery.
+    console.error("Document object cleanup failed", { fingerprint });
   }
 }
 
-async function put(namespace: "pending", key: string, bytes: Uint8Array) {
-  assertLocalFictionalStorage();
-  await mkdir(join(localStorageRoot, namespace), { recursive: true });
-  await writeFile(join(localStorageRoot, namespace, key), bytes, { flag: "wx" });
-}
-
-async function promote(key: string, namespace: "active" | "quarantine") {
-  await mkdir(join(localStorageRoot, namespace), { recursive: true });
-  await rename(join(localStorageRoot, "pending", key), join(localStorageRoot, namespace, key));
-}
-
-async function remove(namespace: "pending" | "active" | "quarantine", key: string) {
-  await rm(join(localStorageRoot, namespace, key), { force: true });
-}
-
-function scanFictionalBytes(bytes: Uint8Array): ScannerResult {
-  const sample = new TextDecoder().decode(bytes.slice(0, Math.min(bytes.length, 128)));
-  if (sample.includes("SCANNER_ERROR")) return "FAILED";
-  return sample.includes("SUSPICIOUS") ? "INFECTED" : "CLEAN";
-}
-
-export async function readLocalActive(key: string) {
-  assertLocalFictionalStorage();
-  return readFile(join(localStorageRoot, "active", key));
-}
-
-export async function ensureFictionalDemoActive(key: string) {
-  assertLocalFictionalStorage();
-  await mkdir(join(localStorageRoot, "active"), { recursive: true });
+export async function uploadPrivateDocument(actor: Actor, file: File) {
   try {
-    await writeFile(join(localStorageRoot, "active", key), "%PDF-1.4\n% fictional Capture Tracker extraction fixture\n", { flag: "wx" });
-  } catch (error) {
-    if (!(typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST")) throw error;
-  }
-}
-
-export async function uploadFictionalDocument(actor: Actor, file: File) {
-  try {
-    assertLocalFictionalStorage();
     const name = normalizeDocumentFilename(file.name);
     if (!file.size || file.size > DOCUMENT_MAX_METADATA_BYTES) {
       return { ok: false as const, code: "INVALID", message: "File must be between 1 byte and 10 MiB." };
     }
-
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (bytes.byteLength !== file.size) {
-      return { ok: false as const, code: "INVALID", message: "File size changed during upload." };
-    }
+    if (bytes.byteLength !== file.size) return { ok: false as const, code: "INVALID", message: "File size changed during upload." };
 
     const mimeType = detectMimeType(bytes);
-    if (!mimeType || mimeType !== file.type) {
-      return { ok: false as const, code: "INVALID", message: "File content is not an approved PDF, JPEG, or PNG." };
+    if (!mimeType || file.type !== mimeType || !extensionMatches(name, mimeType)) {
+      return { ok: false as const, code: "INVALID", message: "File name, declared type, and validated file content must be the same approved type." };
     }
 
     const sha256 = await hashBytes(bytes);
@@ -99,90 +71,62 @@ export async function uploadFictionalDocument(actor: Actor, file: File) {
     if (existing) return { ok: true as const, documentId: existing.id, duplicate: true, outcome: "EXISTING" as const };
 
     const key = crypto.randomUUID().replaceAll("-", "");
-    await put("pending", key, bytes);
-    const scanResult = scanFictionalBytes(bytes);
+    const storage = await getPrivateDocumentStorage();
+    await storage.putActive(key, bytes, { sha256, version: "1" }, mimeType);
     const now = new Date();
-
-    if (scanResult === "FAILED") {
-      try {
-        const document = await prisma.document.create({
-          data: {
-            businessId: actor.businessId,
-            uploadedByMembershipId: actor.actorUserId,
-            originalFilename: name,
-            displayName: name,
-            mimeType,
-            sizeBytes: BigInt(bytes.length),
-            storedSizeBytes: BigInt(bytes.length),
-            sha256,
-            type: "OTHER",
-            category: "OTHER",
-            status: "PENDING_VALIDATION",
-            storageState: "PENDING_STORAGE",
-            storageProvider: "LOCAL_FICTIONAL",
-            storageKey: key,
-            malwareScanStatus: "FAILED",
-            malwareScannedAt: now,
-            retentionClass: "GENERAL_TAX_SEVEN_YEARS",
-            retentionUntil: calculateDocumentRetentionUntil(now),
-            privateReadEligible: false,
-            validationError: "Fictional scanner was unavailable; the document remains inaccessible.",
-            statusHistory: { create: { newStatus: "PENDING_VALIDATION", actorUserId: actor.actorUserId, note: "Fictional scanner was unavailable; private object remains pending." } },
-          },
-        });
-        return { ok: true as const, documentId: document.id, duplicate: false, outcome: "SCANNER_ERROR" as const };
-      } catch (error) {
-        await remove("pending", key);
-        if (isUniqueDocumentHashError(error)) {
-          const canonical = await prisma.document.findFirst({ where: { businessId: actor.businessId, sha256 }, select: { id: true } });
-          if (canonical) return { ok: true as const, documentId: canonical.id, duplicate: true, outcome: "EXISTING" as const };
-        }
-        return { ok: false as const, code: "STORAGE", message: "Document could not be stored safely." };
-      }
-    }
-
-    const destination = scanResult === "INFECTED" ? "quarantine" : "active";
     try {
-      // Promotion precedes the visible database state. A database failure is compensated below.
-      await promote(key, destination);
-      const result = await prisma.$transaction(async (tx) => {
-        const document = await tx.document.create({
+      const document = await prisma.$transaction(async (tx) => {
+        const created = await tx.document.create({
           data: {
             businessId: actor.businessId,
             uploadedByMembershipId: actor.actorUserId,
             originalFilename: name,
             displayName: name,
             mimeType,
+            detectedMimeType: mimeType,
             sizeBytes: BigInt(bytes.length),
             storedSizeBytes: BigInt(bytes.length),
             sha256,
             type: "OTHER",
             category: "OTHER",
-            status: scanResult === "INFECTED" ? "QUARANTINED" : "ACTIVE",
-            storageState: scanResult === "INFECTED" ? "QUARANTINED_PRIVATE" : "STORED_PRIVATE",
-            storageProvider: "LOCAL_FICTIONAL",
+            status: "ACTIVE",
+            storageState: "STORED_PRIVATE",
+            storageProvider: "CLOUDFLARE_R2",
             storageKey: key,
-            malwareScanStatus: scanResult,
-            malwareScannedAt: now,
             retentionClass: "GENERAL_TAX_SEVEN_YEARS",
             retentionUntil: calculateDocumentRetentionUntil(now),
             uploadCompletedAt: now,
-            privateReadEligible: scanResult === "CLEAN",
-            quarantineReasonCode: scanResult === "INFECTED" ? "SYNTHETIC_SCANNER_RESULT" : null,
-            quarantineExplanation: scanResult === "INFECTED" ? "Fictional development scanner result." : null,
+            activatedAt: now,
+            privateReadEligible: true,
+            // No malware scan has run. Strict synchronous validation is the
+            // private-pilot control until untrusted uploads are introduced.
+            malwareScanStatus: "NOT_STARTED",
             statusHistory: {
-              create: [
-                { newStatus: "PENDING_VALIDATION", actorUserId: actor.actorUserId, note: "Fictional binary upload received." },
-                { previousStatus: "PENDING_VALIDATION", newStatus: scanResult === "INFECTED" ? "QUARANTINED" : "ACTIVE", reasonCode: scanResult === "INFECTED" ? "SYNTHETIC_SCANNER_RESULT" : null, actorUserId: actor.actorUserId, note: "Fictional development scanner completed." },
-              ],
+              create: {
+                newStatus: "ACTIVE",
+                actorUserId: actor.actorUserId,
+                note: "Private R2 upload passed synchronous type and size validation; malware scanning is deferred for the private pilot.",
+              },
             },
           },
         });
-        return document;
+        await tx.auditEvent.create({
+          data: {
+            actorType: "USER",
+            businessId: actor.businessId,
+            actorMembershipId: actor.actorUserId,
+            action: "CREATE",
+            entityType: "Document",
+            entityId: created.id,
+            afterJson: { mimeType, sizeBytes: String(bytes.length), sha256 },
+            metadataJson: { storage: "private-r2", validation: "synchronous", malwareScanning: "deferred-private-pilot" },
+          },
+        });
+        return created;
       });
-      return { ok: true as const, documentId: result.id, duplicate: false, outcome: scanResult === "INFECTED" ? "QUARANTINED" as const : "ACTIVE" as const };
+      return { ok: true as const, documentId: document.id, duplicate: false, outcome: "ACTIVE" as const };
     } catch (error) {
-      await remove(destination, key);
+      await cleanupOrphan(key, sha256.slice(0, 12));
       if (isUniqueDocumentHashError(error)) {
         const canonical = await prisma.document.findFirst({ where: { businessId: actor.businessId, sha256 }, select: { id: true } });
         if (canonical) return { ok: true as const, documentId: canonical.id, duplicate: true, outcome: "EXISTING" as const };
@@ -190,7 +134,7 @@ export async function uploadFictionalDocument(actor: Actor, file: File) {
       return { ok: false as const, code: "STORAGE", message: "Document could not be stored safely." };
     }
   } catch {
-    return { ok: false as const, code: "UNAVAILABLE", message: "Fictional secure upload is unavailable." };
+    return { ok: false as const, code: "UNAVAILABLE", message: "Private document storage is unavailable. Please try again." };
   }
 }
 

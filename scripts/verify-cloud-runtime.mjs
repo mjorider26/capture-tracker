@@ -21,7 +21,8 @@ const auth = text("src/lib/auth.ts");
 assert(wrangler.includes('"nodejs_compat"'), "Cloudflare Node compatibility flag is required.");
 assert(wrangler.includes('"global_fetch_strictly_public"') && wrangler.includes('"no_handle_cross_request_promise_resolution"') && wrangler.includes('"compatibility_date": "2026-07-23"'), "Pinned Worker compatibility date and required request-lifecycle flags are required.");
 assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\/|BETTER_AUTH_SECRET/i.test(wrangler), "Wrangler configuration must remain non-secret and account-free.");
-assert(!/r2_buckets|CAPTURE_TRACKER_DOCUMENTS_BUCKET|r2\.dev|custom_domains|public[_ -]?access/i.test(wrangler), "Fictional staging must not configure R2 or public object access.");
+assert(wrangler.includes('"r2_buckets"') && wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS"') && wrangler.includes('"capture-tracker-staging-documents"'), "Fictional staging must bind its dedicated private document bucket.");
+assert(!/r2\.dev|custom_domains|public[_ -]?access|queues|dead_letter/i.test(wrangler), "Fictional staging must not expose document storage or configure queue infrastructure.");
 assert(wrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "false"'), "Free preview must keep real-data approval false.");
 assert(wrangler.includes('"CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false"'), "Free preview must block customer onboarding.");
 assert(wrangler.includes('"observability"'), "Worker logging must be enabled.");
@@ -40,4 +41,4 @@ assert(robots.includes("Disallow: /app/") && robots.includes("Disallow: /demo/")
 assert(prisma.includes('import "server-only"') && auth.includes('import "server-only"'), "Prisma and Better Auth must be server-only.");
 assert(text("src/app/app/money/[transactionId]/actions.ts").startsWith('"use server"') && text("src/app/app/taxes/estimates/[estimateId]/actions.ts").startsWith('"use server"'), "Transaction and payment write entry points must be Server Actions.");
 assert(!text("src/components/tax-payment-form.tsx").includes("@/lib/services/tax-payment") && !text("src/components/transaction-review-form.tsx").includes("@/lib/services/review-transaction-core"), "Client components must not import transaction or payment write services.");
-console.log("CLOUDFLARE RUNTIME VERIFIED: App Router build configuration, route handlers, Server Actions, Better Auth, Prisma/Neon Node compatibility, no-store/noindex, health endpoints, no-R2 staging, and server-secret boundaries passed static verification.");
+console.log("CLOUDFLARE RUNTIME VERIFIED: App Router build configuration, route handlers, Server Actions, Better Auth, Prisma/Neon Node compatibility, private R2 document binding, no-store/noindex, health endpoints, and server-secret boundaries passed static verification.");

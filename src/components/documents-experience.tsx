@@ -48,7 +48,7 @@ export function DocumentsExperience({
       <PageHeader
         eyebrow="Documents workspace"
         title="Evidence, review, and protection"
-        description="Keep fictional document evidence private, reviewable, and deliberately linked. Extraction and match suggestions never change accounting automatically."
+        description="Keep document evidence private, reviewable, and deliberately linked. Extraction and match suggestions never change accounting automatically."
         action={action}
       />
 
@@ -73,7 +73,7 @@ export function DocumentsExperience({
           <span className="ui-status-badge bg-surface-secondary text-text-muted">{documents.length} records</span>
         </div>
         {documents.length === 0 ? (
-          <EmptyState title="No document records yet">Use the available fictional workflow to add evidence. Pending and quarantined files remain inaccessible.</EmptyState>
+          <EmptyState title="No document records yet">Upload a PDF, PNG, or JPEG to add private evidence for this business.</EmptyState>
         ) : (
           <>
             <div className="divide-y divide-border-subtle min-[720px]:hidden">
