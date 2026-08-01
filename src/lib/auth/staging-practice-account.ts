@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { ensureWorkspaceAccountingFoundation } from "@/lib/accounting/workspace-bootstrap";
 
 import {
   practiceBusinessId,
@@ -124,6 +125,7 @@ export async function provisionPracticeWorkspace({
         update: {},
       }),
     ]);
+    await ensureWorkspaceAccountingFoundation(businessId);
   } catch (error) {
     if (error instanceof PracticeWorkspaceProvisionError) throw error;
     throw new PracticeWorkspaceProvisionError();

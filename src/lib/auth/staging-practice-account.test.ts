@@ -26,6 +26,9 @@ const prisma = vi.hoisted(() => ({
   auditEvent: {
     upsert: vi.fn(),
   },
+  financialAccount: { upsert: vi.fn() },
+  ledgerAccount: { upsert: vi.fn() },
+  accountingPeriod: { upsert: vi.fn() },
 }));
 
 vi.mock("server-only", () => ({}));
