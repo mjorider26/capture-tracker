@@ -48,13 +48,13 @@ export async function recordTaxPayment(
       estimateId: data.estimateId,
       idempotencyKey: data.idempotencyKey,
     },
-    select: { id: true, amount: true, paidAt: true, notes: true },
+    select: { id: true, amount: true, paidAt: true, notes: true, confirmationNumber: true },
   });
   if (replay) {
     const exact =
       replay.amount.equals(data.amount) &&
       replay.paidAt?.toISOString().slice(0, 10) === data.paidAt &&
-      (replay.notes ?? null) === data.notes;
+      (replay.notes ?? null) === data.notes && (replay.confirmationNumber ?? null) === data.confirmationNumber;
     return exact
       ? {
           ok: true,
@@ -106,6 +106,7 @@ export async function recordTaxPayment(
             amount: data.amount,
             status: "RECORDED",
             paidAt: new Date(`${data.paidAt}T12:00:00.000Z`),
+            confirmationNumber: data.confirmationNumber,
             notes: data.notes,
             idempotencyKey: data.idempotencyKey,
           },
@@ -122,13 +123,13 @@ export async function recordTaxPayment(
               estimateId: estimate.id,
               idempotencyKey: data.idempotencyKey,
             },
-            select: { id: true, amount: true, paidAt: true, notes: true },
+            select: { id: true, amount: true, paidAt: true, notes: true, confirmationNumber: true },
           });
           if (existing) {
             const exact =
               existing.amount.equals(data.amount) &&
               existing.paidAt?.toISOString().slice(0, 10) === data.paidAt &&
-              (existing.notes ?? null) === data.notes;
+              (existing.notes ?? null) === data.notes && (existing.confirmationNumber ?? null) === data.confirmationNumber;
             return exact
               ? {
                   ok: true as const,
@@ -167,7 +168,7 @@ export async function recordTaxPayment(
           afterJson: {
             estimateId: estimate.id,
             amount: new Prisma.Decimal(data.amount).toFixed(2),
-            paidAt: data.paidAt,
+            paidAt: data.paidAt, confirmationNumber: data.confirmationNumber,
           },
           metadataJson: {
             executionMode: actor.executionMode,
@@ -196,13 +197,13 @@ export async function recordTaxPayment(
           estimateId: data.estimateId,
           idempotencyKey: data.idempotencyKey,
         },
-        select: { id: true, amount: true, paidAt: true, notes: true },
+        select: { id: true, amount: true, paidAt: true, notes: true, confirmationNumber: true },
       });
       if (existing) {
         const exact =
           existing.amount.equals(data.amount) &&
           existing.paidAt?.toISOString().slice(0, 10) === data.paidAt &&
-          (existing.notes ?? null) === data.notes;
+          (existing.notes ?? null) === data.notes && (existing.confirmationNumber ?? null) === data.confirmationNumber;
         return exact
           ? {
               ok: true,

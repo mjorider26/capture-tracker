@@ -33,7 +33,11 @@ function safeHarborReadiness(estimate: {
 
 export async function getTaxesDashboard(businessId: string) {
   noStore();
-  const [estimates, payrollRuns, distributions] = await Promise.all([
+  const today = new Date();
+  const taxYear = today.getUTCFullYear();
+  const taxQuarter = Math.floor(today.getUTCMonth() / 3) + 1;
+  const yearStart = new Date(Date.UTC(taxYear, 0, 1));
+  const [estimates, payrollRuns, distributions, ledgerLines] = await Promise.all([
     prisma.quarterlyTaxEstimate.findMany({
       where: { businessId, status: { notIn: ["VOIDED", "SUPERSEDED"] } },
       include: { payments: { where: { status: "RECORDED" } } },
@@ -58,6 +62,7 @@ export async function getTaxesDashboard(businessId: string) {
       select: { id: true, distributionDate: true, amount: true, memo: true },
       orderBy: { distributionDate: "desc" },
     }),
+    prisma.journalLine.findMany({ where: { businessId, journalEntry: { status: "POSTED", entryDate: { gte: yearStart } } }, select: { debitAmount: true, creditAmount: true, ledgerAccount: { select: { type: true, subtype: true } } } }),
   ]);
 
   const current = estimates[0] ?? null;
@@ -78,6 +83,9 @@ export async function getTaxesDashboard(businessId: string) {
     : distributions;
   const payrollWages = total(yearPayroll.map((run) => run.grossWages));
   const distributionTotal = total(yearDistributions.map((item) => item.amount));
+  const ledgerIncome = ledgerLines.filter((line) => line.ledgerAccount.type === "INCOME").reduce((sum, line) => sum.plus(line.creditAmount).minus(line.debitAmount), new Prisma.Decimal(0));
+  const salaryExpense = ledgerLines.filter((line) => line.ledgerAccount.subtype === "PAYROLL_EXPENSE").reduce((sum, line) => sum.plus(line.debitAmount).minus(line.creditAmount), new Prisma.Decimal(0));
+  const payrollTaxExpense = ledgerLines.filter((line) => line.ledgerAccount.subtype === "PAYROLL_TAX_EXPENSE").reduce((sum, line) => sum.plus(line.debitAmount).minus(line.creditAmount), new Prisma.Decimal(0));
 
   return {
     estimates: estimates.map((estimate) => {
@@ -109,6 +117,7 @@ export async function getTaxesDashboard(businessId: string) {
             readiness: safeHarborReadiness(current),
           }
         : null,
+    overview: { taxYear, taxQuarter, businessIncome: money(ledgerIncome), salaryExpense: money(salaryExpense), payrollTaxExpense: money(payrollTaxExpense), recordedEstimatedPayments: money(total(estimates.flatMap((estimate) => estimate.payments.map((payment) => payment.amount)))), missingInputs: current ? null : "No current tax estimate is recorded. Add or review professional tax-planning inputs before relying on a payment amount." },
     reportingYear,
     payroll: {
       runs: payrollRuns.map((run) => ({
@@ -153,6 +162,7 @@ export async function getTaxesDashboard(businessId: string) {
       latestDistributionDate: date(distributions[0]?.distributionDate ?? null),
       missingFacts:
         "CPA review still needs owner duties, time devoted, comparable-market facts, and any shareholder-basis analysis. Those facts are not recorded here.",
+      comparison: payrollWages.equals(0) && distributionTotal.equals(0) ? "No recorded salary or distribution activity is available for comparison." : "Salary and distributions are shown as separate recorded facts. A tax professional should review reasonable compensation using duties, time, and market evidence.",
     },
   };
 }

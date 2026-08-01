@@ -22,7 +22,12 @@ export function TaxesExperience({
         title="Tax planning workspace"
       />
       <CpaBoundary />
+      <p className="mt-4 text-sm text-text-muted">Tax year {data.overview.taxYear} · Quarter {data.overview.taxQuarter}. Capture Tracker records planning facts; it does not file returns, send payments, or guarantee outcomes.</p>
       <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric label="Ledger business income" value={`$${data.overview.businessIncome}`} />
+        <Metric label="Recorded salary expense" value={`$${data.overview.salaryExpense}`} />
+        <Metric label="Owner distributions" value={`$${data.distributions.total}`} />
+        <Metric label="Estimated-tax payments" value={`$${data.overview.recordedEstimatedPayments}`} />
         <Metric
           label="Projected tax obligation"
           value={data.current ? `$${data.current.projected}` : "Not available"}
@@ -49,6 +54,8 @@ export function TaxesExperience({
             "No current estimate, prior-year tax, withholding, or CPA method is configured."}
         </InlineAlert>
       </div>
+      {data.overview.missingInputs && <InlineAlert title="Missing tax-planning inputs" tone="warning">{data.overview.missingInputs}</InlineAlert>}
+      <Card className="mt-6 p-5"><h2 className="font-bold">Tax workflows</h2><div className="mt-3 flex flex-wrap gap-3"><Link className="ui-link" href={`${basePath}/taxes/estimates`}>Estimate history</Link><Link className="ui-link" href={`${basePath}/taxes/payroll`}>Payroll summary</Link><Link className="ui-link" href={`${basePath}/taxes/owner-compensation`}>Owner compensation</Link></div></Card>
       <Card className="mt-6 p-5">
         <h2 className="font-bold">Quarterly estimates</h2>
         {data.estimates.length ? (
@@ -177,8 +184,7 @@ export function OwnerCompensationExperience({ data }: { data: TaxesData }) {
         </dl>
       </Card>
       <InlineAlert title="Missing facts for CPA review" tone="warning">
-        {owner.missingFacts} Distributions are equity movements, not deductible
-        expenses.
+        {owner.comparison} {owner.missingFacts} Distributions are equity movements, not deductible expenses.
       </InlineAlert>
     </>
   );

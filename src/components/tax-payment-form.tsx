@@ -75,7 +75,11 @@ export function TaxPaymentForm({
         />
       </label>
       <label className="text-sm font-bold" htmlFor="payment-note">
-        Reference or note
+        Confirmation or reference (optional)
+        <input aria-describedby={state.code ? resultId : undefined} className="ui-input mt-1" id="payment-reference" maxLength={160} name="confirmationNumber" />
+      </label>
+      <label className="text-sm font-bold" htmlFor="payment-note">
+        Notes (optional)
         <textarea
           aria-describedby={state.code ? resultId : undefined}
           className="ui-input mt-1"

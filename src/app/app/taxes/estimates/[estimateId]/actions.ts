@@ -30,6 +30,7 @@ export async function payApp(
         expectedVersion: form.get("expectedVersion"),
         amount: form.get("amount"),
         paidAt: form.get("paidAt"),
+        confirmationNumber: form.get("confirmationNumber"),
         notes: form.get("notes"),
         idempotencyKey: form.get("idempotencyKey"),
       },
