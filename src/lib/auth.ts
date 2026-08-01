@@ -2,7 +2,6 @@ import "server-only";
 
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { nextCookies } from "better-auth/next-js";
 
 import { prisma } from "@/lib/prisma";
 import { hashWorkerdPassword, verifyWorkerdPassword } from "@/lib/auth/workerd-password";
@@ -18,13 +17,13 @@ if (!secret) {
   throw new Error("BETTER_AUTH_SECRET is not configured.");
 }
 
-function createAuth({ allowSignUp, useNextCookies }: {
+function createAuth({ allowSignUp }: {
   allowSignUp: boolean;
-  useNextCookies: boolean;
 }) {
   return betterAuth({
     appName: "Capture Tracker",
     baseURL,
+    trustedOrigins: [baseURL!],
     secret,
 
     database: prismaAdapter(prisma, {
@@ -77,17 +76,13 @@ function createAuth({ allowSignUp, useNextCookies }: {
       },
     },
 
-    plugins: useNextCookies ? [nextCookies()] : [],
   });
 }
 
 // The normal Better Auth route remains closed to public registration.
-export const auth = createAuth({ allowSignUp: false, useNextCookies: true });
+export const auth = createAuth({ allowSignUp: false });
 
 // This instance is called only by the invitation-gated staging route. It does
-// not use nextCookies so a session is never sent until workspace provisioning
-// has completed successfully.
-export const stagingPracticeAccountAuth = createAuth({
-  allowSignUp: true,
-  useNextCookies: false,
-});
+// It shares the public handler's Workerd-safe credential and origin settings,
+// but is called only after invitation validation.
+export const stagingPracticeAccountAuth = createAuth({ allowSignUp: true });

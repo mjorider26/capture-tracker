@@ -7,12 +7,14 @@ import { useRouter } from "next/navigation";
 export default function CreateAccountPage() {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
+  const [accountReady, setAccountReady] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setMessage(null);
+    setAccountReady(false);
 
     const form = new FormData(event.currentTarget);
     try {
@@ -30,6 +32,12 @@ export default function CreateAccountPage() {
 
       if (!response.ok) {
         setMessage("Account creation could not be completed.");
+        return;
+      }
+
+      const result = await response.json() as { code?: string };
+      if (result.code === "ACCOUNT_ALREADY_READY") {
+        setAccountReady(true);
         return;
       }
 
@@ -83,6 +91,7 @@ export default function CreateAccountPage() {
             {submitting ? "Creating account…" : "Create practice account"}
           </button>
           {message ? <p role="alert" className="text-sm text-status-error">{message}</p> : null}
+          {accountReady ? <p role="status" className="text-sm text-text-muted">Your practice account is ready. <Link className="font-bold text-brand-navy underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal" href="/sign-in">Sign in to continue.</Link></p> : null}
         </form>
         <p className="mt-5 text-sm text-text-muted">
           Already have an account? <Link className="font-bold text-brand-navy underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal" href="/sign-in">Sign in</Link>

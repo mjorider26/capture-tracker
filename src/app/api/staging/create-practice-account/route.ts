@@ -4,14 +4,17 @@ import {
   validatePracticeAccountInput,
 } from "@/lib/auth/staging-practice-account-core";
 import {
+  isPracticeWorkspaceReady,
   PracticeWorkspaceProvisionError,
   provisionPracticeWorkspace,
 } from "@/lib/auth/staging-practice-account";
+import { verifyWorkerdPassword } from "@/lib/auth/workerd-password";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 type AuthUser = { id: string };
+type ExistingIdentity = AuthUser & { ready: boolean };
 
 function genericError(status = 400) {
   return Response.json({ message: practiceAccountError }, { status });
@@ -74,7 +77,10 @@ async function createOrResumeIdentity({
     select: { id: true },
   });
   if (existingIdentity) {
-    return signInExistingIdentity({ email, password, headers });
+    return resumeExistingIdentity({
+      userId: existingIdentity.id,
+      password,
+    });
   }
 
   const signUpResult: unknown = await stagingPracticeAccountAuth.api.signUpEmail({
@@ -88,32 +94,35 @@ async function createOrResumeIdentity({
     if (createdUser) return { response: signUpResult, user: createdUser };
   }
 
-  // A retry after identity creation can authenticate the same user and finish
-  // the deterministic workspace provisioning without creating another record.
-  // Better Auth returns its duplicate-user condition as an API-error object
-  // when called in-process, rather than as a Fetch Response.
+  // A retry after identity creation must not create a session. It validates the
+  // submitted credential and resumes deterministic provisioning only when it
+  // is incomplete.
   if (!isExistingIdentityResult(signUpResult)) return null;
 
-  return signInExistingIdentity({ email, password, headers });
+  const duplicateIdentity = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (!duplicateIdentity) return null;
+  return resumeExistingIdentity({ userId: duplicateIdentity.id, password });
 }
 
-async function signInExistingIdentity({
-  email,
+async function resumeExistingIdentity({
+  userId,
   password,
-  headers,
 }: {
-  email: string;
+  userId: string;
   password: string;
-  headers: Headers;
-}) {
-  const signInResult: unknown = await stagingPracticeAccountAuth.api.signInEmail({
-    body: { email, password },
-    headers,
-    asResponse: true,
+}): Promise<ExistingIdentity | null> {
+  const credential = await prisma.account.findFirst({
+    where: { userId, providerId: "credential" },
+    select: { password: true },
   });
-  if (!(signInResult instanceof Response)) return null;
-  const existingUser = await userFromAuthResponse(signInResult.clone());
-  return existingUser ? { response: signInResult, user: existingUser } : null;
+  if (!credential?.password || !(await verifyWorkerdPassword(credential.password, password))) {
+    return null;
+  }
+
+  return { id: userId, ready: await isPracticeWorkspaceReady(userId) };
 }
 
 export async function POST(request: Request) {
@@ -138,10 +147,14 @@ export async function POST(request: Request) {
     });
     if (!identity) return genericError();
 
-    await provisionPracticeWorkspace({
-      userId: identity.user.id,
-      displayName: input.name,
-    });
+    if ("ready" in identity) {
+      if (!identity.ready) {
+        await provisionPracticeWorkspace({ userId: identity.id, displayName: input.name });
+      }
+      return Response.json({ ok: true, code: "ACCOUNT_ALREADY_READY" });
+    }
+
+    await provisionPracticeWorkspace({ userId: identity.user.id, displayName: input.name });
 
     const headers = new Headers();
     const setCookies = identity.response.headers.getSetCookie?.() ?? [];

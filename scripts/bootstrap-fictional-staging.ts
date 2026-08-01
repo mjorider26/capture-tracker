@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import "./load-local-staging-environment";
 import { createPrismaClient } from "../src/lib/database/create-prisma-client";
 import { assertFictionalStagingBootstrap } from "../src/lib/cloud/staging-guards";
-import { hashPassword } from "better-auth/crypto";
+import { hashWorkerdPassword } from "../src/lib/auth/workerd-password";
 
 const { config, email, password } = assertFictionalStagingBootstrap();
 
@@ -23,7 +23,7 @@ if (seeded.status !== 0) {
 } else {
   const prisma = createPrismaClient(config.runtimeDatabaseUrl!);
   try {
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await hashWorkerdPassword(password);
     await prisma.account.upsert({
       where: { id: "fictional-staging-credential" },
       create: { id: "fictional-staging-credential", accountId: email, providerId: "credential", userId: "demo-user-jordan-ellis", password: passwordHash },

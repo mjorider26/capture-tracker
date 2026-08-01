@@ -13,12 +13,17 @@ if (!connectionString) {
   throw new Error("TEST_DATABASE_URL is not configured in .env.test.local.");
 }
 
+process.env.DATABASE_URL = connectionString;
+process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
+process.env.BETTER_AUTH_SECRET ??= "integration-fictional-only-secret";
+
 const testRunId = randomUUID();
 const email = `practice-signup-${testRunId}@capturetracker.example.test`;
 const password = `Fictional-${testRunId}-Only`;
 const userName = "Fictional Practice Owner";
 
-const { stagingPracticeAccountAuth } = await import("../../src/lib/auth");
+const { auth, stagingPracticeAccountAuth } = await import("../../src/lib/auth");
+const { POST: publicAuthPost } = await import("../../src/app/api/auth/[...all]/route");
 const { createPrismaClient } = await import("../../src/lib/database/create-prisma-client");
 const { provisionPracticeWorkspace } = await import("../../src/lib/auth/staging-practice-account");
 const { validatePracticeAccountInput } = await import("../../src/lib/auth/staging-practice-account-core");
@@ -60,7 +65,7 @@ describe("fictional staging practice-account valid signup", () => {
     await prisma.$disconnect();
   });
 
-  it("creates, provisions, authenticates, signs out, and removes a valid invitation signup", async () => {
+  it("creates, provisions, signs out, and signs in again through the normal auth instance", async () => {
     const accepted = await validatePracticeAccountInput({
       name: userName,
       email,
@@ -142,5 +147,17 @@ describe("fictional staging practice-account valid signup", () => {
     await expect(stagingPracticeAccountAuth.api.getSession({
       headers: new Headers({ cookie }),
     })).resolves.toBeNull();
+
+    const normalSignIn = await publicAuthPost(new Request("http://localhost:3000/api/auth/sign-in/email", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+      body: JSON.stringify({ email, password, callbackURL: "/app/today" }),
+    }));
+    expect(normalSignIn.ok).toBe(true);
+    const normalCookie = cookieHeader(normalSignIn);
+    expect(normalCookie).not.toBe("");
+    await expect(auth.api.getSession({
+      headers: new Headers({ cookie: normalCookie }),
+    })).resolves.toMatchObject({ user: { id: payload.user.id } });
   });
 });

@@ -14,6 +14,36 @@ export class PracticeWorkspaceProvisionError extends Error {
   }
 }
 
+export async function isPracticeWorkspaceReady(userId: string) {
+  const businessId = practiceBusinessId(userId);
+  const auditId = practiceWorkspaceAuditId(userId);
+  const [business, membership, onboarding, audit] = await Promise.all([
+    prisma.business.findUnique({ where: { id: businessId }, select: { id: true } }),
+    prisma.businessMember.findUnique({
+      where: { businessId_userId: { businessId, userId } },
+      select: { role: true },
+    }),
+    prisma.businessOnboarding.findUnique({
+      where: { businessId },
+      select: { actorUserId: true, status: true },
+    }),
+    prisma.auditEvent.findUnique({
+      where: { id: auditId },
+      select: { action: true, actorMembershipId: true, entityType: true },
+    }),
+  ]);
+
+  return Boolean(
+    business &&
+    membership?.role === "OWNER" &&
+    onboarding?.actorUserId === userId &&
+    onboarding.status === "COMPLETED" &&
+    audit?.action === "CREATE" &&
+    audit.actorMembershipId === userId &&
+    audit.entityType === "PracticeWorkspace",
+  );
+}
+
 function practiceBusinessName(name: string) {
   return `${name}'s fictional practice business`;
 }
