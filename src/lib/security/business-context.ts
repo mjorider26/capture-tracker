@@ -1,6 +1,7 @@
 ﻿import "server-only";
 
 import { headers } from "next/headers";
+import { cache } from "react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +21,9 @@ export type {
   BusinessMembershipRecord,
 } from "./business-context-core";
 
-export async function requireBusinessContext() {
+// React clears cache entries at the request boundary. Layouts, pages, and
+// server actions therefore share one authenticated context per request.
+export const requireBusinessContext = cache(async function requireBusinessContext() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -79,4 +82,4 @@ export async function requireBusinessContext() {
         take: 2,
       }),
   });
-}
+});

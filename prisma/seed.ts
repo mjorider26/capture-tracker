@@ -222,6 +222,18 @@ async function seed(): Promise<void> {
       },
     });
 
+    await tx.businessOnboarding.create({
+      data: {
+        businessId: ids.business,
+        actorUserId: ids.user,
+        ownerDisplayName: "Jordan Ellis",
+        fictionalAcknowledged: true,
+        chartConfirmed: true,
+        status: "COMPLETED",
+        completedAt: date("2026-07-01"),
+      },
+    });
+
     await tx.financialAccount.createMany({
       data: [
         {

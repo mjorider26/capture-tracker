@@ -54,6 +54,9 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
   const membership = await client.businessMember.findFirst({
     where: { id: ids.membership, businessId: ids.business, userId: ids.user },
   });
+  const onboarding = await client.businessOnboarding.findUnique({
+    where: { businessId: ids.business },
+  });
   const membershipCount = await client.businessMember.count({
     where: { businessId: ids.business },
   });
@@ -89,6 +92,14 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
   assert(
     membership?.role === "OWNER",
     "The fictional membership is missing or is not an OWNER membership.",
+  );
+  assert(
+    onboarding?.actorUserId === ids.user &&
+      onboarding.status === "COMPLETED" &&
+      onboarding.fictionalAcknowledged &&
+      onboarding.chartConfirmed &&
+      Boolean(onboarding.completedAt),
+    "The fictional workspace onboarding is incomplete.",
   );
   assert(
     membershipCount === 1,
