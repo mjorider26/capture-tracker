@@ -33,7 +33,7 @@ export type TransactionDetail = {
   }>;
   documentCount: number;
   reimbursementCount: number;
-  journal: { id: string; entryNumber: string; status: string; categories: string[] } | null;
+  journal: { id: string; entryNumber: string; status: string; categories: string[]; reversal: { id: string; entryNumber: string } | null } | null;
   editable: boolean;
   lockExplanation: string | null;
 };
@@ -73,6 +73,7 @@ export async function getTransactionDetailForBusiness(
           status: true,
           accountingPeriod: { select: { status: true } },
           lines: { select: { ledgerAccount: { select: { name: true, type: true } } } },
+          reversedByEntries: { select: { id: true, entryNumber: true } },
         },
       },
     },
@@ -119,6 +120,7 @@ export async function getTransactionDetailForBusiness(
       entryNumber: transaction.journalEntry.entryNumber,
       status: transaction.journalEntry.status,
       categories: [...new Set(transaction.journalEntry.lines.filter((line) => line.ledgerAccount.type !== "ASSET").map((line) => line.ledgerAccount.name))],
+      reversal: transaction.journalEntry.reversedByEntries[0] ?? null,
     } : null,
     editable,
     lockExplanation,

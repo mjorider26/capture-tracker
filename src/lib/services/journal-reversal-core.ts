@@ -9,6 +9,7 @@ export const journalReversalSchema = z.object({
   expectedVersion: version,
   reversalDate: date,
   reason: z.string().trim().min(1, "A business reason is required.").max(240).refine((value) => !/[\x00-\x1F\x7F]/.test(value), "Reason contains unsupported characters."),
+  confirmed: z.literal("on", { error: "Confirm the immutable reversal before posting." }),
 });
 
 export function invertJournalLines(lines: Array<{ debitAmount: { toFixed: (digits: number) => string }; creditAmount: { toFixed: (digits: number) => string }; ledgerAccountId: string; memo: string | null }>) {
