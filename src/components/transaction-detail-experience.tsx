@@ -5,11 +5,15 @@ import type { TransactionDetail } from "@/lib/data/transaction-detail";
 import { TransactionReviewForm } from "./transaction-review-form";
 import { Card, InlineAlert } from "./ui";
 import type { ReviewActionState } from "@/lib/services/review-transaction-action";
+import type { ManualTransactionEntryOptions } from "@/lib/data/manual-transaction-entry";
+import { TransactionCorrectionForm, type TransactionCorrectionActionState } from "./transaction-correction-form";
 
 export function TransactionDetailExperience({
   detail,
   basePath,
   action,
+  correctionOptions,
+  correctionAction,
 }: {
   detail: TransactionDetail;
   basePath: "/app" | "/demo";
@@ -17,6 +21,8 @@ export function TransactionDetailExperience({
     state: ReviewActionState,
     formData: FormData,
   ) => Promise<ReviewActionState>;
+  correctionOptions?: ManualTransactionEntryOptions;
+  correctionAction?: (state: TransactionCorrectionActionState, formData: FormData) => Promise<TransactionCorrectionActionState>;
 }) {
   const date = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -78,6 +84,11 @@ export function TransactionDetailExperience({
       {detail.notes && <Card className="mt-5 p-5"><h2 className="font-bold">Notes</h2><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-text-muted">{detail.notes}</p></Card>}
       {detail.journal && <p className="mt-4 text-sm"><Link className="font-bold text-brand-teal underline underline-offset-4" href={`${basePath}/money/journal/${detail.journal.id}`}>Open journal entry {detail.journal.entryNumber}</Link></p>}
       {detail.journal?.reversal && <p className="mt-2 text-sm font-semibold text-text-muted">Reversed by <Link className="text-brand-teal underline underline-offset-4" href={`${basePath}/money/journal/${detail.journal.reversal.id}`}>{detail.journal.reversal.entryNumber}</Link>. The original accounting history is retained.</p>}
+      {detail.correction.original && <p className="mt-2 text-sm font-semibold text-text-muted">Replacement of <Link className="text-brand-teal underline underline-offset-4" href={`${basePath}/money/${detail.correction.original.id}`}>the original transaction</Link>. The original record remains in history.</p>}
+      {detail.correction.replacement && <p className="mt-2 text-sm font-semibold text-text-muted">This transaction was corrected. <Link className="text-brand-teal underline underline-offset-4" href={`${basePath}/money/${detail.correction.replacement.id}`}>Open the current replacement record</Link>.</p>}
+      {detail.correction.reversal && <p className="mt-2 text-sm font-semibold text-text-muted">Correction reversal: <Link className="text-brand-teal underline underline-offset-4" href={`${basePath}/money/journal/${detail.correction.reversal.id}`}>{detail.correction.reversal.entryNumber}</Link>.</p>}
+      {detail.correction.reason && <Card className="mt-5 p-5"><h2 className="font-bold">Correction summary</h2><p className="mt-2 text-sm text-text-muted">{detail.correction.reason}</p></Card>}
+      {detail.correction.events.length > 0 && <Card className="mt-5 p-5"><h2 className="font-bold">Correction history</h2><ol className="mt-3 space-y-2 text-sm text-text-muted">{detail.correction.events.map((event, index) => <li key={`${event.occurredAt}-${index}`}>{new Date(event.occurredAt).toLocaleString()} · {event.action === "SUPERSEDE" ? "Original record superseded" : "Replacement record created"}{event.reason ? ` · ${event.reason}` : ""}</li>)}</ol></Card>}
       {detail.splits.length > 0 && (
         <Card className="mt-5 p-5">
           <h2 className="font-bold">Current splits</h2>
@@ -106,6 +117,8 @@ export function TransactionDetailExperience({
           }))}
           action={action}
         />
+      ) : detail.correctionEligible && correctionAction && correctionOptions ? (
+        <TransactionCorrectionForm detail={detail} options={correctionOptions} basePath="/app" action={correctionAction}/>
       ) : (
         <div className="mt-6">
           <InlineAlert tone="locked" title="Read-only record">

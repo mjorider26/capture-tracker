@@ -97,7 +97,7 @@ export function MoneyExperience({
           <details className="mt-3 min-[720px]:contents" open={hasFilters || undefined}>
             <summary className="min-h-11 cursor-pointer rounded-[var(--radius-sm)] border border-border-subtle px-4 py-3 text-sm font-bold text-brand-navy min-[720px]:hidden">Filters{hasFilters ? " (active)" : ""}</summary>
             <div className="mt-3 grid gap-3 min-[720px]:contents">
-              <Select label="Status" name="status" value={dashboard.filters.status} options={["PENDING_REVIEW", "APPROVED", "EXCLUDED", "VOIDED"]} />
+              <Select label="Status" name="status" value={dashboard.filters.status} options={["PENDING_REVIEW", "APPROVED", "EXCLUDED", "CORRECTED", "VOIDED"]} />
               <Select label="Intent" name="intent" value={dashboard.filters.intent} options={["UNREVIEWED", "BUSINESS", "PERSONAL", "MIXED"]} />
               <label className="text-sm font-bold text-text-muted">
                 Account

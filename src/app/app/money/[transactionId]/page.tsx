@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { TransactionDocumentsPanel } from "@/components/transaction-document-links";
 import { TransactionDetailExperience } from "@/components/transaction-detail-experience";
 import { getTransactionDetailForBusiness } from "@/lib/data/transaction-detail";
+import { getManualTransactionEntryOptions } from "@/lib/data/manual-transaction-entry";
 import {
   listEligibleDocuments,
   listLinkedDocuments,
@@ -18,6 +19,7 @@ import {
   linkAuthenticatedDocument,
   reviewAuthenticatedTransaction,
   unlinkAuthenticatedDocument,
+  correctAuthenticatedTransaction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -35,9 +37,10 @@ export default async function ApplicationTransactionPage({
     (await params).transactionId,
   );
   if (!detail) notFound();
-  const [linkedDocuments, eligibleDocuments] = await Promise.all([
+  const [linkedDocuments, eligibleDocuments, correctionOptions] = await Promise.all([
     listLinkedDocuments(context.business.id, detail.id),
     listEligibleDocuments(context.business.id, detail.id),
+    getManualTransactionEntryOptions(context.business.id),
   ]);
   const documentPanel = await Promise.all(
     linkedDocuments.map(async (link) => ({
@@ -73,6 +76,8 @@ export default async function ApplicationTransactionPage({
         detail={detail}
         basePath="/app"
         action={reviewAuthenticatedTransaction}
+        correctionOptions={correctionOptions}
+        correctionAction={correctAuthenticatedTransaction}
       />
       <TransactionDocumentsPanel
         transactionId={detail.id}

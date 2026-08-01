@@ -4,7 +4,7 @@ import { formatUsd } from "./today-dashboard-core";
 
 export type MoneyFilter = {
   query: string;
-  status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "VOIDED" | "";
+  status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "CORRECTED" | "VOIDED" | "";
   intent: "UNREVIEWED" | "BUSINESS" | "PERSONAL" | "MIXED" | "";
   accountId: string;
 };
@@ -14,7 +14,7 @@ export type MoneyTransactionInput = {
   amount: Prisma.Decimal;
   direction: "INFLOW" | "OUTFLOW";
   intent: "UNREVIEWED" | "BUSINESS" | "PERSONAL" | "MIXED";
-  status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "VOIDED";
+  status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "CORRECTED" | "VOIDED";
 };
 
 export function emptyMoneyFilter(): MoneyFilter {
@@ -22,7 +22,7 @@ export function emptyMoneyFilter(): MoneyFilter {
 }
 
 const filterValues = {
-  status: new Set(["PENDING_REVIEW", "APPROVED", "EXCLUDED", "VOIDED"]),
+  status: new Set(["PENDING_REVIEW", "APPROVED", "EXCLUDED", "CORRECTED", "VOIDED"]),
   intent: new Set(["UNREVIEWED", "BUSINESS", "PERSONAL", "MIXED"]),
 };
 
@@ -42,7 +42,7 @@ export function parseMoneyFilter(input: Record<string, string | string[] | undef
 
 export function buildMoneySummary(transactions: MoneyTransactionInput[]) {
   const active = transactions.filter(
-    (transaction) => transaction.status !== "VOIDED",
+    (transaction) => transaction.status !== "VOIDED" && transaction.status !== "CORRECTED",
   );
   const reviewedBusiness = active
     .filter(

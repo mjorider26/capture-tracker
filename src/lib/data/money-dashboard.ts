@@ -27,7 +27,7 @@ export type MoneyDashboard = {
     amount: string;
     direction: "INFLOW" | "OUTFLOW";
     intent: "UNREVIEWED" | "BUSINESS" | "PERSONAL" | "MIXED";
-    status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "VOIDED";
+    status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "CORRECTED" | "VOIDED";
     isMixed: boolean;
     hasDocuments: boolean;
     isLocked: boolean;

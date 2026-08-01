@@ -11,6 +11,9 @@ import {
   unlinkDocumentFromTransaction,
 } from "@/lib/documents/transaction-links";
 import { requireBusinessContext } from "@/lib/security/business-context";
+import { correctPostedTransaction } from "@/lib/services/transaction-correction";
+import { prisma } from "@/lib/prisma";
+import type { TransactionCorrectionActionState } from "@/components/transaction-correction-form";
 
 export type TransactionDocumentActionState = {
   ok: boolean;
@@ -114,4 +117,24 @@ export async function reviewAuthenticatedTransaction(
   } catch {
     return { status: "error", message: "Your review could not be authorized." };
   }
+}
+
+export async function correctAuthenticatedTransaction(
+  _previous: TransactionCorrectionActionState,
+  formData: FormData,
+): Promise<TransactionCorrectionActionState> {
+  try {
+    const context = await requireBusinessContext();
+    const result = await correctPostedTransaction(prisma, {
+      businessId: context.business.id,
+      actorUserId: context.user.id,
+      actorMembershipId: context.membership.id,
+      role: context.membership.role,
+      executionMode: "authenticated",
+    }, Object.fromEntries(formData));
+    if (!result.ok) return { status: result.code === "CONFLICT" ? "conflict" : "error", message: "The transaction could not be corrected safely. Refresh and try again." };
+    revalidatePath("/app/money"); revalidatePath("/app/activity"); revalidatePath("/app/today");
+    revalidatePath(`/app/money/${String(formData.get("transactionId") ?? "")}`); revalidatePath(`/app/money/${result.transactionId}`);
+    return { status: "success", message: result.code === "CORRECTED" ? "Correction posted. Opening the replacement record…" : "This correction was already posted. Opening the replacement record…", transactionId: result.transactionId };
+  } catch { return { status: "error", message: "The transaction could not be corrected safely. Refresh and try again." }; }
 }

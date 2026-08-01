@@ -80,7 +80,7 @@ export type ManualTransactionActor = {
 
 export type ManualTransactionInput = z.output<typeof manualTransactionSchema>;
 
-export function accountingForManualTransaction(input: ManualTransactionInput) {
+export function accountingForManualTransaction(input: Pick<ManualTransactionInput, "transactionType" | "cashDirection">) {
   const direction = input.transactionType === "INCOME" ? "INFLOW" : input.transactionType === "BUSINESS_EXPENSE" ? "OUTFLOW" : input.cashDirection!;
   const intent = input.transactionType === "PERSONAL" ? "PERSONAL" : input.transactionType === "MIXED" ? "MIXED" : "BUSINESS";
   const status = intent === "PERSONAL" ? "EXCLUDED" : "APPROVED";

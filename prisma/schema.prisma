@@ -53,6 +53,7 @@ enum TransactionStatus {
   PENDING_REVIEW
   APPROVED
   EXCLUDED
+  CORRECTED
   VOIDED
 }
 
@@ -449,6 +450,10 @@ model Transaction {
   status                 TransactionStatus    @default(PENDING_REVIEW)
   sourceReference        String?
   manualEntryKey        String?
+  correctionKey         String?
+  correctionReason      String?
+  correctionOfId        String?
+  correctionReversalJournalId String?
   notes                  String?
   approvedAt             DateTime?
   approvedByMembershipId String?
@@ -468,10 +473,16 @@ model Transaction {
   distributions         OwnerDistribution[]       @relation("DistributionTransaction")
   journalEntry          JournalEntry?             @relation("TransactionJournalEntry")
   reconciliationItems   ReconciliationItem[]
+  correctionOf          Transaction?             @relation("TransactionCorrections", fields: [businessId, correctionOfId], references: [businessId, id], onDelete: Restrict)
+  corrections           Transaction[]            @relation("TransactionCorrections")
+  correctionReversalJournal JournalEntry?        @relation("TransactionCorrectionReversal", fields: [businessId, correctionReversalJournalId], references: [businessId, id], onDelete: Restrict)
 
   @@unique([businessId, id])
   @@unique([accountId, sourceReference])
   @@unique([businessId, manualEntryKey])
+  @@unique([businessId, correctionKey])
+  @@unique([businessId, correctionOfId])
+  @@unique([businessId, correctionReversalJournalId])
   @@index([businessId, postedAt])
   @@index([businessId, status])
   @@index([businessId, intent])
@@ -1526,6 +1537,7 @@ model JournalEntry {
   reversalOfEntry    JournalEntry?       @relation("JournalEntryReversals", fields: [businessId, reversalOfEntryId], references: [businessId, id], onDelete: Restrict)
   reversedByEntries  JournalEntry[]      @relation("JournalEntryReversals")
   lines              JournalLine[]
+  correctionReversalFor Transaction? @relation("TransactionCorrectionReversal")
 
   @@unique([businessId, id])
   @@unique([businessId, entryNumber])

@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client";
 export type CashTransaction = {
   amount: Prisma.Decimal;
   direction: "INFLOW" | "OUTFLOW";
-  status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "VOIDED";
+  status: "PENDING_REVIEW" | "APPROVED" | "EXCLUDED" | "CORRECTED" | "VOIDED";
 };
 
 export type CashAccount = {
