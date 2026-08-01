@@ -65,6 +65,22 @@ try {
   }
 
   if (!process.exitCode) {
+    // Better Auth resolves an email/password sign-in through User.email before
+    // loading its credential account. Keep the deterministic fixture's user
+    // identity and credential identifier aligned; changing only Account.accountId
+    // leaves an otherwise valid password impossible to use.
+    const existingEmailOwner = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (existingEmailOwner && existingEmailOwner.id !== fixture.userId) {
+      throw new Error("The deterministic fictional staging login email belongs to another identity.");
+    }
+    await prisma.user.update({
+      where: { id: fixture.userId },
+      data: { email },
+    });
+
     const credential = await prisma.account.findUnique({
       where: { id: "fictional-staging-credential" },
       select: { accountId: true, password: true, providerId: true, userId: true },
