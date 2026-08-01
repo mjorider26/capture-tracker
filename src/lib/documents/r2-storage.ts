@@ -1,5 +1,3 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-
 type R2HttpMetadata = { contentType?: string };
 export type R2Object = {
   arrayBuffer(): Promise<ArrayBuffer>;
@@ -34,8 +32,12 @@ export function createDocumentR2Storage(bucket: DocumentR2Bucket | undefined) {
 }
 
 export async function getPrivateDocumentStorage() {
-  const context = await getCloudflareContext({ async: true });
-  const bucket = (context.env as CloudflareEnv & { CAPTURE_TRACKER_DOCUMENTS?: DocumentR2Bucket })
-    .CAPTURE_TRACKER_DOCUMENTS;
+  // OpenNext places the Worker request context under this stable runtime
+  // symbol. Reading the binding directly avoids importing build tooling into
+  // application code while still failing closed outside Worker execution.
+  const context = (globalThis as typeof globalThis & {
+    [key: symbol]: { env?: CloudflareEnv & { CAPTURE_TRACKER_DOCUMENTS?: DocumentR2Bucket } } | undefined;
+  })[Symbol.for("__cloudflare-context__")];
+  const bucket = context?.env?.CAPTURE_TRACKER_DOCUMENTS;
   return createDocumentR2Storage(bucket);
 }

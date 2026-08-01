@@ -66,7 +66,8 @@ for (const file of source) {
 }
 
 const wrangler = text("wrangler.jsonc");
-assert(!/r2_buckets|CAPTURE_TRACKER_DOCUMENTS_BUCKET|DATABASE_URL|DIRECT_DATABASE_URL|BETTER_AUTH_SECRET|account_id|api[_-]?token/i.test(wrangler), "Worker configuration must exclude R2, database/local-tooling settings, secrets, and account credentials.");
+assert(wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS"') && wrangler.includes('"capture-tracker-staging-documents"'), "Worker configuration must contain only the dedicated private document R2 binding.");
+assert(!/CAPTURE_TRACKER_DOCUMENTS_BUCKET|DATABASE_URL|DIRECT_DATABASE_URL|BETTER_AUTH_SECRET|account_id|api[_-]?token|r2\.dev|custom_domains|queues/i.test(wrangler), "Worker configuration must exclude database/local-tooling settings, secrets, account credentials, public R2 access, and queues.");
 const dockerfile = text("Dockerfile");
 assert(!/next dev|wrangler dev|vitest|prisma (?:studio|dev)|aws-cdk/i.test(dockerfile) && /CMD \["node", "server\.js"\]/.test(dockerfile), "Container runtime must not run development, test, database, or infrastructure tooling.");
 assert(manifest.scripts.start === "next start" && manifest.scripts.dev === "next dev", "Production and development server entry points must remain distinct.");
