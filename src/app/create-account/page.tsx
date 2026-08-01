@@ -2,19 +2,17 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function CreateAccountPage() {
-  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
-  const [accountReady, setAccountReady] = useState(false);
+  const [accountOutcome, setAccountOutcome] = useState<"created" | "ready" | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setMessage(null);
-    setAccountReady(false);
+    setAccountOutcome(null);
 
     const form = new FormData(event.currentTarget);
     try {
@@ -36,13 +34,17 @@ export default function CreateAccountPage() {
       }
 
       const result = await response.json() as { code?: string };
-      if (result.code === "ACCOUNT_ALREADY_READY") {
-        setAccountReady(true);
+      if (result.code === "ACCOUNT_CREATED") {
+        setAccountOutcome("created");
         return;
       }
 
-      router.replace("/app");
-      router.refresh();
+      if (result.code === "ACCOUNT_ALREADY_READY") {
+        setAccountOutcome("ready");
+        return;
+      }
+
+      setMessage("Account creation could not be completed.");
     } catch {
       setMessage("Account creation could not be completed.");
     } finally {
@@ -91,7 +93,22 @@ export default function CreateAccountPage() {
             {submitting ? "Creating account…" : "Create practice account"}
           </button>
           {message ? <p role="alert" className="text-sm text-status-error">{message}</p> : null}
-          {accountReady ? <p role="status" className="text-sm text-text-muted">Your practice account is ready. <Link className="font-bold text-brand-navy underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal" href="/sign-in">Sign in to continue.</Link></p> : null}
+          {accountOutcome ? (
+            <div className="grid gap-3" role="status">
+              <p className="text-sm text-text-muted">
+                {accountOutcome === "created"
+                  ? "Your practice account was created. Sign in to continue."
+                  : "Your practice account is ready. Sign in to continue."}
+              </p>
+              <button
+                className="min-h-11 rounded-[var(--radius-sm)] border border-border-strong bg-surface-primary px-5 text-sm font-bold text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal"
+                onClick={() => window.location.assign("/sign-in?created=1")}
+                type="button"
+              >
+                Sign in
+              </button>
+            </div>
+          ) : null}
         </form>
         <p className="mt-5 text-sm text-text-muted">
           Already have an account? <Link className="font-bold text-brand-navy underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal" href="/sign-in">Sign in</Link>

@@ -77,6 +77,8 @@ describe("practice-account route", () => {
     const response = await POST(request());
 
     expect(response.ok).toBe(true);
+    await expect(response.json()).resolves.toEqual({ ok: true, code: "ACCOUNT_CREATED" });
+    expect(response.headers.getSetCookie?.() ?? []).toEqual([]);
     expect(auth.signUpEmail).toHaveBeenCalledTimes(1);
     expect(provisionPracticeWorkspace).toHaveBeenCalledWith({ userId: "identity-one", displayName: "Practice Owner" });
   });
@@ -106,6 +108,7 @@ describe("practice-account route", () => {
 
     await expect(response.json()).resolves.toEqual({ ok: true, code: "ACCOUNT_ALREADY_READY" });
     expect(provisionPracticeWorkspace).toHaveBeenCalledWith({ userId: "identity-one", displayName: "Practice Owner" });
+    expect(response.headers.getSetCookie?.() ?? []).toEqual([]);
   });
 
   it("handles Better Auth's in-process duplicate identity result without signing in", async () => {

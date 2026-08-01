@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 type AuthUser = { id: string };
 type ExistingIdentity = AuthUser & { ready: boolean };
+type CreatedIdentity = AuthUser & { created: true };
 
 function genericError(status = 400) {
   return Response.json({ message: practiceAccountError }, { status });
@@ -91,7 +92,7 @@ async function createOrResumeIdentity({
 
   if (signUpResult instanceof Response) {
     const createdUser = await userFromAuthResponse(signUpResult.clone());
-    if (createdUser) return { response: signUpResult, user: createdUser };
+    if (createdUser) return { id: createdUser.id, created: true } satisfies CreatedIdentity;
   }
 
   // A retry after identity creation must not create a session. It validates the
@@ -154,12 +155,10 @@ export async function POST(request: Request) {
       return Response.json({ ok: true, code: "ACCOUNT_ALREADY_READY" });
     }
 
-    await provisionPracticeWorkspace({ userId: identity.user.id, displayName: input.name });
-
-    const headers = new Headers();
-    const setCookies = identity.response.headers.getSetCookie?.() ?? [];
-    for (const value of setCookies) headers.append("set-cookie", value);
-    return Response.json({ ok: true }, { headers });
+    await provisionPracticeWorkspace({ userId: identity.id, displayName: input.name });
+    // The staging signup auth instance is deliberately sessionless. Do not
+    // propagate its response headers even if the provider changes defaults.
+    return Response.json({ ok: true, code: "ACCOUNT_CREATED" });
   } catch (error) {
     if (error instanceof PracticeWorkspaceProvisionError) {
       return genericError(503);

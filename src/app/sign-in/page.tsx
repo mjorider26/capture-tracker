@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { authClient } from "@/components/auth-client";
+
 export default function SignInPage() {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
@@ -15,17 +17,13 @@ export default function SignInPage() {
 
     const form = new FormData(event.currentTarget);
     try {
-      const response = await fetch("/api/auth/sign-in/email", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          email: String(form.get("email") ?? ""),
-          password: String(form.get("password") ?? ""),
-          callbackURL: "/app/today",
-        }),
+      const result = await authClient.signIn.email({
+        email: String(form.get("email") ?? ""),
+        password: String(form.get("password") ?? ""),
+        callbackURL: "/app/today",
       });
 
-      if (!response.ok) {
+      if (result.error) {
         setMessage("Sign in could not be completed.");
         return;
       }
