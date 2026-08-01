@@ -1,14 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { requestSignOut } from "./sign-out-button";
+import { signOutWithAuthClient } from "./sign-out-button";
 
 describe("sign out", () => {
-  it("uses the existing Better Auth sign-out endpoint", async () => {
-    const fetcher = vi.fn().mockResolvedValue({ ok: true });
+  it("uses Better Auth's generated client sign-out lifecycle", async () => {
+    const onSuccess = vi.fn();
+    const signOut = vi.fn().mockResolvedValue({ data: { success: true } });
 
-    await expect(requestSignOut(fetcher)).resolves.toBe(true);
-    expect(fetcher).toHaveBeenCalledWith("/api/auth/sign-out", {
-      method: "POST",
+    await expect(signOutWithAuthClient({ signOut } as never, onSuccess)).resolves.toBe(true);
+    expect(signOut).toHaveBeenCalledWith({
+      fetchOptions: { onSuccess },
     });
+  });
+
+  it("reports a failed Better Auth response without exposing auth details", async () => {
+    const signOut = vi.fn().mockResolvedValue({ error: { code: "SAFE_ERROR" } });
+
+    await expect(signOutWithAuthClient({ signOut } as never, vi.fn())).resolves.toBe(false);
   });
 });

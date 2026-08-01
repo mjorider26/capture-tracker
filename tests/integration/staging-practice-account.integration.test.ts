@@ -139,14 +139,56 @@ describe("fictional staging practice-account valid signup", () => {
       loadMemberships: async () => [accessibleMembership],
     })).resolves.toMatchObject({ business: { id: membership!.businessId } });
 
-    const signOut = await stagingPracticeAccountAuth.api.signOut({
-      headers: new Headers({ cookie }),
-      asResponse: true,
+    const { createAuthClient } = await import("better-auth/react");
+    const originalFetch = globalThis.fetch;
+    const originalWindow = globalThis.window;
+    const requests: string[] = [];
+    let signOutResponse: Response | undefined;
+
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: { location: { origin: "http://localhost:3000" } },
     });
-    expect(signOut.ok).toBe(true);
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const outgoing = new Request(input, init);
+        requests.push(new URL(outgoing.url).pathname);
+        signOutResponse = await publicAuthPost(new Request(outgoing.url, {
+          method: outgoing.method,
+          headers: new Headers({
+            cookie,
+            origin: "http://localhost:3000",
+          }),
+        }));
+        return signOutResponse;
+      },
+    });
+
+    try {
+      const browserAuthClient = createAuthClient({ basePath: "/api/auth" });
+      const signOut = await browserAuthClient.signOut({
+        fetchOptions: { onSuccess: () => undefined },
+      });
+      expect(signOut.error).toBeNull();
+      expect(signOut.data).toEqual({ success: true });
+    } finally {
+      Object.defineProperty(globalThis, "fetch", { configurable: true, value: originalFetch });
+      Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+    }
+
+    expect(requests).toEqual(["/api/auth/sign-out"]);
+    expect(signOutResponse?.ok).toBe(true);
+    expect(signOutResponse?.headers.getSetCookie?.().some((value) => /Max-Age=0/i.test(value))).toBe(true);
     await expect(stagingPracticeAccountAuth.api.getSession({
       headers: new Headers({ cookie }),
     })).resolves.toBeNull();
+
+    const repeatedSignOut = await publicAuthPost(new Request("http://localhost:3000/api/auth/sign-out", {
+      method: "POST",
+      headers: { origin: "http://localhost:3000" },
+    }));
+    expect(repeatedSignOut.ok).toBe(true);
 
     const normalSignIn = await publicAuthPost(new Request("http://localhost:3000/api/auth/sign-in/email", {
       method: "POST",
