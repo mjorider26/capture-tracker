@@ -26,6 +26,7 @@ export function TodayExperience({
         action={<StatusBadge tone="locked">Read-only financial view</StatusBadge>}
       />
       <ExecutiveSummary dashboard={dashboard} />
+      {dashboard.isEmptyAccount && <section className="ui-card mt-6 p-6"><h2 className="text-lg font-bold">Add your first transaction</h2><p className="mt-2 text-sm text-text-muted">Your business has no cash account activity yet. Add a transaction to begin a ledger-backed financial view.</p><ButtonLink href={`${basePath}/money/new`} tone="primary" className="mt-4">Add transaction</ButtonLink></section>}
       <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
         <CashPosition dashboard={dashboard} />
         <NeedsAttention dashboard={dashboard} basePath={basePath} />
@@ -56,6 +57,7 @@ function ExecutiveSummary({ dashboard }: { dashboard: TodayDashboard }) {
           <SummaryMetric label="Reserve position" value={dashboard.reservePosition.value} detail={dashboard.reservePosition.status === "surplus" ? "Reserve exceeds obligation" : dashboard.reservePosition.status === "gap" ? "Funding attention" : "Needs reserve + estimate"} tone={dashboard.reservePosition.status === "surplus" ? "success" : dashboard.reservePosition.status === "gap" ? "warning" : "neutral"} />
         </div>
       </div>
+      <div className="grid border-t border-white/10 bg-white/[0.035] sm:grid-cols-4"><SummaryMetric label="This-month income" value={dashboard.currentActivity.income} detail="Posted income only" tone="success"/><SummaryMetric label="This-month expenses" value={dashboard.currentActivity.expenses} detail="Business expenses only" tone="neutral"/><SummaryMetric label="Unreviewed" value={String(dashboard.currentActivity.unreviewedTransactions)} detail="Transactions awaiting review" tone={dashboard.currentActivity.unreviewedTransactions ? "warning" : "neutral"}/><SummaryMetric label="Document attention" value={String(dashboard.currentActivity.documentAttention)} detail="Documents needing action" tone={dashboard.currentActivity.documentAttention ? "warning" : "neutral"}/></div>
     </section>
   );
 }

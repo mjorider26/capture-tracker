@@ -5,7 +5,6 @@ import { unstable_noStore as noStore } from "next/cache";
 import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../prisma";
 import {
-  calculateCashBalance,
   calculateRemainingTaxObligation,
   calculateReservePosition,
   formatUsd,
@@ -25,6 +24,8 @@ export type TodayDashboard = {
     explanation: string;
     status: "positive" | "neutral";
   };
+  currentActivity: { income: string; expenses: string; unreviewedTransactions: number; documentAttention: number };
+  isEmptyAccount: boolean;
   taxReserve: {
     value: string;
     explanation: string;
@@ -160,12 +161,7 @@ export async function getTodayDashboard(
       type: { in: ["CHECKING", "SAVINGS"] },
       isActive: true,
     },
-    include: {
-      transactions: {
-        where: { status: "APPROVED" },
-        select: { amount: true, direction: true, status: true },
-      },
-    },
+    select: { id: true, openingBalance: true, isTaxReserve: true, ledgerAccount: { select: { id: true } } },
   });
   const taxReserveAccounts = await prisma.financialAccount.findMany({
     where: {
@@ -175,12 +171,7 @@ export async function getTodayDashboard(
       isTaxReserve: true,
       isActive: true,
     },
-    include: {
-      transactions: {
-        where: { status: "APPROVED" },
-        select: { amount: true, direction: true, status: true },
-      },
-    },
+    select: { id: true, openingBalance: true, isTaxReserve: true, ledgerAccount: { select: { id: true } } },
   });
   const estimates = await prisma.quarterlyTaxEstimate.findMany({
     where: { businessId, status: { notIn: ["VOIDED", "SUPERSEDED"] } },
@@ -217,11 +208,22 @@ export async function getTodayDashboard(
     },
   });
 
-  const cash = calculateCashBalance(cashAccounts);
-  const reserve =
-    taxReserveAccounts.length > 0
-      ? calculateCashBalance(taxReserveAccounts)
-      : null;
+  const today = new Date();
+  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const cashLedgerIds = cashAccounts.flatMap((account) => account.ledgerAccount ? [account.ledgerAccount.id] : []);
+  const reserveLedgerIds = taxReserveAccounts.flatMap((account) => account.ledgerAccount ? [account.ledgerAccount.id] : []);
+  const [cashLines, periodLines, unreviewedTransactions, documentAttention] = await Promise.all([
+    cashLedgerIds.length ? prisma.journalLine.findMany({ where: { businessId, ledgerAccountId: { in: cashLedgerIds }, journalEntry: { status: "POSTED" } }, select: { ledgerAccountId: true, debitAmount: true, creditAmount: true } }) : [],
+    prisma.journalLine.findMany({ where: { businessId, journalEntry: { status: "POSTED", entryDate: { gte: monthStart } } }, select: { debitAmount: true, creditAmount: true, ledgerAccount: { select: { type: true } } } }),
+    prisma.transaction.count({ where: { businessId, status: "PENDING_REVIEW" } }),
+    prisma.document.count({ where: { businessId, OR: [{ status: { in: ["PENDING_VALIDATION", "QUARANTINED"] } }, { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE" }] } }),
+  ]);
+
+  const cashBalance = (accounts: typeof cashAccounts, ids: string[]) => accounts.reduce((total, account) => total.plus(account.openingBalance), new Prisma.Decimal(0)).plus(cashLines.filter((line) => ids.includes(line.ledgerAccountId)).reduce((total, line) => total.plus(line.debitAmount).minus(line.creditAmount), new Prisma.Decimal(0)));
+  const cash = cashBalance(cashAccounts, cashLedgerIds);
+  const reserve = reserveLedgerIds.length ? cashBalance(taxReserveAccounts, reserveLedgerIds) : null;
+  const income = periodLines.filter((line) => line.ledgerAccount.type === "INCOME").reduce((total, line) => total.plus(line.creditAmount).minus(line.debitAmount), new Prisma.Decimal(0));
+  const expenses = periodLines.filter((line) => line.ledgerAccount.type === "EXPENSE").reduce((total, line) => total.plus(line.debitAmount).minus(line.creditAmount), new Prisma.Decimal(0));
   const estimate = selectLatestTaxEstimate(estimates);
   // Remaining tax obligation subtracts seeded withholding, prior payments, and only recorded payments tied to the selected estimate.
   const obligation = estimate
@@ -284,9 +286,11 @@ export async function getTodayDashboard(
     availableCash: {
       value: formatUsd(cash),
       explanation:
-        "Business checking and savings opening balances plus approved inflows, less approved outflows. Credit cards and personal accounts are excluded.",
+        "Business checking and savings opening balances plus posted ledger activity. Credit cards and personal accounts are excluded.",
       status: cash.greaterThan(0) ? "positive" : "neutral",
     },
+    currentActivity: { income: formatUsd(income), expenses: formatUsd(expenses), unreviewedTransactions, documentAttention },
+    isEmptyAccount: cashAccounts.length === 0 && entries.length === 0,
     taxReserve:
       reserve === null
         ? {
