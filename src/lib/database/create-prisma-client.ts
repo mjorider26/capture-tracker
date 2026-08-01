@@ -25,7 +25,10 @@ export function createPrismaClient(connectionString: string): PrismaClient {
   const normalizedConnectionString = normalizePrismaConnectionString(connectionString);
   const adapter = runsInWorkerd()
     ? (() => {
-      neonConfig.webSocketConstructor = WebSocket;
+      // Cloudflare Workers request contexts cannot safely share WebSocket
+      // connections. Prisma's Neon adapter issues one-shot queries, so use
+      // Neon's HTTP transport and its server-side connection cache instead.
+      neonConfig.poolQueryViaFetch = true;
       return new PrismaNeon({ connectionString: normalizedConnectionString });
     })()
     : new PrismaPg({ connectionString: normalizedConnectionString });
