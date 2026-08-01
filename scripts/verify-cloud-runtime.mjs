@@ -19,7 +19,7 @@ const healthContract = text("src/lib/health-contract.mjs");
 const auth = text("src/lib/auth.ts");
 
 assert(wrangler.includes('"nodejs_compat"'), "Cloudflare Node compatibility flag is required.");
-assert(wrangler.includes('"global_fetch_strictly_public"') && wrangler.includes('"compatibility_date": "2026-07-23"'), "Pinned Worker compatibility date and required flags are required.");
+assert(wrangler.includes('"global_fetch_strictly_public"') && wrangler.includes('"no_handle_cross_request_promise_resolution"') && wrangler.includes('"compatibility_date": "2026-07-23"'), "Pinned Worker compatibility date and required request-lifecycle flags are required.");
 assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\/|BETTER_AUTH_SECRET/i.test(wrangler), "Wrangler configuration must remain non-secret and account-free.");
 assert(!/r2_buckets|CAPTURE_TRACKER_DOCUMENTS_BUCKET|r2\.dev|custom_domains|public[_ -]?access/i.test(wrangler), "Fictional staging must not configure R2 or public object access.");
 assert(wrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "false"'), "Free preview must keep real-data approval false.");
