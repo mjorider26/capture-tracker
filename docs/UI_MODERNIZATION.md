@@ -94,3 +94,9 @@ The decision queue is now the central working surface. It is an edge-to-edge, nu
 Cash composition no longer presents an empty reserve as a zero-width progress bar. Configured reserves use the existing percentage as a labeled allocation rail; an unconfigured reserve uses a dashed, explicitly not-configured state. No values or calculations are introduced.
 
 Desktop navigation uses grouped primary and secondary destinations, a compact business identity strip, a teal angular active marker, and reduced visual weight. Existing destinations, order, selected-route behavior, and mobile navigation are unchanged. The Today loading layout now mirrors the new asymmetrical briefing, which reserves the main content geometry before data resolves.
+
+## UI v2 — reference-inspired depth pass
+
+The supplied mobile reference informed this pass only through its visual qualities: layered blue depth, a dominant primary value, compact inset supporting modules, controlled environmental light, and a deliberate small-screen hierarchy. Its hydration use case, phone mockups, circular wellness controls, floating widgets, navigation arrangement, and exact appearance were not copied.
+
+Today adapts those qualities for financial work through a navy-to-blue cash stage, contained teal lighting, and a high-contrast white cash figure. The planning rail now uses compact dark inset panels; the allocation module uses the same restrained navy surface system, while its configured and not-configured states still use only existing account data. The transaction action uses a light high-contrast surface so it remains the obvious next step against the dark briefing.

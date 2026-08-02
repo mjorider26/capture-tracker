@@ -76,7 +76,7 @@ function FinancialBriefing({
           <span className="today-approved-mark">
             Approved cash activity only
           </span>
-          <ButtonLink href={`${basePath}/money`} tone="primary">
+          <ButtonLink href={`${basePath}/money`} tone="secondary">
             Review transactions
           </ButtonLink>
         </div>
