@@ -14,6 +14,7 @@ type TaskClient = Pick<
   | "document"
   | "documentMatchSuggestion"
   | "reconciliationItem"
+  | "statementActivity"
   | "quarterlyTaxEstimate"
 >;
 
@@ -43,12 +44,13 @@ export async function loadWeeklyReviewTasks(
     where: { businessId, status: "OUTSTANDING", reconciliation: { status: { in: ["DRAFT", "IN_PROGRESS"] } } },
     select: { id: true, status: true, reconciliation: { select: { id: true, status: true, statementEndDate: true, financialAccount: { select: { name: true } } } }, transaction: { select: { id: true, description: true, amount: true, postedAt: true } } },
   });
+  const statementActivities = await client.statementActivity.findMany({ where: { businessId, status: "UNMATCHED", reconciliation: { status: { in: ["DRAFT", "IN_PROGRESS"] } } }, select: { id: true, description: true, activityDate: true, amount: true, reconciliation: { select: { id: true, status: true, financialAccount: { select: { name: true } } } } } });
   const taxEstimates = await client.quarterlyTaxEstimate.findMany({
     where: { businessId, status: { in: ["DRAFT", "READY_FOR_REVIEW"] } },
     select: { id: true, status: true, taxYear: true, quarter: true, jurisdictionCode: true, dueDate: true, recommendedPayment: true, payments: { select: { amount: true, status: true } } },
   });
 
-  return buildWeeklyReviewTasks({ transactions, documents, matchSuggestions, reconciliationItems, taxEstimates });
+  return buildWeeklyReviewTasks({ transactions, documents, matchSuggestions, reconciliationItems, statementActivities, taxEstimates });
 }
 
 export async function loadWeeklyReviewTaskCount(client: TaskClient, businessId: string) {

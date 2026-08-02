@@ -282,6 +282,11 @@ enum ReconciliationItemStatus {
   EXCLUDED
 }
 
+enum StatementActivityStatus {
+  UNMATCHED
+  MATCHED
+}
+
 enum PostingRuleStatus {
   ACTIVE
   INACTIVE
@@ -362,6 +367,8 @@ model Business {
   accountingPeriods          AccountingPeriod[]
   reconciliations            Reconciliation[]
   reconciliationItems        ReconciliationItem[]
+  statementActivities        StatementActivity[]
+  statementActivityDecisions StatementActivityCandidateDecision[]
   postingRules               PostingRule[]
 
   @@index([legalName])
@@ -473,6 +480,8 @@ model Transaction {
   distributions         OwnerDistribution[]       @relation("DistributionTransaction")
   journalEntry          JournalEntry?             @relation("TransactionJournalEntry")
   reconciliationItems   ReconciliationItem[]
+  matchedStatementActivities StatementActivity[] @relation("StatementActivityMatchedTransaction")
+  statementActivityCandidateDecisions StatementActivityCandidateDecision[] @relation("StatementActivityCandidateTransaction")
   correctionOf          Transaction?             @relation("TransactionCorrections", fields: [businessId, correctionOfId], references: [businessId, id], onDelete: Restrict)
   corrections           Transaction[]            @relation("TransactionCorrections")
   correctionReversalJournal JournalEntry?        @relation("TransactionCorrectionReversal", fields: [businessId, correctionReversalJournalId], references: [businessId, id], onDelete: Restrict)
@@ -1616,6 +1625,7 @@ model Reconciliation {
   business         Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
   financialAccount FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
   items            ReconciliationItem[]
+  statementActivities StatementActivity[]
 
   @@unique([businessId, id])
   @@unique([businessId, financialAccountId, statementEndDate])
@@ -1640,6 +1650,52 @@ model ReconciliationItem {
   @@unique([businessId, id])
   @@unique([businessId, reconciliationId, transactionId])
   @@index([businessId, status])
+}
+
+model StatementActivity {
+  id                   String                  @id @default(cuid())
+  businessId           String
+  reconciliationId     String
+  activityDate         DateTime
+  description          String
+  reference            String?
+  amount               Decimal                 @db.Decimal(18, 2)
+  direction            TransactionDirection
+  status               StatementActivityStatus @default(UNMATCHED)
+  matchedTransactionId String?
+  matchedAt            DateTime?
+  rejectedAt           DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  version              Int                     @default(1)
+
+  business           Business                             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  reconciliation     Reconciliation                       @relation(fields: [businessId, reconciliationId], references: [businessId, id], onDelete: Restrict)
+  matchedTransaction Transaction?                         @relation("StatementActivityMatchedTransaction", fields: [businessId, matchedTransactionId], references: [businessId, id], onDelete: Restrict)
+  candidateDecisions StatementActivityCandidateDecision[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, matchedTransactionId])
+  @@index([businessId, reconciliationId, status])
+  @@index([businessId, activityDate])
+}
+
+model StatementActivityCandidateDecision {
+  id                  String   @id @default(cuid())
+  businessId          String
+  statementActivityId String
+  transactionId       String
+  activityVersion     Int
+  transactionVersion  Int
+  status              String   @default("REJECTED")
+  createdAt           DateTime @default(now())
+
+  business          Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  statementActivity StatementActivity @relation(fields: [businessId, statementActivityId], references: [businessId, id], onDelete: Restrict)
+  transaction       Transaction       @relation("StatementActivityCandidateTransaction", fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, statementActivityId, transactionId, activityVersion, transactionVersion])
+  @@index([businessId, statementActivityId])
 }
 
 model Session {

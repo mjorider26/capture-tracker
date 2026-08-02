@@ -20,6 +20,7 @@ function client() {
       document: { findMany: findMany("document", []) },
       documentMatchSuggestion: { findMany: findMany("documentMatchSuggestion", []) },
       reconciliationItem: { findMany: findMany("reconciliationItem", []) },
+      statementActivity: { findMany: findMany("statementActivity", []) },
       quarterlyTaxEstimate: { findMany: findMany("quarterlyTaxEstimate", []) },
     },
   };
@@ -31,9 +32,9 @@ describe("loadWeeklyReviewTasks", () => {
     const tasks = await loadWeeklyReviewTasks(harness.client as never, "business-a");
 
     expect(tasks.map((task) => task.id)).toEqual(["transaction-awaiting-review:tx-1"]);
-    expect(harness.calls).toHaveLength(5);
+    expect(harness.calls).toHaveLength(6);
     expect(harness.calls.every((call) => (call.where as { businessId: string }).businessId === "business-a")).toBe(true);
     await expect(loadWeeklyReviewTaskCount(harness.client as never, "business-b")).resolves.toBe(1);
-    expect(harness.calls.slice(5).every((call) => (call.where as { businessId: string }).businessId === "business-b")).toBe(true);
+    expect(harness.calls.slice(6).every((call) => (call.where as { businessId: string }).businessId === "business-b")).toBe(true);
   });
 });

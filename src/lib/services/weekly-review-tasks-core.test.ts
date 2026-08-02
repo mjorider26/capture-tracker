@@ -15,6 +15,7 @@ function records(overrides: Partial<WeeklyReviewTaskRecords> = {}): WeeklyReview
     documents: [],
     matchSuggestions: [],
     reconciliationItems: [],
+    statementActivities: [],
     taxEstimates: [],
     ...overrides,
   };

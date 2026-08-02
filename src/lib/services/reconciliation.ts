@@ -65,6 +65,8 @@ export async function finalizeReconciliation(client: Client, actor: Reconciliati
     if (!record) return { ok: false, code: "NOT_FOUND", message: "Reconciliation not found." };
     if (!editable.includes(record.status as "DRAFT" | "IN_PROGRESS")) return { ok: false, code: "IMMUTABLE", message: "Completed reconciliations are immutable evidence." };
     if (record.version !== parsed.data.expectedVersion) return { ok: false, code: "CONFLICT", message: "This reconciliation changed. Refresh and try again." };
+    const unmatchedActivityCount = await tx.statementActivity.count({ where: { businessId: actor.businessId, reconciliationId: record.id, status: "UNMATCHED" } });
+    if (unmatchedActivityCount) return { ok: false, code: "UNBALANCED", message: "Match all statement activity before finalizing." };
     const candidates = await selectedTransactions(tx, actor.businessId, record);
     const allowed = new Set(candidates.map((candidate) => candidate.id));
     if (record.items.some((item) => !allowed.has(item.transactionId))) return { ok: false, code: "INVALID", message: "A selected transaction is no longer eligible." };

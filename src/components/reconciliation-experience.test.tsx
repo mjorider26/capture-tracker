@@ -1,0 +1,5 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { ReconciliationExperience } from "./reconciliation-experience";
+const action=async()=>({status:"idle" as const,message:null}); const detail={id:"recon-private",accountName:"Checking",statementEndingBalance:"25.00",calculatedBalance:"25.00",difference:"0.00",status:"DRAFT",version:1,selectedIds:[],candidates:[],activities:[{id:"activity-private",activityDate:"2026-08-01T12:00:00.000Z",description:"Office supplies",reference:"REF-1",amount:"25.00",direction:"OUTFLOW",status:"UNMATCHED",version:1,candidates:[]}]};
+describe("statement activity reconciliation UI",()=>{it("renders responsive safe empty candidate state",()=>{const html=renderToStaticMarkup(<ReconciliationExperience detail={detail} saveAction={action} finalizeAction={action} matchAction={action} rejectAction={action} unmatchAction={action}/>);expect(html).toContain("Imported statement activity");expect(html).toContain("No candidate matches are currently eligible");expect(html).toContain("sm:grid-cols-2");expect(html).not.toContain("activity-private");});});

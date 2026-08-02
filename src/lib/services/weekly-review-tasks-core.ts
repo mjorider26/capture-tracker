@@ -56,6 +56,8 @@ type ReconciliationItem = {
   transaction: { id: string; description: string; amount: { toFixed: (digits: number) => string }; postedAt: Date };
 };
 
+type StatementActivity = { id: string; description: string; activityDate: Date; amount: { toFixed: (digits: number) => string }; reconciliation: { id: string; status: string; financialAccount: { name: string } } };
+
 type TaxEstimate = {
   id: string;
   status: string;
@@ -72,6 +74,7 @@ export type WeeklyReviewTaskRecords = {
   documents: Document[];
   matchSuggestions: MatchSuggestion[];
   reconciliationItems: ReconciliationItem[];
+  statementActivities: StatementActivity[];
   taxEstimates: TaxEstimate[];
 };
 
@@ -204,6 +207,11 @@ export function buildWeeklyReviewTasks(
       href: `/money/reconciliations/${item.reconciliation.id}`,
       state: "UNRESOLVED",
     });
+  }
+
+  for (const activity of records.statementActivities) {
+    if (!["DRAFT", "IN_PROGRESS"].includes(activity.reconciliation.status)) continue;
+    add(tasks, { id: `unmatched-statement-activity:${activity.id}`, category: "Reconciliation", title: `Match statement activity: ${activity.description}`, explanation: `This imported activity is still unmatched in ${activity.reconciliation.financialAccount.name}.`, detail: `${formatDate(activity.activityDate)} · ${money(activity.amount)} · unmatched`, href: `/money/reconciliations/${activity.reconciliation.id}`, state: "UNRESOLVED" });
   }
 
   for (const estimate of records.taxEstimates) {
