@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isInvitationPracticeSignupEnabled,
   isFictionalStagingPracticeSignupEnabled,
   practiceBusinessId,
   validatePracticeAccountInput,
@@ -25,6 +26,23 @@ function fictionalStagingEnvironment(
     CAPTURE_TRACKER_STAGING_DIRECT_DATABASE_URL: "postgresql://fixture:fixture@capture-tracker-staging.us-east-1.aws.neon.tech/capture_tracker_staging?sslmode=require",
     DATABASE_URL: runtimeUrl,
     CAPTURE_TRACKER_STAGING_INVITATION_CODE: testInvitation,
+    ...overrides,
+  };
+}
+
+function productionEnvironment(
+  overrides: Record<string, string | undefined> = {},
+) {
+  return {
+    CAPTURE_TRACKER_ENVIRONMENT: "production",
+    CAPTURE_TRACKER_EXECUTION_CONTEXT: "cloudflare",
+    CAPTURE_TRACKER_DEPLOYMENT_PROFILE: "production-cloudflare-neon",
+    CAPTURE_TRACKER_REAL_DATA_APPROVED: "false",
+    CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "true",
+    CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "false",
+    CAPTURE_TRACKER_DATA_MODE: "fictional",
+    CAPTURE_TRACKER_PRODUCTION_DATABASE_NAME: "capture_tracker_production",
+    CAPTURE_TRACKER_PRODUCTION_INVITATION_CODE: testInvitation,
     ...overrides,
   };
 }
@@ -97,6 +115,13 @@ describe("fictional staging practice-account guard", () => {
     });
 
     expect(isFictionalStagingPracticeSignupEnabled(production)).toBe(false);
+  });
+
+  it("accepts a production invitation only in an explicitly authorized production mode", async () => {
+    await expect(validatePracticeAccountInput(validInput, productionEnvironment())).resolves.toMatchObject({ email: validInput.email });
+    expect(isInvitationPracticeSignupEnabled(productionEnvironment({ CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "false" }))).toBe(false);
+    expect(isInvitationPracticeSignupEnabled(productionEnvironment({ CAPTURE_TRACKER_DATA_MODE: "production" }))).toBe(false);
+    await expect(validatePracticeAccountInput(validInput, productionEnvironment({ CAPTURE_TRACKER_PRODUCTION_INVITATION_CODE: undefined }))).resolves.toBeNull();
   });
 
   it("fails closed when the staging database identity is not explicit", () => {

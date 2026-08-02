@@ -1,6 +1,6 @@
 const environments = ["local", "test", "staging", "production"] as const;
 const contexts = ["local", "ci", "cloudflare", "aws"] as const;
-const deploymentProfiles = ["no-deploy", "free-preview-cloudflare-neon", "production-secure-aws"] as const;
+const deploymentProfiles = ["no-deploy", "free-preview-cloudflare-neon", "production-cloudflare-neon", "production-secure-aws"] as const;
 
 export type CaptureTrackerEnvironment = (typeof environments)[number];
 export type ExecutionContext = (typeof contexts)[number];
@@ -117,17 +117,33 @@ export function readCloudEnvironment(input: EnvironmentInput = process.env) {
     }
   }
 
+  if (deploymentProfile === "production-cloudflare-neon") {
+    if (environment !== "production" || executionContext !== "cloudflare") throw new CloudConfigurationError("Cloudflare production is production-only.");
+    if (!runtimeTarget.hostname.endsWith(".neon.tech") || !migrationTarget.hostname.endsWith(".neon.tech") || !runtimeTarget.hostname.includes("-pooler.") || migrationTarget.hostname.includes("-pooler.")) {
+      throw new CloudConfigurationError("Cloudflare production requires Neon pooled runtime and direct migration connections.");
+    }
+    if (documentBucket !== "capture-tracker-production-documents") throw new CloudConfigurationError("Cloudflare production requires the dedicated production document bucket.");
+    if (value(input, "CAPTURE_TRACKER_PAID_SERVICE_APPROVED") !== "true") throw new CloudConfigurationError("Cloudflare production requires explicit paid-service approval.");
+    const dataMode = value(input, "CAPTURE_TRACKER_DATA_MODE");
+    const onboardingEnabled = value(input, "CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED");
+    if (realDataApproved) {
+      if (dataMode !== "production" || onboardingEnabled !== "true") throw new CloudConfigurationError("Real-data production requires explicit production mode and onboarding approval.");
+    } else if (dataMode !== "fictional" || onboardingEnabled !== "false") {
+      throw new CloudConfigurationError("Pre-approval production acceptance must remain fictional with onboarding disabled.");
+    }
+  }
+
   if (deploymentProfile === "no-deploy" && executionContext !== "local" && executionContext !== "ci") {
     throw new CloudConfigurationError("Cloud execution requires an explicit deployment profile.");
   }
-  if (realDataApproved && deploymentProfile !== "production-secure-aws") throw new CloudConfigurationError("Real data is not approved for this execution context.");
+  if (realDataApproved && !["production-secure-aws", "production-cloudflare-neon"].includes(deploymentProfile)) throw new CloudConfigurationError("Real data is not approved for this execution context.");
 
   return { environment, executionContext, deploymentProfile, realDataApproved, runtimeDatabaseUrl, migrationDatabaseUrl, expectedDatabaseName, documentBucket };
 }
 
 export function assertRealDataPermitted(input: EnvironmentInput = process.env) {
   const config = readCloudEnvironment(input);
-  if (config.environment !== "production" || config.executionContext !== "aws" || config.deploymentProfile !== "production-secure-aws" || !config.realDataApproved) {
+  if (config.environment !== "production" || !["aws", "cloudflare"].includes(config.executionContext) || !["production-secure-aws", "production-cloudflare-neon"].includes(config.deploymentProfile) || !config.realDataApproved) {
     throw new CloudConfigurationError("Real data is not approved for this execution context.");
   }
   return config;

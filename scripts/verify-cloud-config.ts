@@ -39,6 +39,19 @@ const awsProduction = {
   CAPTURE_TRACKER_PRODUCTION_KMS_KEY_ARN: "arn:aws:kms:us-west-2:example:key/example",
   CAPTURE_TRACKER_PRODUCTION_SECRET_ARN: "arn:aws:secretsmanager:us-west-2:example:secret:capture-tracker-production",
 };
+const cloudflareProduction = {
+  CAPTURE_TRACKER_ENVIRONMENT: "production",
+  CAPTURE_TRACKER_EXECUTION_CONTEXT: "cloudflare",
+  CAPTURE_TRACKER_DEPLOYMENT_PROFILE: "production-cloudflare-neon",
+  CAPTURE_TRACKER_REAL_DATA_APPROVED: "false",
+  CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "true",
+  CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "false",
+  CAPTURE_TRACKER_DATA_MODE: "fictional",
+  CAPTURE_TRACKER_PRODUCTION_DATABASE_URL: "postgresql://user:password@ep-capture-tracker-production-pooler.us-west-2.aws.neon.tech:5432/capture_tracker_production?sslmode=verify-full",
+  CAPTURE_TRACKER_PRODUCTION_DIRECT_DATABASE_URL: "postgresql://migration:password@ep-capture-tracker-production.us-west-2.aws.neon.tech:5432/capture_tracker_production?sslmode=verify-full",
+  CAPTURE_TRACKER_PRODUCTION_DATABASE_NAME: "capture_tracker_production",
+  CAPTURE_TRACKER_PRODUCTION_DOCUMENT_BUCKET: "capture-tracker-production-documents",
+};
 
 assert(readCloudEnvironment({ DATABASE_URL: "postgresql://local:local@127.0.0.1:5432/capture_tracker" }).deploymentProfile === "no-deploy", "Local configuration must default to no-deploy.");
 const previewConfig = readCloudEnvironment(freePreview);
@@ -65,4 +78,10 @@ assert(assertRealDataPermitted({ ...awsProduction, CAPTURE_TRACKER_REAL_DATA_APP
 assert(!JSON.stringify(publicRuntimeConfiguration()).match(/DATABASE_URL|SECRET|PASSWORD|PRIVATE_KEY|API_KEY|TOKEN/), "Public configuration must contain no server secrets.");
 assert(previewConfig.documentBucket === "capture-tracker-staging-documents", "Fictional staging must use its dedicated private R2 bucket.");
 assert(rejects({ ...freePreview, CAPTURE_TRACKER_STAGING_DOCUMENT_BUCKET: "another-bucket" }), "Fictional staging cannot target another document bucket.");
+assert(readCloudEnvironment(cloudflareProduction).environment === "production", "Synthetic Cloudflare production profile must parse in fictional acceptance mode.");
+assert(rejects({ ...cloudflareProduction, CAPTURE_TRACKER_EXECUTION_CONTEXT: "aws" }), "Cloudflare production cannot run in AWS.");
+assert(rejects({ ...cloudflareProduction, CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "false" }), "Cloudflare production requires explicit paid-service approval.");
+assert(rejects({ ...cloudflareProduction, CAPTURE_TRACKER_REAL_DATA_APPROVED: "true" }), "Real-data Cloudflare production requires onboarding and production data mode.");
+assert(rejects({ ...cloudflareProduction, CAPTURE_TRACKER_PRODUCTION_DOCUMENT_BUCKET: "capture-tracker-staging-documents" }), "Cloudflare production cannot target the staging document bucket.");
+assert(assertRealDataPermitted({ ...cloudflareProduction, CAPTURE_TRACKER_REAL_DATA_APPROVED: "true", CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "true", CAPTURE_TRACKER_DATA_MODE: "production" }).realDataApproved, "Explicit Cloudflare production approval must be recognized.");
 console.log("CLOUD CONFIGURATION VERIFIED: no-deploy default, fictional Cloudflare/Neon staging with its dedicated private R2 bucket, guarded direct migrations, and optional AWS profile assertions passed.");

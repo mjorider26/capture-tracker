@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "capture-tracker-production",
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "no_handle_cross_request_promise_resolution"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "capture-tracker-production" }],
+  "r2_buckets": [{ "binding": "CAPTURE_TRACKER_DOCUMENTS", "bucket_name": "capture-tracker-production-documents" }],
+  "vars": {
+    "BETTER_AUTH_URL": "https://capture-tracker-production.example.invalid",
+    "CAPTURE_TRACKER_ENVIRONMENT": "production",
+    "CAPTURE_TRACKER_EXECUTION_CONTEXT": "cloudflare",
+    "CAPTURE_TRACKER_DEPLOYMENT_PROFILE": "production-cloudflare-neon",
+    "CAPTURE_TRACKER_REAL_DATA_APPROVED": "false",
+    "CAPTURE_TRACKER_PAID_SERVICE_APPROVED": "false",
+    "CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false",
+    "CAPTURE_TRACKER_DATA_MODE": "fictional",
+    "CAPTURE_TRACKER_PRODUCTION_DOCUMENT_BUCKET": "capture-tracker-production-documents",
+    "CAPTURE_TRACKER_PRODUCTION_DATABASE_NAME": "capture_tracker_production"
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

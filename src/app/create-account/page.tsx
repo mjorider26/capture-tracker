@@ -16,7 +16,7 @@ export default function CreateAccountPage() {
 
     const form = new FormData(event.currentTarget);
     try {
-      const response = await fetch("/api/staging/create-practice-account", {
+      const response = await fetch("/api/invitations/create-account", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -59,10 +59,10 @@ export default function CreateAccountPage() {
           Capture Tracker
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-[-0.035em]">
-          Create practice account
+          Create account
         </h1>
         <p className="mt-3 text-sm leading-6 text-text-muted">
-          This creates a fictional staging workspace. Do not enter real data.
+          Use an invitation provided by the account owner. Do not enter real data unless production onboarding has been explicitly approved.
         </p>
         <form className="mt-7 grid gap-4" onSubmit={createAccount}>
           <label className="grid gap-1 text-sm font-bold">
@@ -90,15 +90,15 @@ export default function CreateAccountPage() {
             disabled={submitting}
             type="submit"
           >
-            {submitting ? "Creating account…" : "Create practice account"}
+            {submitting ? "Creating account…" : "Create account"}
           </button>
           {message ? <p role="alert" className="text-sm text-status-error">{message}</p> : null}
           {accountOutcome ? (
             <div className="grid gap-3" role="status">
               <p className="text-sm text-text-muted">
                 {accountOutcome === "created"
-                  ? "Your practice account was created. Sign in to continue."
-                  : "Your practice account is ready. Sign in to continue."}
+                  ? "Your account was created. Sign in to continue."
+                  : "Your account is ready. Sign in to continue."}
               </p>
               <button
                 className="min-h-11 rounded-[var(--radius-sm)] border border-border-strong bg-surface-primary px-5 text-sm font-bold text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal"
