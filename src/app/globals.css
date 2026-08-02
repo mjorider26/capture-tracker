@@ -1000,6 +1000,271 @@ textarea {
   color: var(--brand-teal);
 }
 
+/* Today — restrained, layered glass over the financial workspace environment. */
+.today-briefing {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0.75rem;
+  border-radius: calc(var(--radius-xl) + 0.45rem);
+  background:
+    radial-gradient(circle at 81% 16%, rgb(37 204 179 / 0.32), transparent 25rem),
+    radial-gradient(circle at 18% 88%, rgb(77 161 224 / 0.26), transparent 28rem),
+    linear-gradient(132deg, #061f3c, #0a3659 52%, #123f60);
+  box-shadow: 0 26px 54px rgb(6 30 55 / 0.22);
+}
+
+.today-briefing::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.38;
+  background-image:
+    linear-gradient(rgb(173 233 255 / 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(173 233 255 / 0.14) 1px, transparent 1px);
+  background-position: right 2rem bottom 2rem;
+  background-size: 4.75rem 4.75rem;
+  mask-image: linear-gradient(110deg, transparent 8%, black 54%, transparent 100%);
+  content: "";
+}
+
+.today-briefing > * {
+  position: relative;
+  z-index: 1;
+}
+
+.today-cash-stage {
+  border-color: rgb(208 245 255 / 0.32);
+  background:
+    linear-gradient(145deg, rgb(7 51 88 / 0.78), rgb(8 43 77 / 0.6)),
+    radial-gradient(circle at 80% 17%, rgb(73 215 191 / 0.28), transparent 20rem);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    inset 0 0 0 1px rgb(143 220 241 / 0.05),
+    0 20px 38px rgb(2 24 45 / 0.22);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(20px);
+  --tw-backdrop-saturate: saturate(135%);
+}
+
+.today-cash-stage::before {
+  width: min(56%, 23rem);
+  height: 1px;
+  background: linear-gradient(90deg, rgb(195 255 246 / 0.92), rgb(139 228 218 / 0.35), transparent);
+}
+
+.today-cash-stage::after {
+  border-color: rgb(183 235 246 / 0.28);
+  box-shadow:
+    inset 0 0 0 2.4rem rgb(104 191 224 / 0.08),
+    0 0 4rem rgb(32 201 168 / 0.12);
+}
+
+.today-planning-rail {
+  border: 1px solid rgb(207 242 255 / 0.28);
+  background:
+    linear-gradient(145deg, rgb(20 79 121 / 0.7), rgb(5 38 74 / 0.64)),
+    radial-gradient(circle at 100% 0%, rgb(42 204 178 / 0.22), transparent 14rem);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    0 16px 30px rgb(3 25 48 / 0.22);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(18px);
+  --tw-backdrop-saturate: saturate(135%);
+}
+
+.today-planning-metric {
+  border-color: rgb(220 246 255 / 0.18);
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.13), rgb(184 235 255 / 0.055));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(12px);
+}
+
+.today-activity-ribbon {
+  border-color: rgb(211 246 255 / 0.36);
+  background: rgb(190 234 246 / 0.22);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.48),
+    0 14px 28px rgb(5 34 57 / 0.18);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(16px);
+  --tw-backdrop-saturate: saturate(125%);
+}
+
+.today-ribbon-metric,
+.today-ribbon-metric:first-child {
+  background: linear-gradient(135deg, rgb(242 253 253 / 0.74), rgb(213 240 247 / 0.52));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.58);
+}
+
+.today-workspace {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0.75rem;
+  border-radius: calc(var(--radius-xl) + 0.45rem);
+  background:
+    radial-gradient(circle at 10% 20%, rgb(33 200 174 / 0.2), transparent 20rem),
+    radial-gradient(circle at 94% 78%, rgb(71 157 220 / 0.18), transparent 24rem),
+    linear-gradient(135deg, #d6e5e9, #e9f1f2 58%, #cfdfe6);
+}
+
+.today-workspace::before {
+  position: absolute;
+  right: -4rem;
+  bottom: -3rem;
+  z-index: -1;
+  width: 22rem;
+  height: 16rem;
+  border: 1px solid rgb(24 105 149 / 0.16);
+  border-radius: 50% 50% 0 0;
+  box-shadow:
+    -3.5rem 2.5rem 0 -1px rgb(35 187 171 / 0.08),
+    -7rem 5rem 0 -1px rgb(37 121 177 / 0.07);
+  content: "";
+}
+
+.today-workspace > * {
+  position: relative;
+  z-index: 1;
+}
+
+.today-priority-zone {
+  border: 1px solid rgb(255 255 255 / 0.72);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(145deg, rgb(250 254 254 / 0.68), rgb(225 241 246 / 0.48));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.76),
+    0 18px 36px rgb(20 71 99 / 0.12);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(18px);
+  --tw-backdrop-saturate: saturate(120%);
+}
+
+.today-priority-list li,
+.today-actions,
+.today-actions > div:last-child {
+  border-color: rgb(8 56 88 / 0.14);
+}
+
+.today-priority-row {
+  border-radius: 0.65rem;
+}
+
+.today-priority-row:hover,
+.today-priority-row:focus-visible {
+  background: rgb(255 255 255 / 0.42);
+}
+
+.today-allocation {
+  border: 1px solid rgb(205 242 255 / 0.28);
+  background:
+    linear-gradient(145deg, rgb(9 58 95 / 0.73), rgb(5 38 70 / 0.64)),
+    radial-gradient(circle at 92% 0%, rgb(45 206 179 / 0.3), transparent 16rem);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    0 17px 32px rgb(4 28 53 / 0.2);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(18px);
+  --tw-backdrop-saturate: saturate(135%);
+}
+
+.today-review-callout {
+  border: 1px solid rgb(255 255 255 / 0.7);
+  background:
+    linear-gradient(140deg, rgb(239 253 250 / 0.72), rgb(222 241 247 / 0.55)),
+    radial-gradient(circle at 100% 0%, rgb(32 201 168 / 0.2), transparent 12rem);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.78),
+    0 14px 28px rgb(20 71 99 / 0.1);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(16px);
+  --tw-backdrop-saturate: saturate(120%);
+}
+
+.today-briefing .ui-status-badge,
+.today-priority-zone .ui-status-badge,
+.today-allocation .ui-status-badge,
+.today-review-callout .ui-status-badge {
+  border: 1px solid rgb(255 255 255 / 0.3);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.24);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(10px);
+}
+
+.app-business-identity {
+  border: 1px solid rgb(185 234 250 / 0.18);
+  border-left-color: rgb(113 218 204 / 0.5);
+  border-radius: 0.7rem;
+  background: linear-gradient(135deg, rgb(113 204 232 / 0.17), rgb(255 255 255 / 0.045));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(14px);
+  --tw-backdrop-saturate: saturate(120%);
+}
+
+.app-shell-nav-link.is-active {
+  border: 1px solid rgb(178 237 245 / 0.18);
+  background: linear-gradient(90deg, rgb(50 181 194 / 0.24), rgb(255 255 255 / 0.12));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    0 9px 18px rgb(0 15 35 / 0.16);
+  @apply backdrop-filter;
+  --tw-backdrop-blur: blur(12px);
+  --tw-backdrop-saturate: saturate(125%);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .today-cash-stage { background: #0a3b68; }
+  .today-planning-rail,
+  .today-allocation { background: #07345e; }
+  .today-priority-zone,
+  .today-review-callout { background: #f2f8fa; }
+  .today-ribbon-metric,
+  .today-ribbon-metric:first-child { background: #eaf5f6; }
+  .app-business-identity,
+  .app-shell-nav-link.is-active { background: #104c77; }
+}
+
+@media (max-width: 679px) {
+  .today-briefing,
+  .today-workspace {
+    padding: 0.35rem;
+    border-radius: var(--radius-xl);
+  }
+
+  .today-cash-stage,
+  .today-planning-rail,
+  .today-priority-zone,
+  .today-allocation,
+  .today-review-callout {
+    --tw-backdrop-blur: blur(12px);
+    --tw-backdrop-saturate: saturate(115%);
+  }
+
+  .today-priority-zone {
+    padding: 1.15rem;
+  }
+
+  .today-circuit-motif {
+    opacity: 0.62;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-cash-stage,
+  .today-planning-rail,
+  .today-priority-zone,
+  .today-allocation,
+  .today-review-callout,
+  .app-business-identity,
+  .app-shell-nav-link.is-active {
+    transition: none;
+  }
+}
+
 @media (min-width: 680px) {
   .today-activity-ribbon {
     grid-template-columns: repeat(4, minmax(0, 1fr));
