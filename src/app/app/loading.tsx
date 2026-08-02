@@ -10,24 +10,40 @@ export default function ApplicationLoading() {
         <div className="ui-skeleton h-10 w-64 max-w-full" />
         <div className="ui-skeleton h-4 w-full max-w-xl" />
       </div>
-      <section
-        className="ui-briefing min-h-[22rem] p-6 sm:p-8"
-        aria-hidden="true"
-      >
-        <div className="ui-skeleton h-3 w-36 bg-white/10" />
-        <div className="ui-skeleton mt-5 h-14 w-64 max-w-full bg-white/10" />
-        <div className="mt-10 grid gap-3 sm:grid-cols-3">
+      <section className="today-briefing" aria-hidden="true">
+        <div className="today-cash-stage">
+          <div className="ui-skeleton h-3 w-36" />
+          <div className="ui-skeleton mt-14 h-20 w-72 max-w-full" />
+          <div className="ui-skeleton mt-8 h-4 w-full max-w-xl" />
+          <div className="mt-8 flex justify-between gap-4">
+            <div className="ui-skeleton h-4 w-40" />
+            <div className="ui-skeleton h-11 w-44" />
+          </div>
+        </div>
+        <div className="today-planning-rail">
           {Array.from({ length: 3 }, (_, index) => (
-            <div
-              key={index}
-              className="h-28 rounded-[var(--radius-md)] bg-white/[0.07]"
-            />
+            <div key={index} className="ui-skeleton h-20 bg-white/10" />
+          ))}
+        </div>
+        <div className="today-activity-ribbon">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="h-24 bg-surface-secondary" />
           ))}
         </div>
       </section>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
-        <div className="ui-panel h-80 bg-surface-secondary" />
-        <div className="ui-panel h-80 bg-surface-secondary" />
+      <div className="today-workspace">
+        <div className="space-y-0">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="border-t border-border-subtle py-5">
+              <div className="ui-skeleton h-4 w-56 max-w-full" />
+              <div className="ui-skeleton mt-3 h-3 w-full" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-8">
+          <div className="ui-skeleton h-48" />
+          <div className="ui-skeleton h-56" />
+        </div>
       </div>
     </main>
   );

@@ -83,4 +83,14 @@ Today becomes a balanced two-column briefing at 980px, preserves a focused singl
 
 ### Validation limitation
 
-The local rendering attempt on `/demo/today` was blocked before and after implementation by a missing local database table: `public.StatementActivity`. This is a migration/environment mismatch in the configured local database, not a presentation change. No migration, schema, fixture, authentication, or data-flow change was made to bypass it. Therefore matched responsive screenshots and browser performance traces could not be truthfully produced from this workspace until that local database is brought to its existing migration level.
+An initial local rendering attempt on `/demo/today` was blocked by a missing `public.StatementActivity` table. No migration, schema, fixture, authentication, or data-flow change was made to bypass it. The later fictional-demo verification made the existing local route available, so matching screenshots were captured in the second visual pass.
+
+## UI v2 — Phase 1 second visual pass
+
+The Today screen now uses an editorial composition instead of a uniform dashboard grid. `today-cash-stage`, `today-planning-rail`, and `today-activity-ribbon` form an asymmetrical briefing: the available-cash figure owns a light primary stage; tax planning is a stepped navy rail; and current-month facts sit in a separate, low-profile ribbon. The circuit line and ascending-bar motif reuse the approved icon’s geometry without introducing another logo.
+
+The decision queue is now the central working surface. It is an edge-to-edge, numbered priority stack rather than a white list card. Each row preserves its original count, destination, wording, and semantic status while adding a non-color priority number, directional affordance, keyboard focus treatment, and compositor-only hover/pressed movement.
+
+Cash composition no longer presents an empty reserve as a zero-width progress bar. Configured reserves use the existing percentage as a labeled allocation rail; an unconfigured reserve uses a dashed, explicitly not-configured state. No values or calculations are introduced.
+
+Desktop navigation uses grouped primary and secondary destinations, a compact business identity strip, a teal angular active marker, and reduced visual weight. Existing destinations, order, selected-route behavior, and mobile navigation are unchanged. The Today loading layout now mirrors the new asymmetrical briefing, which reserves the main content geometry before data resolves.

@@ -37,7 +37,7 @@ export function AppShell({
     <div className="min-h-screen overflow-x-clip bg-page text-text-primary">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-white/10 bg-brand-navy px-4 py-5 text-white min-[1180px]:flex">
         <Brand />
-        <div className="mt-7 rounded-[var(--radius-md)] border border-white/10 bg-white/[0.06] px-3 py-3">
+        <div className="app-business-identity mt-7 px-3 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">
             Business
           </p>
@@ -104,8 +104,8 @@ export function AppShell({
 }
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5 px-1">
-      <span className="grid h-10 w-10 place-items-center rounded-[11px] bg-white/10 shadow-sm">
+    <div className="app-shell-brand flex items-center gap-2.5 px-1">
+      <span className="grid h-10 w-10 place-items-center bg-white/10 shadow-sm">
         <BrandIcon decorative className="h-9 w-8" />
       </span>
       <span className="text-[15px] font-bold tracking-[-0.03em] text-white">
@@ -121,24 +121,49 @@ function Navigation({
   basePath: string;
   destination: Destination | null;
 }) {
+  const primary = destinations.slice(0, 5);
+  const secondary = destinations.slice(5);
   return (
-    <nav aria-label="Primary navigation" className="mt-7 space-y-1">
-      {destinations.map((item) => (
+    <nav aria-label="Primary navigation" className="app-shell-navigation mt-7">
+      <NavigationGroup
+        items={primary}
+        basePath={basePath}
+        destination={destination}
+      />
+      <div className="app-shell-nav-divider" aria-hidden="true" />
+      <NavigationGroup
+        items={secondary}
+        basePath={basePath}
+        destination={destination}
+      />
+    </nav>
+  );
+}
+
+function NavigationGroup({
+  items,
+  basePath,
+  destination,
+}: {
+  items: readonly (typeof destinations)[number][];
+  basePath: string;
+  destination: Destination | null;
+}) {
+  return (
+    <div className="space-y-1">
+      {items.map((item) => (
         <Link
           key={item.slug}
           href={`${basePath}/${item.slug}`}
           aria-current={destination === item.slug ? "page" : undefined}
-          className={`flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] border px-3 text-sm font-bold transition-colors ${destination === item.slug ? "border-white/10 bg-white/[0.12] text-white shadow-sm" : "border-transparent text-white/70 hover:bg-white/10 hover:text-white"}`}
+          className={`app-shell-nav-link ${destination === item.slug ? "is-active" : ""}`}
         >
-          <span
-            aria-hidden="true"
-            className={`text-lg leading-none ${destination === item.slug ? "text-brand-teal" : ""}`}
-          >
+          <span aria-hidden="true" className="app-shell-nav-mark">
             {item.mark}
           </span>
           <span>{item.label}</span>
         </Link>
       ))}
-    </nav>
+    </div>
   );
 }
