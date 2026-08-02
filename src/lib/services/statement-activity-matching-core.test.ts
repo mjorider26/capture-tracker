@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildStatementActivityCandidates, isEligibleStatementTransaction, statementMatchSchema } from "./statement-activity-matching-core";
 const money=(value:string)=>({toFixed:()=>value}); const day=new Date("2026-08-01T12:00:00.000Z");
@@ -16,5 +18,10 @@ describe("statement activity candidate generation",()=>{
   it("orders closer and more similar candidates deterministically",()=>{
     const later=transaction({id:"tx-2",postedAt:new Date("2026-08-04T12:00:00.000Z"),description:"Other"});
     expect(buildStatementActivityCandidates(activity,[later,transaction()]).map(x=>x.transaction.id)).toEqual(["tx-1","tx-2"]);
+  });
+  it("uses a distinct, PostgreSQL-safe migration index name",()=>{
+    const migration=readFileSync(resolve(process.cwd(),"prisma/migrations/20260802100000_statement_activity_matching/migration.sql"),"utf8");
+    expect(migration).toContain('CREATE INDEX "StatementActivityCandidateDecision_lookup_idx"');
+    expect("StatementActivityCandidateDecision_lookup_idx".length).toBeLessThanOrEqual(63);
   });
 });

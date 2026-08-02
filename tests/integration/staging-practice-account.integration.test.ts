@@ -81,9 +81,22 @@ async function cleanup(emailValue: string) {
   const businessIds = memberships.map((membership) => membership.businessId);
 
   if (businessIds.length) {
+    await prisma.statementActivityCandidateDecision.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.statementActivity.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.reconciliationItem.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.reconciliation.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.journalLine.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.journalEntry.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.transactionSplit.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.transaction.deleteMany({ where: { businessId: { in: businessIds } } });
     await prisma.auditEvent.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.businessSettingsHistory.deleteMany({ where: { businessId: { in: businessIds } } });
     await prisma.businessOnboarding.deleteMany({ where: { businessId: { in: businessIds } } });
     await prisma.businessSettings.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.postingRule.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.ledgerAccount.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.financialAccount.deleteMany({ where: { businessId: { in: businessIds } } });
+    await prisma.accountingPeriod.deleteMany({ where: { businessId: { in: businessIds } } });
     await prisma.businessMember.deleteMany({ where: { businessId: { in: businessIds } } });
     await prisma.business.deleteMany({ where: { id: { in: businessIds } } });
   }

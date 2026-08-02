@@ -58,6 +58,8 @@ const expectedTables = new Set([
   "PostingRule",
   "Reconciliation",
   "ReconciliationItem",
+  "StatementActivity",
+  "StatementActivityCandidateDecision",
   "Session",
   "Account",
   "Verification",

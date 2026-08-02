@@ -36,7 +36,7 @@ CREATE TABLE "StatementActivityCandidateDecision" (
 
 CREATE INDEX "StatementActivity_businessId_reconciliationId_status_idx" ON "StatementActivity"("businessId", "reconciliationId", "status");
 CREATE INDEX "StatementActivity_businessId_activityDate_idx" ON "StatementActivity"("businessId", "activityDate");
-CREATE INDEX "StatementActivityCandidateDecision_businessId_statementActivityId_idx" ON "StatementActivityCandidateDecision"("businessId", "statementActivityId");
+CREATE INDEX "StatementActivityCandidateDecision_lookup_idx" ON "StatementActivityCandidateDecision"("businessId", "statementActivityId");
 
 ALTER TABLE "StatementActivity" ADD CONSTRAINT "StatementActivity_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "StatementActivity" ADD CONSTRAINT "StatementActivity_reconciliation_fkey" FOREIGN KEY ("businessId", "reconciliationId") REFERENCES "Reconciliation"("businessId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -280,7 +280,7 @@ async function exerciseReconciliationAndReversal(
   const originalId = "demo-journal-entry-commission";
   const original = await prisma.journalEntry.findUniqueOrThrow({
     where: { id: originalId },
-    include: { lines: { orderBy: { lineNumber: "asc" } } },
+    include: { lines: { orderBy: { lineNumber: "asc" } }, transaction: true },
   });
   const reversalAuditBefore = await prisma.auditEvent.count({
     where: { businessId, entityId: originalId },
@@ -291,12 +291,14 @@ async function exerciseReconciliationAndReversal(
       expectedVersion: String(original.version),
       reversalDate: "2026-07-20",
       reason: "Validation correction one",
+      confirmed: "on",
     }),
     reverseJournalEntry(prisma, owner, {
       journalEntryId: originalId,
       expectedVersion: String(original.version),
       reversalDate: "2026-07-20",
       reason: "Validation correction two",
+      confirmed: "on",
     }),
   ]);
   const successes = attempts.filter((result) => result.ok);
@@ -339,6 +341,7 @@ async function exerciseReconciliationAndReversal(
     expectedVersion: String(originalAfter.version),
     reversalDate: "2026-07-20",
     reason: "Duplicate attempt",
+    confirmed: "on",
   });
   assert(
     !second.ok && second.code === "CONFLICT",
@@ -386,6 +389,11 @@ async function exerciseReconciliationAndReversal(
       where: { id: originalId },
       data: { version: original.version },
     });
+    if (original.transaction)
+      await tx.transaction.update({
+        where: { id: original.transaction.id },
+        data: { status: original.transaction.status, voidedAt: original.transaction.voidedAt, version: original.transaction.version },
+      });
   });
   await verifyDemoSeed(prisma);
 }
