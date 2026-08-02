@@ -39,6 +39,7 @@ export async function payDemo(
     );
     if (result.ok) {
       revalidatePath("/demo/taxes", "layout");
+      revalidatePath("/demo/today");
       return result.code === "CREATED"
         ? { code: "RECORDED", message: "Payment recorded externally." }
         : {

@@ -8,10 +8,10 @@ import {
   calculateRemainingTaxObligation,
   calculateReservePosition,
   formatUsd,
-  orderReviewTasks,
   selectLatestTaxEstimate,
 } from "./today-dashboard-core";
-import { loadWeeklyReviewAttention } from "../services/weekly-review-counts";
+import { loadWeeklyReviewTasks } from "../services/weekly-review-tasks";
+import type { WeeklyReviewTask } from "../services/weekly-review-tasks-core";
 import {
   prioritizeTodayAttention,
   type TodayAttentionItem,
@@ -51,15 +51,7 @@ export type TodayDashboard = {
   weeklyReview: {
     status: string;
     estimatedMinutes: number;
-    completedCount: number;
-    tasks: Array<{
-      id: string;
-      title: string;
-      explanation: string | null;
-      category: string;
-      priority: string;
-      complete: boolean;
-    }>;
+    tasks: WeeklyReviewTask[];
   } | null;
   changes: Array<{
     id: string;
@@ -193,7 +185,6 @@ export async function getTodayDashboard(
   const review = await prisma.weeklyReview.findFirst({
     where: { businessId },
     orderBy: { weekStart: "desc" },
-    include: { tasks: true },
   });
   const entries = await prisma.journalEntry.findMany({
     where: { businessId, status: "POSTED" },
@@ -262,12 +253,17 @@ export async function getTodayDashboard(
     )
     .slice(0, 5)
     .map(({ date, ...change }) => ({ ...change, date: formatDate(date) }));
-  const orderedTasks = review ? orderReviewTasks(review.tasks) : [];
-  const completedCount = orderedTasks.filter(
-    (task) => task.status === "COMPLETED" || task.status === "DISMISSED",
-  ).length;
-  const attentionCounts = await loadWeeklyReviewAttention(prisma, businessId);
-  const reviewTasks = orderedTasks.length - completedCount;
+  const tasks = await loadWeeklyReviewTasks(prisma, businessId);
+  const taskCounts = tasks.reduce(
+    (counts, task) => {
+      if (task.category === "Transactions") counts.transactions += 1;
+      if (task.category === "Documents") counts.documents += 1;
+      if (task.category === "Reconciliation") counts.reconciliations += 1;
+      if (task.category === "Taxes") counts.tax += 1;
+      return counts;
+    },
+    { transactions: 0, documents: 0, reconciliations: 0, tax: 0 },
+  );
   const reserveSharePercent =
     reserve && cash.greaterThan(0)
       ? Prisma.Decimal.min(
@@ -347,23 +343,16 @@ export async function getTodayDashboard(
       reserveSharePercent,
     },
     attention: prioritizeTodayAttention({
-      ...attentionCounts,
-      reviewTasks,
+      ...taskCounts,
+      matches: 0,
+      payroll: 0,
+      reviewTasks: 0,
     }),
     weeklyReview: review
       ? {
           status: review.status,
           estimatedMinutes: review.estimatedCompletionMinutes,
-          completedCount,
-          tasks: orderedTasks.map((task) => ({
-            id: task.id,
-            title: task.title,
-            explanation: task.explanation,
-            category: task.category,
-            priority: task.priority,
-            complete:
-              task.status === "COMPLETED" || task.status === "DISMISSED",
-          })),
+          tasks,
         }
       : null,
     changes: orderedChanges,

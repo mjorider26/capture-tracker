@@ -5,7 +5,6 @@ import {
   EmptyState,
   PageHeader,
   Panel,
-  ProgressBar,
   StatusBadge,
 } from "./ui";
 import { type TodayDashboard } from "@/lib/data/today-dashboard";
@@ -149,17 +148,14 @@ function NeedsAttention({ dashboard, basePath }: { dashboard: TodayDashboard; ba
 
 function WeeklyReview({ review, basePath }: { review: TodayDashboard["weeklyReview"]; basePath: string }) {
   if (!review) return <Panel className="border border-border-subtle p-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">Weekly rhythm</p><h2 className="mt-1 text-xl font-bold">Weekly Review</h2><p className="mt-3 text-sm leading-6 text-text-muted">No weekly review is available yet. Once started, progress and unresolved work will appear here.</p></Panel>;
-  const total = review.tasks.length;
-  const progress = total ? Math.round((review.completedCount / total) * 100) : 0;
-  const next = review.tasks.find((task) => !task.complete);
+  const next = review.tasks[0];
   return (
     <Panel className="border border-border-subtle p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">Weekly rhythm</p><h2 className="mt-1 text-xl font-bold tracking-[-0.03em]">Weekly Review</h2></div>
         <StatusBadge tone={review.status === "COMPLETED" ? "success" : "info"}>{review.status.toLowerCase().replaceAll("_", " ")}</StatusBadge>
       </div>
-      <div className="mt-6"><ProgressBar value={progress} label={`${review.completedCount} of ${total} tasks acknowledged`} /></div>
-      <div className="mt-5 rounded-[var(--radius-md)] bg-surface-secondary p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-text-muted">Next recommended action</p><p className="mt-1 text-sm font-bold text-text-primary">{next?.title ?? "Review completion evidence"}</p><p className="mt-1 text-xs leading-5 text-text-muted">{next?.explanation ?? "All listed tasks are acknowledged; review the completion record and any unresolved-item count."}</p></div>
+      <div className="mt-6 rounded-[var(--radius-md)] bg-surface-secondary p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-text-muted">Current task count</p><p className="mt-1 text-2xl font-bold text-text-primary">{review.tasks.length} unresolved</p><p className="mt-2 text-sm font-bold text-text-primary">{next?.title ?? "Nothing needs your attention right now."}</p><p className="mt-1 text-xs leading-5 text-text-muted">{next?.explanation ?? "Current record workflows are clear."}</p></div>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-semibold text-text-muted">{review.estimatedMinutes}-minute review · unresolved work remains visible</p><ButtonLink href={`${basePath}/review`} tone="secondary">Continue review</ButtonLink></div>
     </Panel>
   );
