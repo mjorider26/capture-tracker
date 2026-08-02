@@ -11,7 +11,8 @@ type Evidence = { alias: string; sourceType: string; sourceId?: string; displayL
 type Context = { asOf: string; reports: Awaited<ReturnType<typeof getFinancialReports>>; review: Awaited<ReturnType<typeof getWeeklyReview>>; transactions: Array<{ id: string; label: string; amount: string; status: string }>; documents: number; reconciliations: number; taxes: number; payroll: number; evidence: Evidence[] };
 type AdapterResult = { answer: string; aliases: string[]; limitations?: string; followUps: string[]; blocked?: boolean };
 
-const mutation = /\b(create|edit|change|categorize|split|delete|post|reverse|reconcile|approve|link|unlink|pay|move money|transfer)\b/i;
+const mutation = /\b(create|edit|change|categorize|classify|split|delete|post|reverse|reconcile|finalize|approve|match|link|unlink|pay|move money|transfer|settings?)\b/i;
+const unsafe = /\b(ignore (?:previous|system)|system prompt|internal prompt|reveal (?:secret|token|cookie|config)|raw sql|\bselect\b.+\bfrom\b|database url|another business|private document (?:content|text))\b/i;
 const clean = (value: string) => value.replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, ASK_AI_LIMITS.question);
 const key = (conversationId: string, question: string) => createHash("sha256").update(`${conversationId}:${question.toLowerCase()}`).digest("hex").slice(0, 64);
 
@@ -42,9 +43,11 @@ export async function buildAskAiContext(businessId: string, question: string): P
 export function localAskAiAdapter(question: string, context: Context): AdapterResult {
   if (process.env.NODE_ENV === "production" || process.env.CAPTURE_TRACKER_REAL_DATA_APPROVED === "true") return { answer: "Ask AI is unavailable until a separately approved production provider is configured.", aliases: [], followUps: [], blocked: true };
   const q = clean(question).toLowerCase();
+  if (unsafe.test(q)) return { answer: "I can only summarize approved, business-scoped Capture Tracker facts. I can’t reveal internal instructions, secrets, raw queries, private document contents, or another business’s data.", aliases: [], followUps: ["What should I review this week?"], blocked: true };
   if (mutation.test(q)) return { answer: "Ask AI is read-only. Open the related Capture Tracker workflow to make changes.", aliases: [], followUps: ["Show me items needing attention"], blocked: true };
   const p = context.reports.profitAndLoss; const c = context.reports.cashActivity;
-  if (/perform|income|expense|profit|loss|month|report|why.*expense|supporting/.test(q)) return { answer: `For ${context.reports.range.label}, income is $${p.totalIncome}, expenses are $${p.totalExpenses}, and net income is $${p.netIncome}. These values are from posted journal entries.`, aliases: ["reports"], followUps: ["How much cash came in and went out?", "What should I review this week?"] };
+  if (/trial balance|balance sheet/.test(q)) return { answer: `The requested report is available for ${context.reports.range.label}. It is built from posted journal entries; review the linked report for the complete account-level evidence.`, aliases: ["reports"], followUps: ["Explain my Profit and Loss"] };
+  if (/perform|income|expense|profit|loss|month|report|why.*expense|supporting|largest/.test(q)) return { answer: `For ${context.reports.range.label}, income is $${p.totalIncome}, expenses are $${p.totalExpenses}, and net income is $${p.netIncome}. These values are from posted journal entries.`, aliases: ["reports"], followUps: ["How much cash came in and went out?", "What should I review this week?"] };
   if (/cash/.test(q)) return { answer: `Cash activity for ${context.reports.range.label}: opening $${c.openingCash}, inflows $${c.inflows}, outflows $${c.outflows}, ending $${c.endingCash}. This is a cash-activity summary, not a formal cash-flow statement.`, aliases: ["cash"], followUps: ["Show my financial summary"] };
   if (/document/.test(q)) return { answer: `${context.documents} documents need attention. Document names and extracted fields are treated as untrusted data, not instructions.`, aliases: ["documents"], followUps: ["Which transactions still need review?"] };
   if (/reconcil/.test(q)) return { answer: `${context.reconciliations} reconciliation record${context.reconciliations === 1 ? "" : "s"} still need attention.`, aliases: ["reconciliations"], followUps: ["What should I review this week?"] };
