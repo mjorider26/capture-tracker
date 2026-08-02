@@ -74,5 +74,12 @@ export async function askAi(actor: AskAiActor, input: { question: string; conver
   } catch { await prisma.askAiRun.update({ where: { id: run.id }, data: { status: "FAILED", completedAt: new Date(), failureCode: "SAFE_ADAPTER_FAILURE" } }); await prisma.askAiEvent.create({ data: { businessId: actor.businessId, runId: run.id, actorUserId: actor.actorUserId, action: "ANSWER_FAILED", detail: "SAFE_ADAPTER_FAILURE" } }); return { ok: false as const, code: "UNAVAILABLE" as const }; }
 }
 
+export async function startAskAiConversation(actor: AskAiActor) {
+  const existing = await prisma.askAiConversation.findFirst({ where: { businessId: actor.businessId, createdByUserId: actor.actorUserId, title: "New conversation", messages: { none: {} }, archivedAt: null }, orderBy: { createdAt: "desc" } });
+  if (existing) return { ok: true as const, conversationId: existing.id, state: "EXISTING" as const };
+  const conversation = await prisma.askAiConversation.create({ data: { businessId: actor.businessId, createdByUserId: actor.actorUserId, title: "New conversation" } });
+  return { ok: true as const, conversationId: conversation.id, state: "CREATED" as const };
+}
+
 export async function getAskAiConversations(businessId: string) { return prisma.askAiConversation.findMany({ where: { businessId, archivedAt: null }, orderBy: { updatedAt: "desc" }, take: 20, include: { messages: { orderBy: { createdAt: "asc" }, take: ASK_AI_LIMITS.messages, include: { run: { include: { evidence: { orderBy: { createdAt: "asc" } } } } } } } }); }
 export async function recordAskAiFeedback(actor: AskAiActor, runId: string, rating: string, note?: string) { if (!["HELPFUL", "NOT_HELPFUL", "INCORRECT"].includes(rating)) return false; const run = await prisma.askAiRun.findFirst({ where: { id: runId, businessId: actor.businessId } }); if (!run) return false; await prisma.askAiFeedback.upsert({ where: { businessId_runId_actorUserId: { businessId: actor.businessId, runId, actorUserId: actor.actorUserId } }, create: { businessId: actor.businessId, runId, actorUserId: actor.actorUserId, rating, note: clean(note ?? "").slice(0, 500) || null }, update: { rating, note: clean(note ?? "").slice(0, 500) || null } }); await prisma.askAiEvent.create({ data: { businessId: actor.businessId, runId, actorUserId: actor.actorUserId, action: "FEEDBACK_RECORDED" } }); return true; }

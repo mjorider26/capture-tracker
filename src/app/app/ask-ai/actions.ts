@@ -1,7 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireBusinessContext } from "@/lib/security/business-context";
-import { askAi, recordAskAiFeedback } from "@/lib/services/ask-ai";
+import { askAi, recordAskAiFeedback, startAskAiConversation } from "@/lib/services/ask-ai";
 type State = { ok: boolean; message?: string };
 export async function askAuthenticatedAi(_: State, form: FormData): Promise<State> { try { const c = await requireBusinessContext(); const result = await askAi({ businessId: c.business.id, actorUserId: c.user.id }, { question: String(form.get("question") ?? ""), conversationId: String(form.get("conversationId") ?? "") || undefined }); if (!result.ok) return { ok: false, message: "Ask AI could not prepare a safe answer." }; revalidatePath("/app/ask-ai"); return { ok: true, message: result.state === "BLOCKED" ? "The request was safely blocked." : "Answer prepared from trusted read-only data." }; } catch { return { ok: false, message: "Ask AI could not be authorized." }; } }
 export async function feedbackAuthenticatedAi(_: State, form: FormData): Promise<State> { try { const c = await requireBusinessContext(); const ok = await recordAskAiFeedback({ businessId: c.business.id, actorUserId: c.user.id }, String(form.get("runId") ?? ""), String(form.get("rating") ?? "")); return { ok, message: ok ? "Feedback recorded." : "Feedback could not be saved." }; } catch { return { ok: false, message: "Feedback could not be authorized." }; } }
+export async function newAuthenticatedAiConversation(_: State, _form: FormData): Promise<State> { try { const c=await requireBusinessContext(); await startAskAiConversation({businessId:c.business.id,actorUserId:c.user.id}); revalidatePath("/app/ask-ai"); return {ok:true,message:"New conversation ready."}; } catch { return {ok:false,message:"A new conversation could not be created safely."}; } }
