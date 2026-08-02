@@ -58,3 +58,45 @@ Documents is now a secure evidence workspace. Lifecycle summaries and a short at
 ## Remaining passes
 
 Pass 3 may apply this visual language to Taxes, Weekly Review, Reports, Ask AI, Activity, and Settings in detail, and may make further non-functional refinements after visual review. It must not replace the shared shell, alter accounting workflows, or add unsupported automatic actions.
+
+## UI v2 — Phase 1: Today briefing
+
+Phase 1 refines the existing foundation only where the authenticated shell and Today experience need it. The canonical logo remains `public/brand/capture-tracker-icon.png` in the application shell and `public/brand/capture-tracker-lockup.png` for the marketing surface; no new logo treatment was introduced.
+
+### Audit result
+
+Today already had accurate, server-derived data and a sound server-component boundary. Its main visual weaknesses were that the upper summary gave every supporting metric the same visual treatment, attention rows and quick links competed as similarly bordered cards, and the generic app-loading geometry did not resemble the final briefing. The redesign keeps every data source, destination, label of record, and protected workflow, while making the attention queue and available-cash total easier to scan first.
+
+### Tokens and primitives
+
+`src/app/globals.css` remains the token source. Phase 1 aligns the approved navy, teal, neutral, and semantic values with this document and adds backward-compatible surface, elevation, disabled, focus-ring, skeleton, and briefing tokens. `ui-briefing`, `ui-metric-tile`, `ui-section-mark`, `ui-action-surface`, and `ui-skeleton` are presentation classes built on that layer. They are provisional shared patterns for later dashboard work, not a second theme system.
+
+`src/components/ui.tsx` adds `SectionHeading` and updates `Skeleton` to use the shared skeleton treatment. Existing primitive contracts remain unchanged. New work should use `SectionHeading` for a label/title/action grouping, `ui-action-surface` for a compact protected-workflow link, and the semantic status primitives for all operational state.
+
+### Today hierarchy and states
+
+Today now reads in this order: available cash and tax position; the open decision queue; cash composition; recent ledger context and Weekly Review; then protected workflows. The available-cash briefing uses one restrained navy surface, a single subtle logo-inspired octagonal detail, and teal only as an accent. Attention items become the clear next-action layer without changing their count, destination, or priority. The empty-account, no-attention, no-review, warning, success, locked, loading, focus, hover, pressed, and disabled presentations are all explicit. The app-level error state remains a client error boundary and now uses textual, destructive styling without implying any financial record changed.
+
+### Responsive and motion rules
+
+Today becomes a balanced two-column briefing at 980px, preserves a focused single-column order below that width, and uses the existing safe-area-aware mobile navigation. The desktop selected navigation state now stays in the navy rail instead of switching to an unrelated white card; compact navigation gets the same selected elevation. Motion remains CSS-only, limited to color, shadow, opacity, and small transforms, and all nonessential motion is removed by the existing reduced-motion media query.
+
+### Validation limitation
+
+An initial local rendering attempt on `/demo/today` was blocked by a missing `public.StatementActivity` table. No migration, schema, fixture, authentication, or data-flow change was made to bypass it. The later fictional-demo verification made the existing local route available, so matching screenshots were captured in the second visual pass.
+
+## UI v2 — Phase 1 second visual pass
+
+The Today screen now uses an editorial composition instead of a uniform dashboard grid. `today-cash-stage`, `today-planning-rail`, and `today-activity-ribbon` form an asymmetrical briefing: the available-cash figure owns a light primary stage; tax planning is a stepped navy rail; and current-month facts sit in a separate, low-profile ribbon. The circuit line and ascending-bar motif reuse the approved icon’s geometry without introducing another logo.
+
+The decision queue is now the central working surface. It is an edge-to-edge, numbered priority stack rather than a white list card. Each row preserves its original count, destination, wording, and semantic status while adding a non-color priority number, directional affordance, keyboard focus treatment, and compositor-only hover/pressed movement.
+
+Cash composition no longer presents an empty reserve as a zero-width progress bar. Configured reserves use the existing percentage as a labeled allocation rail; an unconfigured reserve uses a dashed, explicitly not-configured state. No values or calculations are introduced.
+
+Desktop navigation uses grouped primary and secondary destinations, a compact business identity strip, a teal angular active marker, and reduced visual weight. Existing destinations, order, selected-route behavior, and mobile navigation are unchanged. The Today loading layout now mirrors the new asymmetrical briefing, which reserves the main content geometry before data resolves.
+
+## UI v2 — reference-inspired depth pass
+
+The supplied mobile reference informed this pass only through its visual qualities: layered blue depth, a dominant primary value, compact inset supporting modules, controlled environmental light, and a deliberate small-screen hierarchy. Its hydration use case, phone mockups, circular wellness controls, floating widgets, navigation arrangement, and exact appearance were not copied.
+
+Today adapts those qualities for financial work through a navy-to-blue cash stage, contained teal lighting, and a high-contrast white cash figure. The planning rail now uses compact dark inset panels; the allocation module uses the same restrained navy surface system, while its configured and not-configured states still use only existing account data. The transaction action uses a light high-contrast surface so it remains the obvious next step against the dark briefing.

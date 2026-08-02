@@ -50,6 +50,30 @@ export function PageHeader({
   );
 }
 
+export function SectionHeading({
+  eyebrow,
+  title,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p className="ui-section-mark text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">
+          {eyebrow}
+        </p>
+        <h2 className="mt-1.5 text-xl font-bold tracking-[-0.035em] text-text-primary sm:text-2xl">
+          {title}
+        </h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
 export function StatusBadge({
   children,
   tone = "neutral",
@@ -64,13 +88,7 @@ export function StatusBadge({
     info: "bg-[var(--info-soft)] text-[var(--info)]",
     locked: "bg-[var(--locked-soft)] text-[var(--locked)]",
   };
-  return (
-    <span
-      className={`ui-status-badge ${styles[tone]}`}
-    >
-      {children}
-    </span>
-  );
+  return <span className={`ui-status-badge ${styles[tone]}`}>{children}</span>;
 }
 
 export function InlineAlert({
@@ -131,8 +149,10 @@ export function ButtonLink({
   className?: string;
 }) {
   const styles = {
-    primary: "bg-brand-navy text-white shadow-sm hover:bg-[var(--brand-navy-strong)]",
-    secondary: "border border-border-subtle bg-surface text-text-primary hover:bg-surface-secondary",
+    primary:
+      "bg-brand-navy text-white shadow-sm hover:bg-[var(--brand-navy-strong)]",
+    secondary:
+      "border border-border-subtle bg-surface text-text-primary hover:bg-surface-secondary",
     quiet: "bg-transparent text-brand-teal hover:bg-brand-teal-soft",
   };
   return (
@@ -159,15 +179,30 @@ export function ProgressBar({
         <span>{label}</span>
         <span className="money-value text-text-primary">{clamped}%</span>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-tertiary" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={clamped}>
-        <div className="h-full rounded-full bg-brand-teal transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${clamped}%` }} />
+      <div
+        className="mt-2 h-2 overflow-hidden rounded-full bg-surface-tertiary"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clamped}
+      >
+        <div
+          className="h-full rounded-full bg-brand-teal transition-[width] duration-200 motion-reduce:transition-none"
+          style={{ width: `${clamped}%` }}
+        />
       </div>
     </div>
   );
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div aria-hidden="true" className={`animate-pulse rounded-[var(--radius-sm)] bg-surface-tertiary ${className}`} />;
+  return (
+    <div
+      aria-hidden="true"
+      className={`ui-skeleton rounded-[var(--radius-sm)] ${className}`}
+    />
+  );
 }
 
 export function SafeErrorState({
@@ -178,7 +213,10 @@ export function SafeErrorState({
   children: ReactNode;
 }) {
   return (
-    <section role="alert" className="ui-panel border border-[color:var(--danger)]/20 p-6">
+    <section
+      role="alert"
+      className="ui-panel border border-[color:var(--danger)]/20 p-6"
+    >
       <p className="text-sm font-bold text-[var(--danger)]">{title}</p>
       <p className="mt-2 text-sm leading-6 text-text-muted">{children}</p>
     </section>
