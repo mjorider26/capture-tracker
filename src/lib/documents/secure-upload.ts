@@ -70,7 +70,9 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
     });
     if (existing) return { ok: true as const, documentId: existing.id, duplicate: true, outcome: "EXISTING" as const };
 
-    const key = crypto.randomUUID().replaceAll("-", "");
+    // Tenant-scoped object keys keep R2 cleanup and recovery bounded even
+    // though object storage itself has no relational authorization model.
+    const key = `${actor.businessId}/${crypto.randomUUID().replaceAll("-", "")}`;
     const storage = await getPrivateDocumentStorage();
     await storage.putActive(key, bytes, { sha256, version: "1" }, mimeType);
     const now = new Date();
