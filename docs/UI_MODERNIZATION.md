@@ -58,3 +58,29 @@ Documents is now a secure evidence workspace. Lifecycle summaries and a short at
 ## Remaining passes
 
 Pass 3 may apply this visual language to Taxes, Weekly Review, Reports, Ask AI, Activity, and Settings in detail, and may make further non-functional refinements after visual review. It must not replace the shared shell, alter accounting workflows, or add unsupported automatic actions.
+
+## UI v2 — Phase 1: Today briefing
+
+Phase 1 refines the existing foundation only where the authenticated shell and Today experience need it. The canonical logo remains `public/brand/capture-tracker-icon.png` in the application shell and `public/brand/capture-tracker-lockup.png` for the marketing surface; no new logo treatment was introduced.
+
+### Audit result
+
+Today already had accurate, server-derived data and a sound server-component boundary. Its main visual weaknesses were that the upper summary gave every supporting metric the same visual treatment, attention rows and quick links competed as similarly bordered cards, and the generic app-loading geometry did not resemble the final briefing. The redesign keeps every data source, destination, label of record, and protected workflow, while making the attention queue and available-cash total easier to scan first.
+
+### Tokens and primitives
+
+`src/app/globals.css` remains the token source. Phase 1 aligns the approved navy, teal, neutral, and semantic values with this document and adds backward-compatible surface, elevation, disabled, focus-ring, skeleton, and briefing tokens. `ui-briefing`, `ui-metric-tile`, `ui-section-mark`, `ui-action-surface`, and `ui-skeleton` are presentation classes built on that layer. They are provisional shared patterns for later dashboard work, not a second theme system.
+
+`src/components/ui.tsx` adds `SectionHeading` and updates `Skeleton` to use the shared skeleton treatment. Existing primitive contracts remain unchanged. New work should use `SectionHeading` for a label/title/action grouping, `ui-action-surface` for a compact protected-workflow link, and the semantic status primitives for all operational state.
+
+### Today hierarchy and states
+
+Today now reads in this order: available cash and tax position; the open decision queue; cash composition; recent ledger context and Weekly Review; then protected workflows. The available-cash briefing uses one restrained navy surface, a single subtle logo-inspired octagonal detail, and teal only as an accent. Attention items become the clear next-action layer without changing their count, destination, or priority. The empty-account, no-attention, no-review, warning, success, locked, loading, focus, hover, pressed, and disabled presentations are all explicit. The app-level error state remains a client error boundary and now uses textual, destructive styling without implying any financial record changed.
+
+### Responsive and motion rules
+
+Today becomes a balanced two-column briefing at 980px, preserves a focused single-column order below that width, and uses the existing safe-area-aware mobile navigation. The desktop selected navigation state now stays in the navy rail instead of switching to an unrelated white card; compact navigation gets the same selected elevation. Motion remains CSS-only, limited to color, shadow, opacity, and small transforms, and all nonessential motion is removed by the existing reduced-motion media query.
+
+### Validation limitation
+
+The local rendering attempt on `/demo/today` was blocked before and after implementation by a missing local database table: `public.StatementActivity`. This is a migration/environment mismatch in the configured local database, not a presentation change. No migration, schema, fixture, authentication, or data-flow change was made to bypass it. Therefore matched responsive screenshots and browser performance traces could not be truthfully produced from this workspace until that local database is brought to its existing migration level.
