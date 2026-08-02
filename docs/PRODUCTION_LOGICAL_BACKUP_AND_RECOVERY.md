@@ -6,9 +6,9 @@ Capture Tracker production remains on Neon Free. The available provider history 
 
 Run the backup only from native Linux/WSL. Provide the direct, unpooled TLS production connection only to that process through `CAPTURE_TRACKER_PRODUCTION_DIRECT_DATABASE_URL`; never put it in a Windows environment file, repository file, command argument, archive name, or log.
 
-`tsx scripts/backup-production-logical.ts` uses `pg_dump -Fc --no-owner --no-privileges`, holds the unencrypted archive only in `/dev/shm`, encrypts it with AES-256-GCM using a scrypt-derived key, writes a 0600 encrypted archive and sanitized JSON manifest to the explicitly approved private destination, calculates SHA-256, and removes the unencrypted archive in all cases. It records timestamp, database name, source commit, PostgreSQL version, encrypted archive size, checksum, and applied migration count. The passphrase is process-only input and must be handled by the approved secret owner.
+`tsx scripts/backup-production-logical.ts` uses `pg_dump -Fc --no-owner --no-privileges`, holds every local artifact only in `/dev/shm`, encrypts with AES-256-GCM using a scrypt-derived key, calculates SHA-256, uploads only the encrypted archive and a sanitized JSON manifest to `capture-tracker-production-backups`, downloads each object once to verify its checksum, and removes all temporary files in all cases. It records timestamp, database name, source commit, PostgreSQL version, encrypted archive size, checksum, and applied migration count. The passphrase is process-only input and must be handled by the approved secret owner.
 
-The current document bucket is not a backup destination: it has no separately approved backup access-control or retention policy. Before a production backup can be persisted, the owner must identify an approved private, non-document destination (or explicitly authorize creation of a separate private backup bucket). This procedure intentionally refuses an unapproved or Windows-mounted destination.
+The authorized backup bucket is private, not bound to the application Worker, has no public development URL, and uses lifecycle expiration only for `production/daily/` (30 days), `production/pre-acceptance/` (30 days), and `production/restore-verification/` (7 days). The document bucket is never a backup destination.
 
 ## Restore verification
 

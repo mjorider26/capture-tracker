@@ -29,8 +29,14 @@ export function decryptBackupArchive(encrypted: Buffer, passphrase: string) {
   return Buffer.concat([decipher.update(encrypted.subarray(header)), decipher.final()]);
 }
 
-export function assertPrivateLinuxBackupDestination(value: string | undefined) {
+export const backupPrefixes = {
+  daily: "production/daily/",
+  "pre-acceptance": "production/pre-acceptance/",
+  "restore-verification": "production/restore-verification/",
+} as const;
+
+export function assertBackupPrefix(value: string | undefined) {
   if (process.platform !== "linux") throw new Error("NATIVE_LINUX_REQUIRED");
-  if (!value || !value.startsWith("/") || value === "/" || value.startsWith("/mnt/")) throw new Error("BACKUP_DESTINATION_REFUSED");
-  return value;
+  if (value !== "daily" && value !== "pre-acceptance" && value !== "restore-verification") throw new Error("BACKUP_PREFIX_REFUSED");
+  return backupPrefixes[value];
 }

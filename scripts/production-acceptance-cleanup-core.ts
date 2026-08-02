@@ -6,6 +6,7 @@ export const productionAcceptance = {
   authorization: "CAPTURE_TRACKER_RESERVED_FICTIONAL_ACCEPTANCE_CLEANUP",
   database: "capture_tracker_production",
   bucket: "capture-tracker-production-documents",
+  backupBucket: "capture-tracker-production-backups",
 } as const;
 
 export type CleanupEnvironment = Record<string, string | undefined>;
