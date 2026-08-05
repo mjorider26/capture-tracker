@@ -39,6 +39,13 @@
   --focus-ring: 0 0 0 3px rgb(72 217 193 / 0.24);
   --disabled: #687d8c;
   --disabled-surface: #15283a;
+  --glass-primary: rgba(7, 22, 34, 0.68);
+  --glass-secondary: rgba(12, 36, 52, 0.56);
+  --glass-inset: rgba(5, 17, 28, 0.48);
+  --glass-edge: rgba(140, 230, 225, 0.18);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-blur-desktop: blur(22px) saturate(128%);
+  --glass-blur-mobile: blur(14px) saturate(118%);
   --duration-ui: 180ms;
   --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
   --background: var(--page);
@@ -1980,4 +1987,170 @@ textarea {
   .ask-ai-thread,
   .ask-ai-prompt,
   .review-queue a::before { transition: none; }
+}
+
+/* Smoked glass correction: the workspace environment stays visible through
+   intentional alpha surfaces instead of being covered by opaque route cards. */
+.app-shell {
+  background:
+    radial-gradient(circle at 82% 6%, rgba(47, 211, 186, 0.2), transparent 28rem),
+    radial-gradient(circle at 7% 76%, rgba(69, 155, 225, 0.17), transparent 30rem),
+    radial-gradient(circle at 64% 94%, rgba(133, 100, 224, 0.08), transparent 22rem),
+    linear-gradient(rgba(135, 226, 238, 0.042) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(135, 226, 238, 0.042) 1px, transparent 1px),
+    linear-gradient(135deg, #030a13, #061827 48%, #04101e) !important;
+  background-size: auto, auto, auto, 4.5rem 4.5rem, 4.5rem 4.5rem, auto !important;
+}
+
+.app-shell > aside {
+  border-right-color: var(--glass-edge) !important;
+  background: linear-gradient(180deg, rgba(6, 23, 39, 0.76), rgba(3, 13, 25, 0.68)) !important;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.035), 16px 0 48px rgba(0, 7, 18, 0.18);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.app-shell > main > div:first-child {
+  border-bottom-color: var(--glass-edge) !important;
+  background: linear-gradient(110deg, rgba(7, 22, 34, 0.66), rgba(9, 31, 44, 0.54)) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 8px 28px rgba(0, 9, 22, 0.12);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.ui-page-header {
+  border: 1px solid rgba(140, 230, 225, 0.13);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, rgba(7, 22, 34, 0.5), rgba(16, 54, 67, 0.33));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  padding: 1.1rem 1.25rem 1.25rem;
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.ui-card,
+.ui-panel,
+.workspace-summary,
+.metric-card,
+.ask-ai-stage,
+.review-command-stage,
+.document-safeguards,
+.reconciliation-summary {
+  border-color: var(--glass-edge) !important;
+  background:
+    linear-gradient(145deg, rgba(13, 45, 59, 0.58), var(--glass-primary)) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-subtle);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.today-briefing,
+.today-workspace {
+  border: 1px solid rgba(140, 230, 225, 0.1);
+  background:
+    radial-gradient(circle at 84% 16%, rgba(42, 209, 183, 0.18), transparent 23rem),
+    radial-gradient(circle at 12% 92%, rgba(65, 145, 218, 0.15), transparent 25rem),
+    linear-gradient(135deg, rgba(4, 15, 26, 0.24), rgba(5, 22, 34, 0.16));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 26px 54px rgba(0, 8, 20, 0.18);
+}
+
+.today-cash-stage,
+.today-planning-rail,
+.today-allocation {
+  border-color: rgba(140, 230, 225, 0.2) !important;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(45, 219, 192, 0.24), transparent 20rem),
+    radial-gradient(circle at 12% 100%, rgba(73, 159, 231, 0.14), transparent 18rem),
+    linear-gradient(145deg, rgba(15, 56, 71, 0.62), var(--glass-primary)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(169, 242, 238, 0.035),
+    0 20px 38px rgba(0, 10, 24, 0.2);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.today-planning-metric,
+.today-ribbon-metric,
+.today-ribbon-metric:first-child,
+.ui-metric-tile,
+.today-activity-ribbon {
+  border-color: rgba(140, 230, 225, 0.14) !important;
+  background: linear-gradient(135deg, rgba(39, 103, 119, 0.3), var(--glass-inset)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  -webkit-backdrop-filter: blur(18px) saturate(122%);
+  backdrop-filter: blur(18px) saturate(122%);
+}
+
+.today-priority-zone,
+.today-review-callout {
+  border-color: rgba(140, 230, 225, 0.17) !important;
+  background:
+    radial-gradient(circle at 92% 5%, rgba(55, 203, 186, 0.15), transparent 18rem),
+    linear-gradient(145deg, rgba(15, 51, 64, 0.58), rgba(5, 17, 28, 0.52)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075), 0 18px 36px rgba(0, 9, 20, 0.16);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.app-business-identity,
+.app-shell-nav-link.is-active {
+  border-color: rgba(140, 230, 225, 0.2) !important;
+  background: linear-gradient(120deg, rgba(39, 143, 151, 0.34), rgba(8, 31, 47, 0.46)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 9px 18px rgba(0, 10, 24, 0.12);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+.mobile-shell-nav {
+  border-top-color: rgba(140, 230, 225, 0.2) !important;
+  background: linear-gradient(105deg, rgba(5, 18, 30, 0.7), rgba(10, 41, 53, 0.58)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 -10px 32px rgba(0, 7, 18, 0.22) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(122%);
+  backdrop-filter: blur(16px) saturate(122%);
+}
+
+.mobile-nav-drawer {
+  background: linear-gradient(180deg, rgba(7, 28, 45, 0.82), rgba(3, 14, 26, 0.76)) !important;
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .app-shell > aside,
+  .app-shell > main > div:first-child,
+  .ui-card,
+  .ui-panel,
+  .today-cash-stage,
+  .today-planning-rail,
+  .today-allocation,
+  .today-priority-zone,
+  .today-review-callout,
+  .mobile-shell-nav,
+  .mobile-nav-drawer {
+    background: #0a2438 !important;
+  }
+}
+
+@media (max-width: 679px) {
+  .app-shell > main > div:first-child,
+  .ui-page-header,
+  .ui-card,
+  .ui-panel,
+  .today-cash-stage,
+  .today-planning-rail,
+  .today-allocation,
+  .today-priority-zone,
+  .today-review-callout,
+  .mobile-nav-drawer {
+    -webkit-backdrop-filter: var(--glass-blur-mobile);
+    backdrop-filter: var(--glass-blur-mobile);
+  }
+
+  .today-briefing,
+  .today-workspace {
+    background:
+      radial-gradient(circle at 88% 8%, rgba(42, 209, 183, 0.14), transparent 17rem),
+      linear-gradient(135deg, rgba(4, 15, 26, 0.18), rgba(5, 22, 34, 0.12));
+  }
 }
