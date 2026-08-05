@@ -40,7 +40,7 @@ export function MoneyExperience({
 
       <section
         aria-label="Money review summary"
-        className="ui-panel overflow-hidden bg-brand-navy text-white"
+        className="workspace-summary ui-panel overflow-hidden text-white"
       >
         <div className="grid divide-y divide-white/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
           <Summary
@@ -67,7 +67,7 @@ export function MoneyExperience({
         </div>
       </section>
 
-      <form className="ui-card p-4 sm:p-5" method="get">
+      <form className="workspace-filter ui-card p-4 sm:p-5" method="get">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-sm font-bold text-text-primary">Find transactions</p>
@@ -116,7 +116,7 @@ export function MoneyExperience({
         </div>
       </form>
 
-      <section className="ui-card overflow-hidden">
+      <section className="data-table-shell ui-card overflow-hidden">
         <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 sm:px-6">
           <div>
             <h2 className="font-bold text-text-primary">Transactions</h2>

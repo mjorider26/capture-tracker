@@ -59,12 +59,12 @@ export function DocumentsExperience({
         <Metric label="Document records" value={documents.length} detail="Private business-scoped records" />
       </section>
 
-      {attentionItems.length > 0 && <section className="ui-panel border border-[var(--warning)]/25 p-5 sm:p-6" aria-labelledby="document-attention-heading">
+      {attentionItems.length > 0 && <section className="attention-panel ui-panel border border-[var(--warning)]/25 p-5 sm:p-6" aria-labelledby="document-attention-heading">
         <div className="flex flex-wrap items-baseline justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--warning)]">Attention queue</p><h2 id="document-attention-heading" className="mt-1 text-lg font-bold">Documents needing a deliberate next step</h2></div><span className="text-xs text-text-muted">Showing {attentionItems.length} highest-priority items</span></div>
         <ul className="mt-4 divide-y divide-border-subtle">{attentionItems.map(({ document, reason }, index) => <li key={`${document.id}-${reason}-${index}`} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0"><div><Link className="font-bold text-brand-navy underline decoration-brand-teal underline-offset-4" href={`${basePath}/documents/${document.id}`}>{document.displayName}</Link><p className="mt-1 text-sm text-text-muted">{reason}</p></div><span className="ui-status-badge bg-[var(--warning-soft)] text-[var(--warning)]">Action needed</span></li>)}</ul>
       </section>}
 
-      <section className="ui-card overflow-hidden">
+      <section className="data-table-shell ui-card overflow-hidden">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 sm:px-6">
           <div>
             <h2 className="font-bold text-text-primary">Document pipeline</h2>
@@ -101,7 +101,7 @@ export function DocumentsExperience({
 }
 
 function Metric({ label, value, detail, emphasis = false }: { label: string; value: number; detail: string; emphasis?: boolean }) {
-  return <section className={`ui-card min-h-32 p-5 ${emphasis ? "border-[var(--warning)]" : ""}`}><p className="text-sm font-bold text-text-muted">{label}</p><p className="money-value mt-3 text-3xl font-bold tracking-[-0.04em] text-brand-navy">{value}</p><p className="mt-2 text-xs leading-5 text-[var(--text-subtle)]">{detail}</p></section>;
+  return <section className={`metric-card ui-card min-h-32 p-5 ${emphasis ? "border-[var(--warning)]" : ""}`}><p className="text-sm font-bold text-text-muted">{label}</p><p className="money-value mt-3 text-3xl font-bold tracking-[-0.04em] text-brand-navy">{value}</p><p className="mt-2 text-xs leading-5 text-[var(--text-subtle)]">{detail}</p></section>;
 }
 
 function DocumentTableRow({ document, basePath }: { document: DocumentRow; basePath: "/app" | "/demo" }) {

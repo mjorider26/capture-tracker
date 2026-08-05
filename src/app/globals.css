@@ -1,45 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --brand-navy: #082b4d;
-  --brand-navy-strong: #061f38;
-  --brand-teal: #078c87;
-  --brand-teal-strong: #056d69;
-  --brand-teal-soft: #e5f6f3;
+  --brand-navy: #092846;
+  --brand-navy-strong: #061a30;
+  --brand-teal: #24c5aa;
+  --brand-teal-strong: #8ff0dc;
+  --brand-teal-soft: #123f42;
   --teal-gradient-light: #20c9a8;
   --teal-gradient-dark: #078b91;
-  --page: #f5f7f5;
-  --surface: #ffffff;
-  --surface-secondary: #f0f5f4;
-  --surface-tertiary: #e7efee;
-  --surface-raised: #ffffff;
-  --surface-tint: #f2faf8;
-  --text: #10233f;
-  --text-muted: #53667a;
-  --text-subtle: #718198;
-  --border: #d9e2e6;
-  --border-strong: #b6c6ce;
-  --focus: #078c87;
-  --info: #245fae;
-  --info-soft: #eaf1fb;
-  --success: #08765f;
-  --success-soft: #e3f5ee;
-  --warning: #9a5c00;
-  --warning-soft: #fff3dd;
-  --danger: #c2414b;
-  --locked: #5b6472;
-  --locked-soft: #eef0f3;
+  --page: #061321;
+  --surface: #0c2035;
+  --surface-secondary: #102a43;
+  --surface-tertiary: #173750;
+  --surface-raised: #132d48;
+  --surface-tint: #0b3047;
+  --text: #edf7fa;
+  --text-muted: #a9becc;
+  --text-subtle: #7d98aa;
+  --border: #25465e;
+  --border-strong: #3c657b;
+  --focus: #48d9c1;
+  --info: #87c8ff;
+  --info-soft: #123a5c;
+  --success: #76e0b7;
+  --success-soft: #103f3e;
+  --warning: #ffd079;
+  --warning-soft: #493918;
+  --danger: #ff9ca6;
+  --locked: #bccbd6;
+  --locked-soft: #293848;
   --radius-sm: 0.625rem;
   --radius-md: 0.875rem;
   --radius-lg: 1.125rem;
   --radius-xl: 1.5rem;
-  --shadow-subtle:
-    0 1px 2px rgb(8 43 77 / 0.04), 0 5px 18px rgb(8 43 77 / 0.035);
-  --shadow-elevated: 0 20px 52px rgb(8 43 77 / 0.15);
-  --shadow-float: 0 10px 26px rgb(8 43 77 / 0.1);
-  --focus-ring: 0 0 0 3px rgb(7 140 135 / 0.2);
-  --disabled: #a4b1bd;
-  --disabled-surface: #edf1f3;
+  --shadow-subtle: 0 14px 32px rgb(0 6 17 / 0.2);
+  --shadow-elevated: 0 26px 70px rgb(0 5 16 / 0.42);
+  --shadow-float: 0 14px 34px rgb(0 5 16 / 0.3);
+  --focus-ring: 0 0 0 3px rgb(72 217 193 / 0.24);
+  --disabled: #687d8c;
+  --disabled-surface: #15283a;
+  --glass-primary: rgba(7, 22, 34, 0.68);
+  --glass-secondary: rgba(12, 36, 52, 0.56);
+  --glass-inset: rgba(5, 17, 28, 0.48);
+  --glass-edge: rgba(140, 230, 225, 0.18);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-blur-desktop: blur(22px) saturate(128%);
+  --glass-blur-mobile: blur(14px) saturate(118%);
   --duration-ui: 180ms;
   --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
   --background: var(--page);
@@ -67,9 +73,13 @@
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 82% -8%, rgb(35 192 176 / 0.18), transparent 30rem),
+    radial-gradient(circle at 2% 65%, rgb(43 116 181 / 0.16), transparent 34rem),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
 ::selection {
@@ -99,16 +109,21 @@ textarea {
 }
 
 .ui-card {
-  border: 1px solid var(--border);
+  border: 1px solid rgb(166 221 235 / 0.14);
   border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-subtle);
+  background: linear-gradient(135deg, rgb(21 51 75 / 0.8), rgb(8 27 46 / 0.72));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), var(--shadow-subtle);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(120%);
 }
 
 .ui-panel {
   border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow: var(--shadow-subtle);
+  border: 1px solid rgb(166 221 235 / 0.12);
+  background: linear-gradient(135deg, rgb(20 50 74 / 0.78), rgb(7 25 43 / 0.68));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--shadow-subtle);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
 }
 
 .today-briefing {
@@ -1514,5 +1529,628 @@ textarea {
 
   .ui-skeleton {
     background: var(--surface-tertiary);
+  }
+}
+
+/* Application-wide premium workspace treatment. These rules intentionally sit
+   after legacy route styles so the shared system remains the single source of
+   visual hierarchy across every authenticated surface. */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(rgb(142 214 231 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(142 214 231 / 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 87% 8%, rgb(37 205 180 / 0.16), transparent 28rem),
+    radial-gradient(circle at 7% 84%, rgb(50 127 196 / 0.16), transparent 32rem),
+    var(--page);
+  background-size: 4.5rem 4.5rem, 4.5rem 4.5rem, auto, auto, auto;
+}
+
+.app-shell::before,
+.app-shell::after {
+  position: fixed;
+  z-index: -1;
+  width: 30rem;
+  height: 30rem;
+  border: 1px solid rgb(123 218 222 / 0.08);
+  content: "";
+  pointer-events: none;
+}
+
+.app-shell::before {
+  top: 13rem;
+  right: -16rem;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  box-shadow: inset 0 0 0 3rem rgb(46 154 192 / 0.025);
+}
+
+.app-shell::after {
+  bottom: -21rem;
+  left: 16rem;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4rem rgb(36 196 169 / 0.025);
+}
+
+.app-shell > aside {
+  border-right-color: rgb(155 224 239 / 0.12) !important;
+  background:
+    linear-gradient(180deg, rgb(7 27 48 / 0.95), rgb(4 17 31 / 0.92)) !important;
+  box-shadow: 16px 0 48px rgb(0 7 18 / 0.2);
+}
+
+.app-shell > main > div:first-child {
+  border-bottom-color: rgb(154 219 234 / 0.12) !important;
+  background: rgb(6 19 33 / 0.7) !important;
+  box-shadow: 0 8px 28px rgb(0 9 22 / 0.12);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  backdrop-filter: blur(20px) saturate(135%);
+}
+
+.app-shell .text-brand-navy {
+  color: var(--text) !important;
+}
+
+.app-shell .bg-brand-navy {
+  background:
+    linear-gradient(135deg, #0b3d66, #072542) !important;
+}
+
+.app-shell .hover\:bg-\[var\(--brand-navy-strong\)\]:hover {
+  background: #061a30 !important;
+}
+
+.app-shell .bg-surface-secondary,
+.app-shell .bg-surface-tertiary {
+  background-color: rgb(21 52 75 / 0.72) !important;
+}
+
+.app-shell .border-border-subtle {
+  border-color: rgb(154 219 234 / 0.13) !important;
+}
+
+.app-shell .divide-border-subtle > :not(:last-child),
+.app-shell .divide-y > :not(:last-child) {
+  border-color: rgb(154 219 234 / 0.12) !important;
+}
+
+.app-shell .hover\:bg-surface-secondary\/60:hover,
+.app-shell .hover\:bg-surface-secondary:hover {
+  background-color: rgb(41 91 119 / 0.38) !important;
+}
+
+.ui-card,
+.ui-panel {
+  position: relative;
+}
+
+.ui-card::before,
+.ui-panel::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.05), transparent 30%);
+  content: "";
+  pointer-events: none;
+}
+
+.ui-card > *,
+.ui-panel > * {
+  position: relative;
+}
+
+.ui-page-header {
+  position: relative;
+  margin-bottom: 2.25rem;
+  padding: 0.35rem 0 1.35rem;
+}
+
+.ui-page-header::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(65 221 195 / 0.58), rgb(123 200 231 / 0.14), transparent 72%);
+  content: "";
+}
+
+.ui-page-eyebrow {
+  color: #7de4d3;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.ui-page-title {
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.ui-page-description {
+  color: var(--text-muted);
+}
+
+.ui-status-badge {
+  border: 1px solid rgb(176 231 239 / 0.14);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.ui-input {
+  border-color: rgb(137 205 221 / 0.24);
+  background: rgb(4 22 38 / 0.56);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+}
+
+.ui-input::placeholder {
+  color: var(--text-subtle);
+}
+
+.ui-input:hover {
+  border-color: rgb(137 214 218 / 0.42);
+}
+
+.ui-input:focus {
+  background: rgb(4 25 42 / 0.82);
+  box-shadow: var(--focus-ring), inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.ui-link {
+  color: #7de4d3;
+  text-decoration-color: rgb(125 228 211 / 0.4);
+  text-underline-offset: 0.24em;
+}
+
+.ui-link:hover {
+  color: #d7fff8;
+}
+
+.ui-section-mark::before {
+  box-shadow: 0 0 1rem rgb(36 197 170 / 0.36);
+}
+
+.ui-skeleton {
+  background: linear-gradient(110deg, rgb(20 50 73 / 0.58) 8%, rgb(48 93 119 / 0.72) 18%, rgb(20 50 73 / 0.58) 33%);
+  background-size: 200% 100%;
+}
+
+.ui-action-surface {
+  border-color: rgb(162 222 234 / 0.1);
+  background: rgb(20 52 75 / 0.5);
+}
+
+.ui-action-surface:hover {
+  border-color: rgb(72 217 193 / 0.4);
+  background: rgb(24 73 89 / 0.58);
+}
+
+.ui-metric-tile {
+  border-color: rgb(202 246 248 / 0.12);
+  background: rgb(255 255 255 / 0.045);
+}
+
+.auth-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(rgb(140 217 232 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(140 217 232 / 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 78% 13%, rgb(45 204 182 / 0.24), transparent 26rem),
+    radial-gradient(circle at 12% 91%, rgb(50 125 193 / 0.19), transparent 30rem),
+    var(--page);
+  background-size: 4.5rem 4.5rem, 4.5rem 4.5rem, auto, auto, auto;
+}
+
+.auth-stage::before {
+  position: absolute;
+  top: -15rem;
+  right: -10rem;
+  z-index: -1;
+  width: 36rem;
+  height: 36rem;
+  border: 1px solid rgb(147 223 236 / 0.1);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4rem rgb(43 180 197 / 0.04), inset 0 0 0 9rem rgb(43 180 197 / 0.025);
+  content: "";
+}
+
+.auth-card {
+  border-color: rgb(179 235 244 / 0.17);
+  background: linear-gradient(145deg, rgb(16 48 72 / 0.88), rgb(6 25 43 / 0.78));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 28px 80px rgb(0 5 16 / 0.42);
+}
+
+.auth-stage .text-brand-navy {
+  color: var(--text) !important;
+}
+
+.auth-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #8be7d8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.auth-kicker::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--brand-teal);
+  box-shadow: 0 0 1rem rgb(36 197 170 / 0.65);
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  content: "";
+}
+
+.auth-note {
+  border: 1px solid rgb(123 210 208 / 0.15);
+  background: rgb(19 63 74 / 0.48);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.workspace-summary {
+  overflow: hidden;
+  border: 1px solid rgb(183 235 243 / 0.17);
+  background:
+    radial-gradient(circle at 88% 0, rgb(53 215 191 / 0.24), transparent 22rem),
+    linear-gradient(125deg, rgb(10 50 82 / 0.92), rgb(6 27 49 / 0.88));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--shadow-elevated);
+}
+
+.data-table-shell {
+  overflow: hidden;
+  border-color: rgb(161 222 236 / 0.14);
+}
+
+.data-table-shell thead {
+  background: rgb(24 59 83 / 0.64) !important;
+}
+
+.data-table-shell tbody tr {
+  transition: background-color var(--duration-ui) var(--ease-ui);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .ui-card,
+  .ui-panel,
+  .auth-card {
+    background: #0d263f;
+  }
+
+  .app-shell > main > div:first-child {
+    background: #061321 !important;
+  }
+}
+
+@media (max-width: 679px) {
+  .app-shell {
+    background-size: 6rem 6rem, 6rem 6rem, auto, auto, auto;
+  }
+
+  .ui-card,
+  .ui-panel {
+    -webkit-backdrop-filter: blur(12px) saturate(112%);
+    backdrop-filter: blur(12px) saturate(112%);
+  }
+
+  .ui-page-header {
+    margin-bottom: 1.6rem;
+  }
+}
+
+.ui-button {
+  text-decoration: none;
+  transition: transform var(--duration-ui) var(--ease-ui), box-shadow var(--duration-ui) var(--ease-ui), background-color var(--duration-ui) var(--ease-ui), border-color var(--duration-ui) var(--ease-ui);
+}
+
+.ui-button:hover { transform: translateY(-1px); }
+.ui-button:active { transform: translateY(0); }
+.ui-button-primary { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 10px 24px rgb(0 8 22 / 0.24); }
+.ui-button-secondary { background: rgb(18 50 73 / 0.72); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06); }
+.ui-button-quiet { color: #83e8d7; }
+
+.workspace-filter {
+  border: 1px solid rgb(168 228 237 / 0.12);
+  background: rgb(10 34 53 / 0.46);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.metric-card {
+  background: linear-gradient(145deg, rgb(20 53 76 / 0.84), rgb(8 28 47 / 0.72));
+}
+
+.metric-card .money-value {
+  color: #f0ffff;
+}
+
+.attention-panel {
+  background: linear-gradient(135deg, rgb(79 56 19 / 0.5), rgb(35 39 41 / 0.66));
+}
+
+.report-tabs a {
+  border: 1px solid rgb(159 221 232 / 0.12);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  transition: transform var(--duration-ui) var(--ease-ui), background-color var(--duration-ui) var(--ease-ui);
+}
+
+.report-tabs a:hover { transform: translateY(-1px); }
+
+.ask-ai-sidebar { align-self: start; }
+.ask-ai-thread { color: var(--text-muted); transition: background-color var(--duration-ui) var(--ease-ui), color var(--duration-ui) var(--ease-ui); }
+.ask-ai-thread:hover { background: rgb(31 82 101 / 0.48); color: var(--text); }
+.ask-ai-thread.is-active { background: linear-gradient(135deg, rgb(34 117 118 / 0.7), rgb(23 66 88 / 0.8)); color: #edfffb; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.11); }
+.ask-ai-stage { background: linear-gradient(145deg, rgb(15 45 68 / 0.88), rgb(7 27 46 / 0.78)); }
+.ask-ai-composer { border: 1px solid rgb(108 211 204 / 0.2); background: rgb(12 50 63 / 0.44); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06); }
+.ask-ai-prompt { border: 1px solid rgb(143 220 225 / 0.16); background: rgb(18 56 74 / 0.58); color: var(--text-muted); transition: border-color var(--duration-ui) var(--ease-ui), color var(--duration-ui) var(--ease-ui); }
+.ask-ai-prompt:hover { border-color: rgb(81 225 198 / 0.45); color: #d8fff7; }
+.ask-ai-message { border: 1px solid rgb(160 224 235 / 0.12); border-radius: var(--radius-md); padding: 1rem; }
+.ask-ai-message.is-user { margin-left: auto; max-width: min(42rem, 94%); background: rgb(25 67 84 / 0.68); }
+.ask-ai-message.is-assistant { max-width: min(48rem, 97%); background: rgb(8 30 49 / 0.52); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04); }
+.ask-ai-evidence { display: inline-flex; min-height: 1.85rem; align-items: center; border: 1px solid rgb(111 218 207 / 0.22); border-radius: 999px; background: rgb(14 61 69 / 0.44); padding: 0 0.65rem; color: #8ce9d9; font-size: 0.72rem; font-weight: 700; text-decoration: none; }
+
+.review-command-stage { border-color: rgb(102 224 203 / 0.24); background: radial-gradient(circle at 87% 2%, rgb(42 211 183 / 0.2), transparent 18rem), linear-gradient(135deg, rgb(10 50 77 / 0.9), rgb(7 27 47 / 0.78)); }
+.review-queue > div:first-child { background: rgb(21 60 80 / 0.58); }
+.review-queue a { position: relative; }
+.review-queue a::before { position: absolute; top: 1.1rem; bottom: 1.1rem; left: 0; width: 0.2rem; background: transparent; content: ""; transition: background-color var(--duration-ui) var(--ease-ui); }
+.review-queue a:hover::before { background: var(--brand-teal); }
+.review-empty { background: linear-gradient(135deg, rgb(15 67 67 / 0.62), rgb(10 31 49 / 0.7)); }
+
+.mobile-shell-nav {
+  border-top-color: rgb(153 223 235 / 0.18) !important;
+  background: rgb(6 22 37 / 0.82) !important;
+  box-shadow: 0 -10px 32px rgb(0 7 18 / 0.28) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  backdrop-filter: blur(20px) saturate(135%);
+}
+
+.mobile-nav-drawer {
+  border-left: 1px solid rgb(155 224 239 / 0.15);
+  background: linear-gradient(180deg, #0b2842, #06172a) !important;
+}
+
+.document-safeguards {
+  background:
+    radial-gradient(circle at 94% 4%, rgb(58 203 184 / 0.14), transparent 20rem),
+    linear-gradient(145deg, rgb(16 48 72 / 0.88), rgb(6 25 43 / 0.72));
+}
+
+.document-history ol {
+  position: relative;
+}
+
+.document-history li {
+  border-left-color: rgb(59 211 190 / 0.65);
+}
+
+.ui-alert {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.ui-empty-state {
+  background: linear-gradient(135deg, rgb(17 52 73 / 0.42), rgb(7 24 41 / 0.34));
+}
+
+.ui-icon-button {
+  display: inline-grid;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
+  border: 1px solid rgb(160 224 235 / 0.16);
+  border-radius: var(--radius-sm);
+  background: rgb(19 56 77 / 0.64);
+  color: var(--text);
+}
+
+.ui-icon-button:hover {
+  border-color: rgb(92 227 204 / 0.46);
+  background: rgb(30 83 96 / 0.72);
+}
+
+.reconciliation-summary {
+  background:
+    radial-gradient(circle at 90% 0, rgb(56 201 185 / 0.16), transparent 20rem),
+    linear-gradient(135deg, rgb(13 50 76 / 0.9), rgb(7 26 45 / 0.78));
+}
+
+.reconciliation-difference .money-value {
+  color: #b9fff0;
+}
+
+.reconciliation-candidate {
+  transition: background-color var(--duration-ui) var(--ease-ui);
+}
+
+.reconciliation-candidate:hover {
+  background: rgb(32 79 101 / 0.36);
+}
+
+.reconciliation-match-candidate {
+  border: 1px solid rgb(129 217 221 / 0.14);
+  border-radius: var(--radius-md);
+  background: rgb(15 48 69 / 0.54);
+  padding: 0.9rem;
+}
+
+.reconciliation-finalize {
+  border-left: 2px solid rgb(77 221 194 / 0.8);
+  padding-left: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button,
+  .report-tabs a,
+  .ask-ai-thread,
+  .ask-ai-prompt,
+  .review-queue a::before { transition: none; }
+}
+
+/* Smoked glass correction: the workspace environment stays visible through
+   intentional alpha surfaces instead of being covered by opaque route cards. */
+.app-shell {
+  background:
+    radial-gradient(circle at 82% 6%, rgba(47, 211, 186, 0.2), transparent 28rem),
+    radial-gradient(circle at 7% 76%, rgba(69, 155, 225, 0.17), transparent 30rem),
+    radial-gradient(circle at 64% 94%, rgba(133, 100, 224, 0.08), transparent 22rem),
+    linear-gradient(rgba(135, 226, 238, 0.042) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(135, 226, 238, 0.042) 1px, transparent 1px),
+    linear-gradient(135deg, #030a13, #061827 48%, #04101e) !important;
+  background-size: auto, auto, auto, 4.5rem 4.5rem, 4.5rem 4.5rem, auto !important;
+}
+
+.app-shell > aside {
+  border-right-color: var(--glass-edge) !important;
+  background: linear-gradient(180deg, rgba(6, 23, 39, 0.76), rgba(3, 13, 25, 0.68)) !important;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.035), 16px 0 48px rgba(0, 7, 18, 0.18);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.app-shell > main > div:first-child {
+  border-bottom-color: var(--glass-edge) !important;
+  background: linear-gradient(110deg, rgba(7, 22, 34, 0.66), rgba(9, 31, 44, 0.54)) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 8px 28px rgba(0, 9, 22, 0.12);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.ui-page-header {
+  border: 1px solid rgba(140, 230, 225, 0.13);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, rgba(7, 22, 34, 0.5), rgba(16, 54, 67, 0.33));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  padding: 1.1rem 1.25rem 1.25rem;
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.ui-card,
+.ui-panel,
+.workspace-summary,
+.metric-card,
+.ask-ai-stage,
+.review-command-stage,
+.document-safeguards,
+.reconciliation-summary {
+  border-color: var(--glass-edge) !important;
+  background:
+    linear-gradient(145deg, rgba(13, 45, 59, 0.58), var(--glass-primary)) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-subtle);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.today-briefing,
+.today-workspace {
+  border: 1px solid rgba(140, 230, 225, 0.1);
+  background:
+    radial-gradient(circle at 84% 16%, rgba(42, 209, 183, 0.18), transparent 23rem),
+    radial-gradient(circle at 12% 92%, rgba(65, 145, 218, 0.15), transparent 25rem),
+    linear-gradient(135deg, rgba(4, 15, 26, 0.24), rgba(5, 22, 34, 0.16));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 26px 54px rgba(0, 8, 20, 0.18);
+}
+
+.today-cash-stage,
+.today-planning-rail,
+.today-allocation {
+  border-color: rgba(140, 230, 225, 0.2) !important;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(45, 219, 192, 0.24), transparent 20rem),
+    radial-gradient(circle at 12% 100%, rgba(73, 159, 231, 0.14), transparent 18rem),
+    linear-gradient(145deg, rgba(15, 56, 71, 0.62), var(--glass-primary)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(169, 242, 238, 0.035),
+    0 20px 38px rgba(0, 10, 24, 0.2);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.today-planning-metric,
+.today-ribbon-metric,
+.today-ribbon-metric:first-child,
+.ui-metric-tile,
+.today-activity-ribbon {
+  border-color: rgba(140, 230, 225, 0.14) !important;
+  background: linear-gradient(135deg, rgba(39, 103, 119, 0.3), var(--glass-inset)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  -webkit-backdrop-filter: blur(18px) saturate(122%);
+  backdrop-filter: blur(18px) saturate(122%);
+}
+
+.today-priority-zone,
+.today-review-callout {
+  border-color: rgba(140, 230, 225, 0.17) !important;
+  background:
+    radial-gradient(circle at 92% 5%, rgba(55, 203, 186, 0.15), transparent 18rem),
+    linear-gradient(145deg, rgba(15, 51, 64, 0.58), rgba(5, 17, 28, 0.52)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075), 0 18px 36px rgba(0, 9, 20, 0.16);
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+.app-business-identity,
+.app-shell-nav-link.is-active {
+  border-color: rgba(140, 230, 225, 0.2) !important;
+  background: linear-gradient(120deg, rgba(39, 143, 151, 0.34), rgba(8, 31, 47, 0.46)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 9px 18px rgba(0, 10, 24, 0.12);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+.mobile-shell-nav {
+  border-top-color: rgba(140, 230, 225, 0.2) !important;
+  background: linear-gradient(105deg, rgba(5, 18, 30, 0.7), rgba(10, 41, 53, 0.58)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 -10px 32px rgba(0, 7, 18, 0.22) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(122%);
+  backdrop-filter: blur(16px) saturate(122%);
+}
+
+.mobile-nav-drawer {
+  background: linear-gradient(180deg, rgba(7, 28, 45, 0.82), rgba(3, 14, 26, 0.76)) !important;
+  -webkit-backdrop-filter: var(--glass-blur-desktop);
+  backdrop-filter: var(--glass-blur-desktop);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .app-shell > aside,
+  .app-shell > main > div:first-child,
+  .ui-card,
+  .ui-panel,
+  .today-cash-stage,
+  .today-planning-rail,
+  .today-allocation,
+  .today-priority-zone,
+  .today-review-callout,
+  .mobile-shell-nav,
+  .mobile-nav-drawer {
+    background: #0a2438 !important;
+  }
+}
+
+@media (max-width: 679px) {
+  .app-shell > main > div:first-child,
+  .ui-page-header,
+  .ui-card,
+  .ui-panel,
+  .today-cash-stage,
+  .today-planning-rail,
+  .today-allocation,
+  .today-priority-zone,
+  .today-review-callout,
+  .mobile-nav-drawer {
+    -webkit-backdrop-filter: var(--glass-blur-mobile);
+    backdrop-filter: var(--glass-blur-mobile);
+  }
+
+  .today-briefing,
+  .today-workspace {
+    background:
+      radial-gradient(circle at 88% 8%, rgba(42, 209, 183, 0.14), transparent 17rem),
+      linear-gradient(135deg, rgba(4, 15, 26, 0.18), rgba(5, 22, 34, 0.12));
   }
 }

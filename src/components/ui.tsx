@@ -33,15 +33,15 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+    <header className="ui-page-header flex flex-wrap items-start justify-between gap-4">
       <div className="max-w-3xl">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">
+        <p className="ui-page-eyebrow font-bold uppercase">
           {eyebrow}
         </p>
-        <h1 className="mt-1.5 text-3xl font-bold tracking-[-0.045em] text-text-primary sm:text-[2.5rem]">
+        <h1 className="ui-page-title mt-2 text-3xl font-bold tracking-[-0.055em] text-text-primary sm:text-[2.65rem]">
           {title}
         </h1>
-        <p className="mt-2.5 text-sm leading-6 text-text-muted sm:text-base">
+        <p className="ui-page-description mt-3 text-sm leading-6 text-text-muted sm:text-base">
           {description}
         </p>
       </div>
@@ -112,7 +112,7 @@ export function InlineAlert({
   return (
     <section
       role="status"
-      className={`rounded-[var(--radius-md)] border p-4 text-sm ${styles[tone]}`}
+      className={`ui-alert rounded-[var(--radius-md)] border p-4 text-sm ${styles[tone]}`}
     >
       <p className="font-bold">{title}</p>
       <div className="mt-1 leading-6">{children}</div>
@@ -128,7 +128,7 @@ export function EmptyState({
   children: ReactNode;
 }) {
   return (
-    <div className="ui-panel border border-dashed border-border-subtle p-7 text-center">
+    <div className="ui-panel ui-empty-state border border-dashed border-border-subtle p-7 text-center">
       <p className="text-lg font-bold text-text-primary">{title}</p>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-text-muted">
         {children}
@@ -150,10 +150,10 @@ export function ButtonLink({
 }) {
   const styles = {
     primary:
-      "bg-brand-navy text-white shadow-sm hover:bg-[var(--brand-navy-strong)]",
+      "ui-button ui-button-primary bg-brand-navy text-white shadow-sm hover:bg-[var(--brand-navy-strong)]",
     secondary:
-      "border border-border-subtle bg-surface text-text-primary hover:bg-surface-secondary",
-    quiet: "bg-transparent text-brand-teal hover:bg-brand-teal-soft",
+      "ui-button ui-button-secondary border border-border-subtle bg-surface text-text-primary hover:bg-surface-secondary",
+    quiet: "ui-button ui-button-quiet bg-transparent text-brand-teal hover:bg-brand-teal-soft",
   };
   return (
     <Link
