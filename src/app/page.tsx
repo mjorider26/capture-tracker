@@ -3,9 +3,11 @@ import { headers } from "next/headers";
 
 import { BrandLockup } from "@/components/brand";
 import { auth } from "@/lib/auth";
+import { landingOnboardingPresentation } from "@/lib/auth/onboarding-presentation";
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
+  const onboarding = landingOnboardingPresentation();
   return (
     <main className="auth-stage grid min-h-screen place-items-center px-5 py-10 text-text-primary">
       <section className="auth-card ui-card w-full max-w-2xl p-7 sm:p-10">
@@ -22,8 +24,7 @@ export default async function Home() {
             and weekly financial focus in one precise place.
           </p>
           <p className="auth-note mt-7 rounded-[var(--radius-md)] p-4 text-sm leading-6 text-text-muted">
-            This is a fictional staging environment. Do not enter real
-            financial, customer, payroll, tax, or document data.
+            {onboarding.notice}
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
@@ -33,13 +34,15 @@ export default async function Home() {
             >
               Sign in
             </Link>
-            <Link
-              href="/create-account"
-              aria-label="Create a fictional Capture Tracker practice account"
-              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-sm)] border border-border-strong bg-surface-primary px-5 text-sm font-bold text-text-primary transition hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal"
-            >
-              Create practice account
-            </Link>
+            {onboarding.accountCreationAvailable ? (
+              <Link
+                href="/create-account"
+                aria-label={onboarding.accountCreationAriaLabel}
+                className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-sm)] border border-border-strong bg-surface-primary px-5 text-sm font-bold text-text-primary transition hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal"
+              >
+                {onboarding.accountCreationLabel}
+              </Link>
+            ) : null}
             {session ? (
               <Link
                 href="/app"
