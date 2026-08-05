@@ -27,7 +27,7 @@ export default function ApplicationError({
         <button
           type="button"
           onClick={reset}
-          className="mt-5 min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-4 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-navy-strong)] focus-visible:outline-none"
+          className="ui-button ui-button-primary mt-5 min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-4 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-navy-strong)] focus-visible:outline-none"
         >
           Try again
         </button>
