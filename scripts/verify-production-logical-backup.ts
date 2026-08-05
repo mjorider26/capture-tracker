@@ -48,7 +48,7 @@ async function verifyCatalog(url: URL) {
       (SELECT count(*)::int FROM "_prisma_migrations" WHERE finished_at IS NOT NULL) AS migrations,
       (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,
       (SELECT count(*)::int FROM information_schema.routines WHERE routine_schema='public') AS functions,
-      (SELECT count(*)::int FROM information_schema.triggers WHERE trigger_schema='public') AS triggers,
+      (SELECT count(DISTINCT trigger_name)::int FROM information_schema.triggers WHERE trigger_schema='public') AS triggers,
       (SELECT count(*)::int FROM information_schema.table_constraints WHERE constraint_schema='public') AS constraints,
       (SELECT count(*)::int FROM "User") AS users,
       (SELECT count(*)::int FROM "Business") AS businesses,
