@@ -58,6 +58,7 @@ async function verifyCatalog(url: URL) {
       (SELECT count(*)::int FROM "BusinessMember" bm JOIN "Business" b ON b.id=bm."businessId" LEFT JOIN "User" u ON u.id=bm."userId" WHERE b.id IS NULL OR u.id IS NULL) AS orphan_memberships,
       (SELECT coalesce(sum("debitAmount"),0)=coalesce(sum("creditAmount"),0) FROM "JournalLine") AS ledger_balanced`);
     const row = result.rows[0];
+    console.log(`RESTORE CATALOG OBSERVED: migrations=${row?.migrations ?? "unknown"} tables=${row?.tables ?? "unknown"} functions=${row?.functions ?? "unknown"} triggers=${row?.triggers ?? "unknown"} constraints=${row?.constraints ?? "unknown"} users=${row?.users ?? "unknown"} businesses=${row?.businesses ?? "unknown"} transactions=${row?.transactions ?? "unknown"} documents=${row?.documents ?? "unknown"} journal_entries=${row?.journal_entries ?? "unknown"} orphan_memberships=${row?.orphan_memberships ?? "unknown"} ledger_balanced=${row?.ledger_balanced ?? "unknown"}`);
     if (!row || row.migrations !== 16 || row.tables < 30 || row.functions !== 14 || row.triggers !== 11 || row.constraints < 30 || row.users !== 0 || row.businesses !== 0 || row.transactions !== 0 || row.documents !== 0 || row.journal_entries !== 0 || row.orphan_memberships !== 0 || row.ledger_balanced !== true) throw new Error("RESTORE_CATALOG_VERIFICATION_FAILED");
     return row;
   } finally { await client.end(); }
