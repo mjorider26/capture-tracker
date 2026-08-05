@@ -9,6 +9,7 @@ function assert(condition, message) {
 }
 
 const wrangler = text("wrangler.jsonc");
+const productionWrangler = text("wrangler.production.jsonc");
 const nextConfig = text("next.config.ts");
 const openNext = text("open-next.config.ts");
 const live = text("src/app/api/health/live/route.ts");
@@ -25,6 +26,10 @@ assert(wrangler.includes('"r2_buckets"') && wrangler.includes('"CAPTURE_TRACKER_
 assert(!/r2\.dev|custom_domains|public[_ -]?access|queues|dead_letter/i.test(wrangler), "Fictional staging must not expose document storage or configure queue infrastructure.");
 assert(wrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "false"'), "Free preview must keep real-data approval false.");
 assert(wrangler.includes('"CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false"'), "Free preview must block customer onboarding.");
+assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\/|BETTER_AUTH_SECRET/i.test(productionWrangler), "Production Wrangler configuration must remain non-secret and account-free.");
+assert(productionWrangler.includes('"name": "capture-tracker-production"') && productionWrangler.includes('"capture-tracker-production-documents"'), "Production must target only its dedicated Worker and private document bucket.");
+assert(productionWrangler.includes('"CAPTURE_TRACKER_ENVIRONMENT": "production"') && productionWrangler.includes('"CAPTURE_TRACKER_DEPLOYMENT_PROFILE": "production-cloudflare-neon"'), "Production must declare its Cloudflare/Neon deployment profile.");
+assert(productionWrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "true"') && productionWrangler.includes('"CAPTURE_TRACKER_PAID_SERVICE_APPROVED": "true"') && productionWrangler.includes('"CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "true"') && productionWrangler.includes('"CAPTURE_TRACKER_DATA_MODE": "production"'), "Production must explicitly enable approved real-data invitation-only onboarding.");
 assert(wrangler.includes('"observability"'), "Worker logging must be enabled.");
 assert(nextConfig.includes('output: "standalone"') && nextConfig.includes("initOpenNextCloudflareForDev"), "Next.js must retain standalone and OpenNext development support.");
 assert(nextConfig.includes("turbopack: { root: projectRoot }"), "Next.js must pin Turbopack to this repository root.");
