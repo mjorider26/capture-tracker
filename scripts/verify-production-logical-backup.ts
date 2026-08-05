@@ -49,10 +49,15 @@ async function verifyCatalog(url: URL) {
       (SELECT count(*)::int FROM information_schema.routines WHERE routine_schema='public') AS functions,
       (SELECT count(*)::int FROM information_schema.triggers WHERE trigger_schema='public') AS triggers,
       (SELECT count(*)::int FROM information_schema.table_constraints WHERE constraint_schema='public') AS constraints,
+      (SELECT count(*)::int FROM "User") AS users,
+      (SELECT count(*)::int FROM "Business") AS businesses,
+      (SELECT count(*)::int FROM "Transaction") AS transactions,
+      (SELECT count(*)::int FROM "Document") AS documents,
+      (SELECT count(*)::int FROM "JournalEntry") AS journal_entries,
       (SELECT count(*)::int FROM "BusinessMember" bm JOIN "Business" b ON b.id=bm."businessId" LEFT JOIN "User" u ON u.id=bm."userId" WHERE b.id IS NULL OR u.id IS NULL) AS orphan_memberships,
       (SELECT coalesce(sum("debitAmount"),0)=coalesce(sum("creditAmount"),0) FROM "JournalLine") AS ledger_balanced`);
     const row = result.rows[0];
-    if (!row || row.migrations < 16 || row.tables < 30 || row.functions < 10 || row.triggers < 10 || row.constraints < 30 || row.orphan_memberships !== 0 || row.ledger_balanced !== true) throw new Error("RESTORE_CATALOG_VERIFICATION_FAILED");
+    if (!row || row.migrations !== 16 || row.tables < 30 || row.functions !== 14 || row.triggers !== 11 || row.constraints < 30 || row.users !== 0 || row.businesses !== 0 || row.transactions !== 0 || row.documents !== 0 || row.journal_entries !== 0 || row.orphan_memberships !== 0 || row.ledger_balanced !== true) throw new Error("RESTORE_CATALOG_VERIFICATION_FAILED");
     return row;
   } finally { await client.end(); }
 }
@@ -74,7 +79,7 @@ async function main() {
     try { await adminClient.query(`CREATE DATABASE "${restoreDatabase}" TEMPLATE template0`); } finally { await adminClient.end(); }
     await run("pg_restore", ["--no-owner", "--no-privileges", "--dbname", target.href, temporaryArchive], postgresEnvironment(target));
     const catalog = await verifyCatalog(target);
-    console.log(`LOGICAL RESTORE VERIFIED: migrations=${catalog.migrations} tables=${catalog.tables} functions=${catalog.functions} triggers=${catalog.triggers} constraints=${catalog.constraints}`);
+    console.log(`LOGICAL RESTORE VERIFIED: migrations=${catalog.migrations} tables=${catalog.tables} functions=${catalog.functions} triggers=${catalog.triggers} constraints=${catalog.constraints} users=${catalog.users} businesses=${catalog.businesses} transactions=${catalog.transactions} documents=${catalog.documents} journal_entries=${catalog.journal_entries}`);
   } finally {
     rmSync(temporaryArchive, { force: true });
     await dropRestoreDatabase(target).catch(() => undefined);
