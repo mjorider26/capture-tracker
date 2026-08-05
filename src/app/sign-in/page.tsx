@@ -38,12 +38,12 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-page px-5 py-10 text-text-primary">
-      <section className="ui-card w-full max-w-md p-7 sm:p-10">
-        <p className="text-sm font-bold tracking-wide text-brand-teal">
-          Capture Tracker
+    <main className="auth-stage grid min-h-screen place-items-center px-5 py-10 text-text-primary">
+      <section className="auth-card ui-card w-full max-w-md p-7 sm:p-10">
+        <p className="auth-kicker">
+          Secure workspace
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-[-0.035em]">
+        <h1 className="mt-3 text-3xl font-bold tracking-[-0.055em]">
           Sign in
         </h1>
         <p className="mt-3 text-sm leading-6 text-text-muted">
@@ -71,7 +71,7 @@ export default function SignInPage() {
             />
           </label>
           <button
-            className="min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-5 text-sm font-bold text-white disabled:opacity-60"
+            className="ui-button ui-button-primary min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-5 text-sm font-bold text-white disabled:opacity-60"
             disabled={submitting}
             type="submit"
           >

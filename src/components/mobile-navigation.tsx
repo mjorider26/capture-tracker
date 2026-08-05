@@ -42,7 +42,7 @@ export function MobileNavigation({
     <div className="min-[1180px]:hidden">
       <nav
         aria-label="Primary mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border-subtle bg-surface/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-8px_24px_rgb(11_34_57_/_0.08)] backdrop-blur"
+        className="mobile-shell-nav fixed inset-x-0 bottom-0 z-30 border-t border-border-subtle bg-surface/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-8px_24px_rgb(11_34_57_/_0.08)] backdrop-blur"
       >
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5">
           {primary.map((item) => (
@@ -78,7 +78,7 @@ export function MobileNavigation({
             role="dialog"
             aria-modal="true"
             aria-label="More navigation"
-            className="ml-auto flex h-full w-[min(22rem,90vw)] flex-col overflow-y-auto bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] shadow-[0_16px_48px_rgb(11_34_57_/_0.24)] motion-safe:animate-[slide-in_180ms_ease-out]"
+            className="mobile-nav-drawer ml-auto flex h-full w-[min(22rem,90vw)] flex-col overflow-y-auto bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] shadow-[0_16px_48px_rgb(11_34_57_/_0.24)] motion-safe:animate-[slide-in_180ms_ease-out]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3">

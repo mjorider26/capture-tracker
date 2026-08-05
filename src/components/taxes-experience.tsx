@@ -192,7 +192,7 @@ export function OwnerCompensationExperience({ data }: { data: TaxesData }) {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="p-5">
+    <Card className="metric-card p-5">
       <p className="text-sm font-bold text-text-muted">{label}</p>
       <p className="money-value mt-3 text-2xl font-bold text-brand-navy">
         {value}

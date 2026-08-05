@@ -34,7 +34,7 @@ export function AppShell({
   const basePath = mode === "demo" ? "/demo" : "/app";
   const current = destinations.find((item) => item.slug === destination);
   return (
-    <div className="min-h-screen overflow-x-clip bg-page text-text-primary">
+    <div className="app-shell min-h-screen overflow-x-clip bg-page text-text-primary">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-white/10 bg-brand-navy px-4 py-5 text-white min-[1180px]:flex">
         <Brand />
         <div className="app-business-identity mt-7 px-3 py-3">
@@ -82,7 +82,7 @@ export function AppShell({
               </span>
               {mode === "app" && <SignOutButton />}
               <span
-                className="hidden h-9 w-9 place-items-center rounded-full bg-surface-secondary text-brand-navy md:grid"
+                className="hidden h-9 w-9 place-items-center rounded-full border border-white/10 bg-surface-secondary text-brand-teal md:grid"
                 aria-hidden="true"
               >
                 ◌
