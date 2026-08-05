@@ -7,6 +7,7 @@ import { decryptBackupArchive } from "./production-logical-backup-core";
 
 const restoreDatabase = "capture_tracker_restore_test";
 const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+let restoreStage = "guard";
 
 function restoreTarget(value: string | undefined) {
   if (process.platform !== "linux") throw new Error("NATIVE_LINUX_REQUIRED");
@@ -71,13 +72,18 @@ async function main() {
   const target = restoreTarget(process.env.CAPTURE_TRACKER_RESTORE_TEST_DATABASE_URL);
   const temporaryArchive = join("/dev/shm", `capture-tracker-restore-${Date.now()}.dump`);
   try {
+    restoreStage = "decrypt";
     writeFileSync(temporaryArchive, decryptBackupArchive(readFileSync(source), passphrase), { mode: 0o600, flag: "wx" });
+    restoreStage = "drop-prior";
     await dropRestoreDatabase(target);
+    restoreStage = "create";
     const admin = new URL(target.href); admin.pathname = "/postgres";
     const adminClient = new Client({ connectionString: admin.href });
     await adminClient.connect();
     try { await adminClient.query(`CREATE DATABASE "${restoreDatabase}" TEMPLATE template0`); } finally { await adminClient.end(); }
+    restoreStage = "pg-restore";
     await run("pg_restore", ["--no-owner", "--no-privileges", "--dbname", target.href, temporaryArchive], postgresEnvironment(target));
+    restoreStage = "catalog";
     const catalog = await verifyCatalog(target);
     console.log(`LOGICAL RESTORE VERIFIED: migrations=${catalog.migrations} tables=${catalog.tables} functions=${catalog.functions} triggers=${catalog.triggers} constraints=${catalog.constraints} users=${catalog.users} businesses=${catalog.businesses} transactions=${catalog.transactions} documents=${catalog.documents} journal_entries=${catalog.journal_entries}`);
   } finally {
@@ -86,4 +92,4 @@ async function main() {
   }
 }
 
-main().catch(() => { console.error("LOGICAL RESTORE VERIFICATION REFUSED OR FAILED; production was not touched."); process.exitCode = 1; });
+main().catch(() => { console.error(`LOGICAL RESTORE VERIFICATION FAILED AT ${restoreStage}; production was not touched.`); process.exitCode = 1; });
