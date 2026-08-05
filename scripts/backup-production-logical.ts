@@ -6,6 +6,7 @@ import { Client } from "pg";
 
 import { assertDirectProductionUrl, productionAcceptance } from "./production-acceptance-cleanup-core";
 import { assertBackupPrefix, encryptBackupArchive } from "./production-logical-backup-core";
+import { getBackupObject, putBackupObject } from "./r2-scoped-object-storage";
 
 function run(command: string, args: string[], environment: NodeJS.ProcessEnv) {
   return new Promise<string>((resolvePromise, reject) => {
@@ -43,12 +44,8 @@ async function sourceMetadata(url: URL) {
 }
 
 async function uploadAndVerify(objectKey: string, source: string, expectedChecksum: string) {
-  const downloaded = join("/dev/shm/capture-tracker-production-backup", `verify-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-  try {
-    await run("npx", ["wrangler", "r2", "object", "put", `${productionAcceptance.backupBucket}/${objectKey}`, "--file", source, "--remote"], process.env);
-    await run("npx", ["wrangler", "r2", "object", "get", `${productionAcceptance.backupBucket}/${objectKey}`, "--file", downloaded, "--remote"], process.env);
-    if (createHash("sha256").update(readFileSync(downloaded)).digest("hex") !== expectedChecksum) throw new Error("BACKUP_UPLOAD_CHECKSUM_FAILED");
-  } finally { rmSync(downloaded, { force: true }); }
+  await putBackupObject(objectKey, readFileSync(source));
+  if (createHash("sha256").update(await getBackupObject(objectKey)).digest("hex") !== expectedChecksum) throw new Error("BACKUP_UPLOAD_CHECKSUM_FAILED");
 }
 
 async function main() {

@@ -5,7 +5,7 @@ import { Client } from "pg";
 
 import { decryptBackupArchive } from "./production-logical-backup-core";
 
-const restoreDatabase = "capture_tracker_production_restore_verification";
+const restoreDatabase = "capture_tracker_restore_test";
 const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function restoreTarget(value: string | undefined) {
