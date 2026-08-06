@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { uploadPrivateDocument } from "@/lib/documents/secure-upload";
+import { selectedDocumentUpload } from "@/lib/documents/upload-selection";
 import { extractDocument, reviewDocumentExtraction } from "@/lib/documents/extraction";
 import { decideDocumentTransactionMatch, dismissDocumentTransactionMatchRun, generateDocumentTransactionMatches } from "@/lib/documents/transaction-matching";
 import { requireBusinessContext } from "@/lib/security/business-context";
@@ -41,8 +42,8 @@ export async function dismissAuthenticatedDocumentMatchingRun(_: DocumentMatchin
 }
 
 export async function uploadDocument(_: DocumentUploadState, formData: FormData): Promise<DocumentUploadState> {
-  const file = formData.get("document");
-  if (!(file instanceof File) || !file.name) return { ok: false, code: "INVALID", message: "Choose a PDF, JPEG, or PNG file first." };
+  const file = selectedDocumentUpload(formData);
+  if (!file) return { ok: false, code: "INVALID", message: "Choose a PDF, JPEG, or PNG file first." };
 
   try {
     const context = await requireBusinessContext();
