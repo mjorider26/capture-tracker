@@ -6,14 +6,14 @@ const getSession = vi.fn();
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession } } }));
-vi.mock("@/lib/auth/production-owner-bootstrap", () => ({ isProductionOwnerBootstrapAvailable: vi.fn() }));
+vi.mock("@/lib/auth/public-bootstrap-state", () => ({ readPublicBootstrapState: vi.fn() }));
 
-const { isProductionOwnerBootstrapAvailable } = await import("@/lib/auth/production-owner-bootstrap");
+const { readPublicBootstrapState } = await import("@/lib/auth/public-bootstrap-state");
 
 describe("root page entry actions", () => {
   beforeEach(() => {
     getSession.mockReset();
-    vi.mocked(isProductionOwnerBootstrapAvailable).mockResolvedValue(false);
+    vi.mocked(readPublicBootstrapState).mockResolvedValue({ deploymentKind: "staging", bootstrapAvailability: "initialized" });
     vi.unstubAllEnvs();
   });
 
@@ -53,7 +53,7 @@ describe("root page entry actions", () => {
     vi.stubEnv("CAPTURE_TRACKER_DEPLOYMENT_PROFILE", "production-cloudflare-neon");
     vi.stubEnv("CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED", "true");
     getSession.mockResolvedValue(null);
-    vi.mocked(isProductionOwnerBootstrapAvailable).mockResolvedValue(true);
+    vi.mocked(readPublicBootstrapState).mockResolvedValue({ deploymentKind: "production", bootstrapAvailability: "available" });
     const { default: Home } = await import("./page");
 
     const html = renderToStaticMarkup(await Home());

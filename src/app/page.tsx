@@ -4,11 +4,12 @@ import { headers } from "next/headers";
 import { BrandLockup } from "@/components/brand";
 import { auth } from "@/lib/auth";
 import { landingOnboardingPresentation } from "@/lib/auth/onboarding-presentation";
-import { isProductionOwnerBootstrapAvailable } from "@/lib/auth/production-owner-bootstrap";
+import { readPublicBootstrapState } from "@/lib/auth/public-bootstrap-state";
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
-  const onboarding = landingOnboardingPresentation(undefined, await isProductionOwnerBootstrapAvailable());
+  const state = await readPublicBootstrapState();
+  const onboarding = landingOnboardingPresentation(undefined, state.bootstrapAvailability === "available");
   return (
     <main className="auth-stage grid min-h-screen place-items-center px-5 py-10 text-text-primary">
       <section className="auth-card ui-card w-full max-w-2xl p-7 sm:p-10">

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 
-export function CreateAccountForm() {
+export function CreateAccountForm({ endpoint = "/api/invitations/create-account" }: { endpoint?: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [created, setCreated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -12,7 +12,7 @@ export function CreateAccountForm() {
     event.preventDefault(); setSubmitting(true); setMessage(null);
     const form = new FormData(event.currentTarget);
     try {
-      const response = await fetch("/api/invitations/create-account", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: String(form.get("name") ?? ""), email: String(form.get("email") ?? ""), password: String(form.get("password") ?? ""), confirmPassword: String(form.get("confirmPassword") ?? "") }) });
+      const response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: String(form.get("name") ?? ""), email: String(form.get("email") ?? ""), password: String(form.get("password") ?? ""), confirmPassword: String(form.get("confirmPassword") ?? "") }) });
       if (response.ok && (await response.json() as { code?: string }).code?.match(/^ACCOUNT_/)) { setCreated(true); return; }
       setMessage("Account creation could not be completed.");
     } catch { setMessage("Account creation could not be completed."); } finally { setSubmitting(false); }

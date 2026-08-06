@@ -21,14 +21,15 @@ export async function isProductionOwnerBootstrapAvailable() {
   return users === 0 && businesses === 0;
 }
 
-function expectedBootstrapLookupFailure(error: unknown) {
-  return typeof error === "object" && error !== null && "name" in error && typeof error.name === "string" && error.name.startsWith("PrismaClient");
-}
-
 export async function readProductionBootstrapAvailability(): Promise<BootstrapAvailability> {
   if (!isProductionOwnerBootstrapEnabled()) return "initialized";
-  try { return await isProductionOwnerBootstrapAvailable() ? "available" : "initialized"; }
-  catch (error) { if (expectedBootstrapLookupFailure(error)) return "unknown"; throw error; }
+  try {
+    return await isProductionOwnerBootstrapAvailable() ? "available" : "initialized";
+  } catch {
+    // This is only public presentation guidance. The signup route retains the
+    // authoritative locked transaction/recheck and must remain the boundary.
+    return "unknown";
+  }
 }
 
 export async function acquireProductionOwnerBootstrap(input: ProductionBootstrapInput): Promise<BootstrapLease | null> {
