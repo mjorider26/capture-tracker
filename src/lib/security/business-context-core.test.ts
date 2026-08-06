@@ -97,6 +97,32 @@ describe("resolveBusinessContext", () => {
     );
   });
 
+  it("keeps separately resolved request contexts tenant-scoped", async () => {
+    const first = createMembership();
+    const second = createMembership({
+      id: "membership-two",
+      user: { id: "other-user", email: "other@capturetracker.local", displayName: "Other owner", version: 2 },
+      business: {
+        id: "business-two",
+        legalName: "Other Company LLC",
+        displayName: "Other Company",
+        timezone: "America/New_York",
+        currency: "USD",
+        version: 2,
+        onboarding: { status: "COMPLETED" },
+      },
+    });
+
+    const [firstContext, secondContext] = await Promise.all([
+      resolveBusinessContext({ sessionId: "session-one", userId: first.user.id, loadMemberships: vi.fn().mockResolvedValue([first]) }),
+      resolveBusinessContext({ sessionId: "session-two", userId: second.user.id, loadMemberships: vi.fn().mockResolvedValue([second]) }),
+    ]);
+
+    expect(firstContext.business.id).toBe("business-one");
+    expect(secondContext.business.id).toBe("business-two");
+    expect(firstContext.user.id).not.toBe(secondContext.user.id);
+  });
+
   it("denies a membership whose workspace provisioning is incomplete", async () => {
     const membership = createMembership({
       business: {

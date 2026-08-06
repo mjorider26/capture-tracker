@@ -43,16 +43,16 @@ export async function getMoneyDashboard(
 ): Promise<MoneyDashboard> {
   noStore();
   const filters = parseMoneyFilter(rawFilters);
-  const business = await prisma.business.findUniqueOrThrow({
+  const businessRequest = prisma.business.findUniqueOrThrow({
     where: { id: businessId },
     select: { displayName: true },
   });
-  const accounts = await prisma.financialAccount.findMany({
+  const accountsRequest = prisma.financialAccount.findMany({
     where: { businessId, isActive: true },
     orderBy: [{ name: "asc" }, { id: "asc" }],
     select: { id: true, name: true },
   });
-  const allTransactions = await prisma.transaction.findMany({
+  const allTransactionsRequest = prisma.transaction.findMany({
     where: { businessId },
     select: {
       id: true,
@@ -62,7 +62,7 @@ export async function getMoneyDashboard(
       status: true,
     },
   });
-  const transactions = await prisma.transaction.findMany({
+  const transactionsRequest = prisma.transaction.findMany({
     where: {
       businessId,
       ...(filters.query
@@ -105,6 +105,12 @@ export async function getMoneyDashboard(
       },
     },
   });
+  const [business, accounts, allTransactions, transactions] = await Promise.all([
+    businessRequest,
+    accountsRequest,
+    allTransactionsRequest,
+    transactionsRequest,
+  ]);
   const summary = buildMoneySummary(allTransactions);
 
   return {

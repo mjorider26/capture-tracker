@@ -142,30 +142,13 @@ export async function getTodayDashboard(
 ): Promise<TodayDashboard> {
   noStore();
 
-  const business = await prisma.business.findUniqueOrThrow({
-    where: { id: businessId },
-    select: { displayName: true },
-  });
-  const cashAccounts = await prisma.financialAccount.findMany({
-    where: {
-      businessId,
-      ownership: "BUSINESS",
-      type: { in: ["CHECKING", "SAVINGS"] },
-      isActive: true,
-    },
-    select: { id: true, openingBalance: true, isTaxReserve: true, ledgerAccount: { select: { id: true } } },
-  });
-  const taxReserveAccounts = await prisma.financialAccount.findMany({
-    where: {
-      businessId,
-      ownership: "BUSINESS",
-      type: { in: ["CHECKING", "SAVINGS"] },
-      isTaxReserve: true,
-      isActive: true,
-    },
-    select: { id: true, openingBalance: true, isTaxReserve: true, ledgerAccount: { select: { id: true } } },
-  });
-  const estimates = await prisma.quarterlyTaxEstimate.findMany({
+  const [business, cashAccounts, estimates, payments, review, entries, tasks] = await Promise.all([
+    prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { displayName: true } }),
+    prisma.financialAccount.findMany({
+      where: { businessId, ownership: "BUSINESS", type: { in: ["CHECKING", "SAVINGS"] }, isActive: true },
+      select: { id: true, openingBalance: true, isTaxReserve: true, ledgerAccount: { select: { id: true } } },
+    }),
+    prisma.quarterlyTaxEstimate.findMany({
     where: { businessId, status: { notIn: ["VOIDED", "SUPERSEDED"] } },
     select: {
       id: true,
@@ -177,27 +160,16 @@ export async function getTodayDashboard(
       priorPayments: true,
       dueDate: true,
     },
-  });
-  const payments = await prisma.taxPaymentRecord.findMany({
-    where: { businessId, status: "RECORDED" },
-    select: { amount: true, status: true, estimateId: true },
-  });
-  const review = await prisma.weeklyReview.findFirst({
-    where: { businessId },
-    orderBy: { weekStart: "desc" },
-  });
-  const entries = await prisma.journalEntry.findMany({
-    where: { businessId, status: "POSTED" },
-    orderBy: [{ entryDate: "desc" }, { entryNumber: "desc" }],
-    take: 4,
-    select: {
-      id: true,
-      entryDate: true,
-      description: true,
-      sourceType: true,
-      lines: { select: { debitAmount: true, creditAmount: true } },
-    },
-  });
+    }),
+    prisma.taxPaymentRecord.findMany({ where: { businessId, status: "RECORDED" }, select: { amount: true, status: true, estimateId: true } }),
+    prisma.weeklyReview.findFirst({ where: { businessId }, orderBy: { weekStart: "desc" } }),
+    prisma.journalEntry.findMany({
+      where: { businessId, status: "POSTED" }, orderBy: [{ entryDate: "desc" }, { entryNumber: "desc" }], take: 4,
+      select: { id: true, entryDate: true, description: true, sourceType: true, lines: { select: { debitAmount: true, creditAmount: true } } },
+    }),
+    loadWeeklyReviewTasks(prisma, businessId),
+  ]);
+  const taxReserveAccounts = cashAccounts.filter((account) => account.isTaxReserve);
 
   const today = new Date();
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
@@ -253,7 +225,6 @@ export async function getTodayDashboard(
     )
     .slice(0, 5)
     .map(({ date, ...change }) => ({ ...change, date: formatDate(date) }));
-  const tasks = await loadWeeklyReviewTasks(prisma, businessId);
   const taskCounts = tasks.reduce(
     (counts, task) => {
       if (task.category === "Transactions") counts.transactions += 1;

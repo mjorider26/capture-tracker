@@ -37,4 +37,34 @@ describe("loadWeeklyReviewTasks", () => {
     await expect(loadWeeklyReviewTaskCount(harness.client as never, "business-b")).resolves.toBe(1);
     expect(harness.calls.slice(6).every((call) => (call.where as { businessId: string }).businessId === "business-b")).toBe(true);
   });
+
+  it("starts each independent business-scoped reader before waiting for results", async () => {
+    const pending: Array<() => void> = [];
+    const started: string[] = [];
+    const delayed = (model: string) => () => new Promise<never[]>((resolve) => {
+      started.push(model);
+      pending.push(() => resolve([]));
+    });
+    const harness = {
+      transaction: { findMany: delayed("transaction") },
+      document: { findMany: delayed("document") },
+      documentMatchSuggestion: { findMany: delayed("match") },
+      reconciliationItem: { findMany: delayed("reconciliation") },
+      statementActivity: { findMany: delayed("statement") },
+      quarterlyTaxEstimate: { findMany: delayed("tax") },
+    };
+
+    const loading = loadWeeklyReviewTasks(harness as never, "business-a");
+
+    expect(started).toEqual([
+      "transaction",
+      "document",
+      "match",
+      "reconciliation",
+      "statement",
+      "tax",
+    ]);
+    pending.forEach((resolve) => resolve());
+    await expect(loading).resolves.toEqual([]);
+  });
 });
