@@ -1005,7 +1005,10 @@ textarea {
   outline-offset: 2px;
 }
 .app-shell-nav-mark {
+  display: inline-grid;
+  flex: 0 0 1.05rem;
   width: 1.05rem;
+  place-items: center;
   color: currentColor;
   font-size: 1rem;
   line-height: 1;

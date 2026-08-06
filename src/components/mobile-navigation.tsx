@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { splitMobileNavigation } from "@/lib/navigation/mobile-navigation";
+import {
+  isSecondaryNavigationDestination,
+  navigationHref,
+  splitNavigation,
+  type NavigationDestination,
+  type NavigationItem,
+} from "@/lib/navigation/application-navigation";
 
 import { BrandIcon } from "./brand";
-
-type NavigationItem = { slug: string; label: string; mark: string };
+import { NavigationIcon } from "./navigation-icons";
 
 export function MobileNavigation({
   basePath,
@@ -15,7 +20,7 @@ export function MobileNavigation({
   items,
 }: {
   basePath: string;
-  destination: string | null;
+  destination: NavigationDestination | null;
   items: readonly NavigationItem[];
 }) {
   const [open, setOpen] = useState(false);
@@ -23,7 +28,8 @@ export function MobileNavigation({
   const opener = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
-  const { primary, secondary } = splitMobileNavigation(items);
+  const { primary, secondary } = splitNavigation(items);
+  const moreActive = isSecondaryNavigationDestination(destination);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -56,23 +62,19 @@ export function MobileNavigation({
           <button
             ref={opener}
             type="button"
+            aria-current={moreActive ? "page" : undefined}
             aria-controls={drawerId}
             aria-expanded={open}
             onClick={() => setOpen(true)}
-            className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] px-1 text-[11px] font-bold transition-colors ${open ? "bg-brand-teal-soft text-brand-teal shadow-sm" : "text-text-muted hover:bg-surface-secondary"}`}
+            className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] border px-1 text-[11px] font-bold transition-[transform,opacity,background-color,color,border-color] active:scale-95 motion-reduce:transform-none ${open || moreActive ? "border-brand-teal/35 bg-brand-teal-soft text-brand-teal shadow-sm" : "border-transparent text-text-muted hover:bg-surface-secondary hover:text-text-primary"}`}
           >
-            <span aria-hidden="true" className="text-base leading-none">
-              •••
-            </span>
+            <NavigationIcon name="more" className="h-[1.1rem] w-[1.1rem]" />
             <span>More</span>
           </button>
         </div>
       </nav>
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-brand-navy/35"
-          onClick={() => setOpen(false)}
-        >
+        <div className="fixed inset-0 z-40 bg-brand-navy/35" onClick={() => setOpen(false)}>
           <section
             id={drawerId}
             role="dialog"
@@ -86,14 +88,8 @@ export function MobileNavigation({
                 <BrandIcon decorative className="h-10 w-9" />
                 CaptureTracker
               </span>
-              <button
-                ref={closeButton}
-                type="button"
-                onClick={() => setOpen(false)}
-                className="ui-icon-button"
-                aria-label="Close More navigation"
-              >
-                ×
+              <button ref={closeButton} type="button" onClick={() => setOpen(false)} className="ui-icon-button" aria-label="Close More navigation">
+                <span aria-hidden="true">×</span>
               </button>
             </div>
             <p className="mt-5 text-xs font-bold uppercase tracking-[0.12em] text-text-subtle">
@@ -103,21 +99,18 @@ export function MobileNavigation({
               {secondary.map((item) => (
                 <Link
                   key={item.slug}
-                  href={`${basePath}/${item.slug}`}
+                  href={navigationHref(basePath, item)}
                   aria-current={destination === item.slug ? "page" : undefined}
                   onClick={() => setOpen(false)}
-                  className={`flex min-h-12 items-center gap-3 rounded-[var(--radius-md)] px-3 text-sm font-bold transition-colors ${destination === item.slug ? "bg-brand-teal-soft text-brand-teal" : "text-text-muted hover:bg-surface-secondary hover:text-text-primary"}`}
+                  className={`flex min-h-12 items-center gap-3 rounded-[var(--radius-md)] border px-3 text-sm font-bold transition-[transform,opacity,background-color,color,border-color] active:scale-[0.99] motion-reduce:transform-none ${destination === item.slug ? "border-brand-teal/35 bg-brand-teal-soft text-brand-teal shadow-sm" : "border-transparent text-text-muted hover:bg-surface-secondary hover:text-text-primary"}`}
                 >
-                  <span aria-hidden="true" className="text-lg">
-                    {item.mark}
-                  </span>
+                  <NavigationIcon name={item.icon} className="h-5 w-5 shrink-0" />
                   {item.label}
                 </Link>
               ))}
             </nav>
             <p className="mt-auto rounded-[var(--radius-md)] bg-surface-secondary p-3 text-xs leading-5 text-text-muted">
-              Navigation changes only your view. Financial actions remain
-              available only in their existing protected workflows.
+              Navigation changes only your view. Financial actions remain available only in their existing protected workflows.
             </p>
           </section>
         </div>
@@ -137,13 +130,11 @@ function Tab({
 }) {
   return (
     <Link
-      href={`${basePath}/${item.slug}`}
+      href={navigationHref(basePath, item)}
       aria-current={active ? "page" : undefined}
-      className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] px-1 text-[11px] font-bold transition-colors ${active ? "bg-brand-teal-soft text-brand-teal shadow-sm" : "text-text-muted hover:bg-surface-secondary"}`}
+      className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] border px-1 text-[11px] font-bold transition-[transform,opacity,background-color,color,border-color] active:scale-95 motion-reduce:transform-none ${active ? "border-brand-teal/35 bg-brand-teal-soft text-brand-teal shadow-sm" : "border-transparent text-text-muted hover:bg-surface-secondary hover:text-text-primary"}`}
     >
-      <span aria-hidden="true" className="text-base leading-none">
-        {item.mark}
-      </span>
+      <NavigationIcon name={item.icon} className="h-[1.1rem] w-[1.1rem]" />
       <span>{item.label}</span>
     </Link>
   );

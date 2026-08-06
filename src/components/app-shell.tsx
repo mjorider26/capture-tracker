@@ -1,38 +1,39 @@
 import Link from "next/link";
 
+import {
+  destinations,
+  isDestination,
+  navigationHref,
+  navigationItems,
+  splitNavigation,
+  type Destination,
+  type NavigationDestination,
+  type NavigationItem,
+} from "@/lib/navigation/application-navigation";
+
 import { BrandIcon } from "./brand";
 import { MobileNavigation } from "./mobile-navigation";
+import { NavigationIcon } from "./navigation-icons";
 import { SignOutButton } from "./sign-out-button";
 
-export const destinations = [
-  { slug: "today", label: "Today", mark: "◉" },
-  { slug: "money", label: "Money", mark: "◇" },
-  { slug: "taxes", label: "Taxes", mark: "△" },
-  { slug: "documents", label: "Documents", mark: "□" },
-  { slug: "review", label: "Review", mark: "✓" },
-  { slug: "reports", label: "Reports", mark: "≡" },
-  { slug: "ask-ai", label: "Ask AI", mark: "✦" },
-  { slug: "activity", label: "Activity", mark: "◴" },
-  { slug: "settings", label: "Settings", mark: "⚙" },
-] as const;
-export type Destination = (typeof destinations)[number]["slug"];
-export function isDestination(value: string): value is Destination {
-  return destinations.some((destination) => destination.slug === value);
-}
+export { destinations, isDestination, type Destination };
 
 export function AppShell({
   mode,
   destination,
+  navigationDestination,
   businessName,
   children,
 }: {
   mode: "app" | "demo";
   destination: Destination | null;
+  navigationDestination?: NavigationDestination | null;
   businessName: string;
   children: React.ReactNode;
 }) {
   const basePath = mode === "demo" ? "/demo" : "/app";
   const current = destinations.find((item) => item.slug === destination);
+  const activeNavigation = navigationDestination ?? destination;
   return (
     <div className="app-shell min-h-screen overflow-x-clip bg-page text-text-primary">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-white/10 bg-brand-navy px-4 py-5 text-white min-[1180px]:flex">
@@ -45,7 +46,7 @@ export function AppShell({
             {businessName}
           </p>
         </div>
-        <Navigation basePath={basePath} destination={destination} />
+        <Navigation basePath={basePath} destination={activeNavigation} />
         {mode === "demo" && (
           <p className="mt-auto rounded-[var(--radius-md)] border border-brand-teal/30 bg-brand-teal/15 px-3 py-3 text-xs leading-5 text-teal-50">
             Local fictional demo. Changes remain within the local demo boundary.
@@ -85,7 +86,7 @@ export function AppShell({
                 className="hidden h-9 w-9 place-items-center rounded-full border border-white/10 bg-surface-secondary text-brand-teal md:grid"
                 aria-hidden="true"
               >
-                ◌
+                <BrandIcon decorative className="h-5 w-4" />
               </span>
             </div>
           </div>
@@ -96,12 +97,13 @@ export function AppShell({
       </main>
       <MobileNavigation
         basePath={basePath}
-        destination={destination}
-        items={destinations}
+        destination={activeNavigation}
+        items={navigationItems}
       />
     </div>
   );
 }
+
 function Brand() {
   return (
     <div className="app-shell-brand flex items-center gap-2.5 px-1">
@@ -114,28 +116,20 @@ function Brand() {
     </div>
   );
 }
+
 function Navigation({
   basePath,
   destination,
 }: {
   basePath: string;
-  destination: Destination | null;
+  destination: NavigationDestination | null;
 }) {
-  const primary = destinations.slice(0, 5);
-  const secondary = destinations.slice(5);
+  const { primary, secondary } = splitNavigation(navigationItems);
   return (
     <nav aria-label="Primary navigation" className="app-shell-navigation mt-7">
-      <NavigationGroup
-        items={primary}
-        basePath={basePath}
-        destination={destination}
-      />
+      <NavigationGroup items={primary} basePath={basePath} destination={destination} />
       <div className="app-shell-nav-divider" aria-hidden="true" />
-      <NavigationGroup
-        items={secondary}
-        basePath={basePath}
-        destination={destination}
-      />
+      <NavigationGroup items={secondary} basePath={basePath} destination={destination} />
     </nav>
   );
 }
@@ -145,21 +139,21 @@ function NavigationGroup({
   basePath,
   destination,
 }: {
-  items: readonly (typeof destinations)[number][];
+  items: readonly NavigationItem[];
   basePath: string;
-  destination: Destination | null;
+  destination: NavigationDestination | null;
 }) {
   return (
     <div className="space-y-1">
       {items.map((item) => (
         <Link
           key={item.slug}
-          href={`${basePath}/${item.slug}`}
+          href={navigationHref(basePath, item)}
           aria-current={destination === item.slug ? "page" : undefined}
           className={`app-shell-nav-link ${destination === item.slug ? "is-active" : ""}`}
         >
           <span aria-hidden="true" className="app-shell-nav-mark">
-            {item.mark}
+            <NavigationIcon name={item.icon} className="h-[1.05rem] w-[1.05rem]" />
           </span>
           <span>{item.label}</span>
         </Link>

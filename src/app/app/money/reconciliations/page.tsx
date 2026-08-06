@@ -1,9 +1,41 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
+
 import { AccountingNav } from "@/components/accounting-nav";
+import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusBadge } from "@/components/ui";
 import { getReconciliations } from "@/lib/data/reconciliations";
 import { isAccessControlError, requireBusinessContext } from "@/lib/security/business-context";
-export const dynamic = "force-dynamic"; export const revalidate = 0; export const metadata = { robots: { index: false, follow: false } };
-export default async function Reconciliations() { let context; try { context = await requireBusinessContext(); } catch (error) { if (isAccessControlError(error)) notFound(); throw error; } const records = await getReconciliations(context.business.id); return <AppShell mode="app" destination="money" businessName={context.business.displayName}><AccountingNav basePath="/app" active="reconciliations"/><PageHeader eyebrow="Money" title="Account reconciliation" description="Compare statement-cleared activity with the book balance using exact decimals."/>{records.map((record) => <Link key={record.id} href={`/app/money/reconciliations/${record.id}`} className="ui-card mb-3 block p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="font-bold">{record.accountName}</h2><p className="mt-1 text-sm text-text-muted">Statement ending {new Date(record.statementEndDate).toLocaleDateString()} · {record.clearedItemCount} cleared items</p></div><StatusBadge tone={record.status === "COMPLETED" ? "success" : "warning"}>{record.status}</StatusBadge></div><p className="money-value mt-4 text-sm font-bold">Difference: ${record.difference}</p></Link>)}</AppShell>; }
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const metadata = { robots: { index: false, follow: false } };
+
+export default async function Reconciliations() {
+  let context;
+  try {
+    context = await requireBusinessContext();
+  } catch (error) {
+    if (isAccessControlError(error)) notFound();
+    throw error;
+  }
+  const records = await getReconciliations(context.business.id);
+  return (
+    <AppShell mode="app" destination="money" navigationDestination="reconciliation" businessName={context.business.displayName}>
+      <AccountingNav basePath="/app" active="reconciliations" />
+      <PageHeader eyebrow="Money" title="Account reconciliation" description="Compare statement-cleared activity with the book balance using exact decimals." />
+      {records.map((record) => (
+        <Link key={record.id} href={`/app/money/reconciliations/${record.id}`} className="ui-card mb-3 block p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-bold">{record.accountName}</h2>
+              <p className="mt-1 text-sm text-text-muted">Statement ending {new Date(record.statementEndDate).toLocaleDateString()} · {record.clearedItemCount} cleared items</p>
+            </div>
+            <StatusBadge tone={record.status === "COMPLETED" ? "success" : "warning"}>{record.status}</StatusBadge>
+          </div>
+          <p className="money-value mt-4 text-sm font-bold">Difference: ${record.difference}</p>
+        </Link>
+      ))}
+    </AppShell>
+  );
+}
