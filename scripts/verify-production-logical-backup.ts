@@ -1,21 +1,22 @@
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { Client } from "pg";
 
 import { decryptBackupArchive } from "./production-logical-backup-core";
+import {
+  assertRestoreTarget,
+  assertRestoredBackupState,
+  assertLogicalBackupReceipt,
+  deriveSourceSchemaInventory,
+  withTemporaryRecoveryArtifacts,
+  type LogicalBackupManifest,
+  type SanitizedDataCounts,
+} from "./production-logical-restore-core";
+import { getBackupObject } from "./r2-scoped-object-storage";
 
-const restoreDatabase = "capture_tracker_restore_test";
-const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 let restoreStage = "guard";
-
-function restoreTarget(value: string | undefined) {
-  if (process.platform !== "linux") throw new Error("NATIVE_LINUX_REQUIRED");
-  if (!value) throw new Error("RESTORE_TARGET_REQUIRED");
-  const url = new URL(value);
-  if (!localHosts.has(url.hostname) || decodeURIComponent(url.pathname.slice(1)) !== restoreDatabase) throw new Error("RESTORE_TARGET_REFUSED");
-  return url;
-}
 
 function run(command: string, args: string[], environment: NodeJS.ProcessEnv) {
   return new Promise<void>((resolve, reject) => {
@@ -26,7 +27,7 @@ function run(command: string, args: string[], environment: NodeJS.ProcessEnv) {
 }
 
 function postgresEnvironment(url: URL) {
-  return { ...process.env, PGHOST: url.hostname, PGPORT: url.port || "5432", PGUSER: decodeURIComponent(url.username), PGPASSWORD: decodeURIComponent(url.password), PGDATABASE: restoreDatabase };
+  return { ...process.env, PGHOST: url.hostname, PGPORT: url.port || "5432", PGUSER: decodeURIComponent(url.username), PGPASSWORD: decodeURIComponent(url.password), PGDATABASE: decodeURIComponent(url.pathname.slice(1)) };
 }
 
 async function dropRestoreDatabase(url: URL) {
@@ -35,60 +36,96 @@ async function dropRestoreDatabase(url: URL) {
   const client = new Client({ connectionString: admin.href });
   await client.connect();
   try {
-    await client.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()", [restoreDatabase]);
-    await client.query(`DROP DATABASE IF EXISTS "${restoreDatabase}"`);
+    const database = decodeURIComponent(url.pathname.slice(1));
+    await client.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()", [database]);
+    await client.query(`DROP DATABASE IF EXISTS "${database}"`);
   } finally { await client.end(); }
 }
 
-async function verifyCatalog(url: URL) {
+async function verifyCatalog(url: URL, manifest: LogicalBackupManifest) {
   const client = new Client({ connectionString: url.href });
   await client.connect();
   try {
-    const result = await client.query(`SELECT
-      (SELECT count(*)::int FROM "_prisma_migrations" WHERE finished_at IS NOT NULL) AS migrations,
-      (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,
-      (SELECT count(*)::int FROM information_schema.routines WHERE routine_schema='public') AS functions,
-      (SELECT count(DISTINCT trigger_name)::int FROM information_schema.triggers WHERE trigger_schema='public') AS triggers,
-      (SELECT count(*)::int FROM information_schema.table_constraints WHERE constraint_schema='public') AS constraints,
-      (SELECT count(*)::int FROM "User") AS users,
-      (SELECT count(*)::int FROM "Business") AS businesses,
-      (SELECT count(*)::int FROM "Transaction") AS transactions,
-      (SELECT count(*)::int FROM "Document") AS documents,
-      (SELECT count(*)::int FROM "JournalEntry") AS journal_entries,
-      (SELECT count(*)::int FROM "BusinessMember" bm JOIN "Business" b ON b.id=bm."businessId" LEFT JOIN "User" u ON u.id=bm."userId" WHERE b.id IS NULL OR u.id IS NULL) AS orphan_memberships,
-      (SELECT coalesce(sum("debitAmount"),0)=coalesce(sum("creditAmount"),0) FROM "JournalLine") AS ledger_balanced`);
-    const row = result.rows[0];
-    console.log(`RESTORE CATALOG OBSERVED: migrations=${row?.migrations ?? "unknown"} tables=${row?.tables ?? "unknown"} functions=${row?.functions ?? "unknown"} triggers=${row?.triggers ?? "unknown"} constraints=${row?.constraints ?? "unknown"} users=${row?.users ?? "unknown"} businesses=${row?.businesses ?? "unknown"} transactions=${row?.transactions ?? "unknown"} documents=${row?.documents ?? "unknown"} journal_entries=${row?.journal_entries ?? "unknown"} orphan_memberships=${row?.orphan_memberships ?? "unknown"} ledger_balanced=${row?.ledger_balanced ?? "unknown"}`);
-    if (!row || row.migrations !== 16 || row.tables < 30 || row.functions !== 14 || row.triggers !== 11 || row.constraints < 30 || row.users !== 0 || row.businesses !== 0 || row.transactions !== 0 || row.documents !== 0 || row.journal_entries !== 0 || row.orphan_memberships !== 0 || row.ledger_balanced !== true) throw new Error("RESTORE_CATALOG_VERIFICATION_FAILED");
-    return row;
+    const expected = deriveSourceSchemaInventory();
+    const migrations = await client.query('SELECT migration_name AS name, checksum, finished_at AS "finishedAt", rolled_back_at AS "rolledBackAt", logs FROM "_prisma_migrations" ORDER BY migration_name');
+    const tables = await client.query<{ name: string }>("SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
+    const functions = await client.query<{ name: string }>("SELECT routine_name AS name FROM information_schema.routines WHERE routine_schema='public'");
+    const triggers = await client.query<{ name: string }>("SELECT DISTINCT trigger_name AS name FROM information_schema.triggers WHERE trigger_schema='public'");
+    const constraints = await client.query<{ name: string }>("SELECT constraint_name AS name FROM information_schema.table_constraints WHERE constraint_schema='public'");
+    const counts = await client.query<SanitizedDataCounts>('SELECT (SELECT count(*)::int FROM "User") AS users, (SELECT count(*)::int FROM "Business") AS businesses, (SELECT count(*)::int FROM "Transaction") AS transactions, (SELECT count(*)::int FROM "Document") AS documents, (SELECT count(*)::int FROM "JournalEntry") AS "journalEntries", (SELECT count(*)::int FROM "JournalLine") AS "journalLines"');
+    const integrity = await client.query('SELECT (SELECT count(*)::int FROM "BusinessMember" bm JOIN "Business" b ON b.id=bm."businessId" LEFT JOIN "User" u ON u.id=bm."userId" WHERE b.id IS NULL OR u.id IS NULL) AS orphan_memberships, (SELECT coalesce(sum("debitAmount"),0)=coalesce(sum("creditAmount"),0) FROM "JournalLine") AS ledger_balanced');
+    const actual = (rows: Array<{ name: string }>) => new Set(rows.map((row) => row.name));
+    const missing = (required: string[], received: Set<string>) => required.filter((name) => !received.has(name));
+    const missingStructure = [
+      ...missing(expected.tables, actual(tables.rows)),
+      ...missing(expected.functions, actual(functions.rows)),
+      ...missing(expected.triggers, actual(triggers.rows)),
+      ...missing(expected.constraints, actual(constraints.rows)),
+    ];
+    const dataCounts = counts.rows[0];
+    const integrityRow = integrity.rows[0];
+    if (!dataCounts || missingStructure.length || integrityRow?.orphan_memberships !== 0 || integrityRow?.ledger_balanced !== true) throw new Error("RESTORE_CATALOG_VERIFICATION_FAILED");
+    assertRestoredBackupState({ expected, manifest, records: migrations.rows, counts: dataCounts });
+    return { migrations: expected.names.length, tables: expected.tables.length, functions: expected.functions.length, triggers: expected.triggers.length, constraints: expected.constraints.length, dataCounts };
   } finally { await client.end(); }
+}
+
+async function recoverySources() {
+  const receiptPath = process.env.CAPTURE_TRACKER_LOGICAL_BACKUP_RECEIPT;
+  if (!receiptPath) {
+    const archive = process.env.CAPTURE_TRACKER_ENCRYPTED_BACKUP_ARCHIVE;
+    const manifest = process.env.CAPTURE_TRACKER_LOGICAL_BACKUP_MANIFEST;
+    if (!archive || !manifest || archive.startsWith("/mnt/") || manifest.startsWith("/mnt/")) throw new Error("RESTORE_SOURCE_REFUSED");
+    return { archive, manifest, cleanup: [] as string[] };
+  }
+  if (!receiptPath.startsWith("/dev/shm/") || receiptPath.startsWith("/mnt/")) throw new Error("RESTORE_SOURCE_REFUSED");
+  const receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
+  assertLogicalBackupReceipt(receipt);
+  const root = "/dev/shm/capture-tracker-production-restore";
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  const stamp = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const archive = join(root, `${stamp}.ctbackup`);
+  const manifest = join(root, `${stamp}.json`);
+  try {
+    writeFileSync(archive, await getBackupObject(receipt.archiveKey), { mode: 0o600, flag: "wx" });
+    writeFileSync(manifest, await getBackupObject(receipt.manifestKey), { mode: 0o600, flag: "wx" });
+  } catch (error) {
+    rmSync(archive, { force: true });
+    rmSync(manifest, { force: true });
+    throw error;
+  }
+  return { archive, manifest, cleanup: [archive, manifest] };
 }
 
 async function main() {
   if (process.env.CAPTURE_TRACKER_RESTORE_VERIFICATION_AUTHORIZATION !== "CAPTURE_TRACKER_LOGICAL_RESTORE_VERIFICATION_APPROVED") throw new Error("RESTORE_AUTHORIZATION_REFUSED");
   if (process.env.CAPTURE_TRACKER_RESTORE_VERIFICATION_CONFIRMATION !== "RESTORE_DISPOSABLE_LOCAL_VERIFICATION_ONLY") throw new Error("RESTORE_CONFIRMATION_REFUSED");
-  const source = process.env.CAPTURE_TRACKER_ENCRYPTED_BACKUP_ARCHIVE;
   const passphrase = process.env.CAPTURE_TRACKER_PRODUCTION_BACKUP_PASSPHRASE;
-  if (!source || !passphrase || source.startsWith("/mnt/")) throw new Error("RESTORE_SOURCE_REFUSED");
-  const target = restoreTarget(process.env.CAPTURE_TRACKER_RESTORE_TEST_DATABASE_URL);
+  if (!passphrase) throw new Error("RESTORE_SOURCE_REFUSED");
+  const target = assertRestoreTarget(process.env.CAPTURE_TRACKER_RESTORE_TEST_DATABASE_URL);
   const temporaryArchive = join("/dev/shm", `capture-tracker-restore-${Date.now()}.dump`);
   try {
-    restoreStage = "decrypt";
-    writeFileSync(temporaryArchive, decryptBackupArchive(readFileSync(source), passphrase), { mode: 0o600, flag: "wx" });
-    restoreStage = "drop-prior";
-    await dropRestoreDatabase(target);
-    restoreStage = "create";
-    const admin = new URL(target.href); admin.pathname = "/postgres";
-    const adminClient = new Client({ connectionString: admin.href });
-    await adminClient.connect();
-    try { await adminClient.query(`CREATE DATABASE "${restoreDatabase}" TEMPLATE template0`); } finally { await adminClient.end(); }
-    restoreStage = "pg-restore";
-    await run("pg_restore", ["--no-owner", "--no-privileges", "--dbname", target.href, temporaryArchive], postgresEnvironment(target));
-    restoreStage = "catalog";
-    const catalog = await verifyCatalog(target);
-    console.log(`LOGICAL RESTORE VERIFIED: migrations=${catalog.migrations} tables=${catalog.tables} functions=${catalog.functions} triggers=${catalog.triggers} constraints=${catalog.constraints} users=${catalog.users} businesses=${catalog.businesses} transactions=${catalog.transactions} documents=${catalog.documents} journal_entries=${catalog.journal_entries}`);
+    const sources = await recoverySources();
+    await withTemporaryRecoveryArtifacts([temporaryArchive, ...sources.cleanup], async () => {
+      const manifest = JSON.parse(readFileSync(sources.manifest, "utf8")) as LogicalBackupManifest;
+      const encrypted = readFileSync(sources.archive);
+      if (createHash("sha256").update(encrypted).digest("hex") !== manifest.sha256) throw new Error("RESTORE_CHECKSUM_REFUSED");
+      restoreStage = "decrypt";
+      writeFileSync(temporaryArchive, decryptBackupArchive(encrypted, passphrase), { mode: 0o600, flag: "wx" });
+      restoreStage = "drop-prior";
+      await dropRestoreDatabase(target);
+      restoreStage = "create";
+      const admin = new URL(target.href); admin.pathname = "/postgres";
+      const adminClient = new Client({ connectionString: admin.href });
+      await adminClient.connect();
+      try { await adminClient.query(`CREATE DATABASE "${decodeURIComponent(target.pathname.slice(1))}" TEMPLATE template0`); } finally { await adminClient.end(); }
+      restoreStage = "pg-restore";
+      await run("pg_restore", ["--no-owner", "--no-privileges", "--dbname", target.href, temporaryArchive], postgresEnvironment(target));
+      restoreStage = "catalog";
+      const catalog = await verifyCatalog(target, manifest);
+      console.log(`LOGICAL RESTORE VERIFIED: migrations=${catalog.migrations} tables=${catalog.tables} functions=${catalog.functions} triggers=${catalog.triggers} constraints=${catalog.constraints} dataCountsMatch=true`);
+    });
   } finally {
-    rmSync(temporaryArchive, { force: true });
     await dropRestoreDatabase(target).catch(() => undefined);
   }
 }
