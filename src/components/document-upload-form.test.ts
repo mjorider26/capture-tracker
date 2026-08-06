@@ -19,6 +19,8 @@ describe("mobile receipt camera upload form", () => {
     expect(source).toContain("Preview of");
     expect(source).toContain("Retake photo");
     expect(source).toContain("Remove file");
+    expect(source).toContain('source === "camera" && fileInput.current');
+    expect(source).toContain('source === "file" && cameraInput.current');
     expect(source).toContain("aria-label=\"Take photo of receipt\"");
     expect(source).toContain("min-h-12");
     expect(source).toContain("overflow-hidden");

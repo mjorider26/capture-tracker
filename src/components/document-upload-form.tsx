@@ -20,6 +20,8 @@ export function DocumentUploadForm() {
   function selectFile(event: ChangeEvent<HTMLInputElement>, source: "camera" | "file") {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
+    if (source === "camera" && fileInput.current) fileInput.current.value = "";
+    if (source === "file" && cameraInput.current) cameraInput.current.value = "";
     if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
     previewUrl.current = file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
     setSelected({ file, source, previewUrl: previewUrl.current });
