@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureWorkspaceAccountingFoundation } from "@/lib/accounting/workspace-bootstrap";
 
 import { isProductionOwnerBootstrapEnabled, productionBootstrapEmailHash, type ProductionBootstrapInput } from "./production-owner-bootstrap-core";
+import type { BootstrapAvailability } from "./sign-in-presentation";
 
 const bootstrapId = "production-first-owner";
 const workspaceId = "production-first-owner-workspace";
@@ -18,6 +19,16 @@ export async function isProductionOwnerBootstrapAvailable() {
     prisma.business.count(),
   ]);
   return users === 0 && businesses === 0;
+}
+
+function expectedBootstrapLookupFailure(error: unknown) {
+  return typeof error === "object" && error !== null && "name" in error && typeof error.name === "string" && error.name.startsWith("PrismaClient");
+}
+
+export async function readProductionBootstrapAvailability(): Promise<BootstrapAvailability> {
+  if (!isProductionOwnerBootstrapEnabled()) return "initialized";
+  try { return await isProductionOwnerBootstrapAvailable() ? "available" : "initialized"; }
+  catch (error) { if (expectedBootstrapLookupFailure(error)) return "unknown"; throw error; }
 }
 
 export async function acquireProductionOwnerBootstrap(input: ProductionBootstrapInput): Promise<BootstrapLease | null> {
