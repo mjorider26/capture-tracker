@@ -17,10 +17,17 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return Response.json({
-    production: process.env.CAPTURE_TRACKER_ENVIRONMENT === "production",
-    available: await isProductionOwnerBootstrapAvailable(),
-  }, { headers: { "Cache-Control": "no-store" } });
+  try {
+    return Response.json({
+      production: process.env.CAPTURE_TRACKER_ENVIRONMENT === "production",
+      available: await isProductionOwnerBootstrapAvailable(),
+    }, { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return Response.json({
+      production: process.env.CAPTURE_TRACKER_ENVIRONMENT === "production",
+      available: false,
+    }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 }
 
 function failure(status = 400) {

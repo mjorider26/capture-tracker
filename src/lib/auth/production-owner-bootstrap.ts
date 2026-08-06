@@ -14,11 +14,14 @@ type BootstrapLease = { ownerEmailHash: string; userId: string | null };
 
 export async function isProductionOwnerBootstrapAvailable() {
   if (!isProductionOwnerBootstrapEnabled()) return false;
-  const [users, businesses] = await prisma.$transaction([
-    prisma.user.count(),
-    prisma.business.count(),
-  ]);
-  return users === 0 && businesses === 0;
+  // Neon HTTP/Workerd does not reliably start Prisma's array transaction for
+  // this read. A single SQL statement has one snapshot and avoids an
+  // unnecessary transaction while the bootstrap's unique lock remains the
+  // authoritative concurrency boundary for signup.
+  const rows = await prisma.$queryRawUnsafe<{ available: boolean }[]>(
+    'SELECT NOT EXISTS (SELECT 1 FROM "User") AND NOT EXISTS (SELECT 1 FROM "Business") AS "available"',
+  );
+  return rows[0]?.available === true;
 }
 
 export async function readProductionBootstrapAvailability(): Promise<BootstrapAvailability> {
