@@ -15,6 +15,7 @@ const prismaCli = fileURLToPath(
 const expectedTables = new Set([
   "User",
   "Business",
+  "ProductionBootstrap",
   "BusinessMember",
   "FinancialAccount",
   "Transaction",

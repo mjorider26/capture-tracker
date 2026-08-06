@@ -15,6 +15,7 @@ export type LandingOnboardingPresentation = {
  */
 export function landingOnboardingPresentation(
   input: EnvironmentInput = process.env,
+  initialSetupAvailable = false,
 ): LandingOnboardingPresentation {
   const environment = input.CAPTURE_TRACKER_ENVIRONMENT?.trim();
   const profile = input.CAPTURE_TRACKER_DEPLOYMENT_PROFILE?.trim();
@@ -33,18 +34,18 @@ export function landingOnboardingPresentation(
   }
 
   if (environment === "production" && profile === "production-cloudflare-neon") {
-    if (onboardingEnabled) {
+    if (onboardingEnabled && initialSetupAvailable) {
       return {
         accountCreationAvailable: true,
         accountCreationLabel: "Create account",
-        accountCreationAriaLabel: "Create a Capture Tracker account with an invitation",
-        notice: "Capture Tracker is a private production pilot. An invitation from the account owner is required to create an account.",
+        accountCreationAriaLabel: "Create the first Capture Tracker owner account",
+        notice: "Create the first owner account to finish setting up this private Capture Tracker workspace.",
       };
     }
 
     return {
       accountCreationAvailable: false,
-      notice: "Capture Tracker is a private production pilot. New account onboarding is currently closed; use an existing account to sign in.",
+      notice: "This private workspace has already been set up. Sign in to continue.",
     };
   }
 

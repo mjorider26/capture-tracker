@@ -4,10 +4,11 @@ import { headers } from "next/headers";
 import { BrandLockup } from "@/components/brand";
 import { auth } from "@/lib/auth";
 import { landingOnboardingPresentation } from "@/lib/auth/onboarding-presentation";
+import { isProductionOwnerBootstrapAvailable } from "@/lib/auth/production-owner-bootstrap";
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
-  const onboarding = landingOnboardingPresentation();
+  const onboarding = landingOnboardingPresentation(undefined, await isProductionOwnerBootstrapAvailable());
   return (
     <main className="auth-stage grid min-h-screen place-items-center px-5 py-10 text-text-primary">
       <section className="auth-card ui-card w-full max-w-2xl p-7 sm:p-10">
@@ -17,7 +18,7 @@ export default async function Home() {
             Financial command center
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-[-0.055em] sm:text-5xl">
-            Focused books, calm decisions.
+            Your business financial workspace
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-text-muted sm:text-base">
             Capture Tracker keeps your reviewed business activity, tax planning,

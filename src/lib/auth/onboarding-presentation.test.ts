@@ -21,15 +21,15 @@ describe("landing onboarding presentation", () => {
     expect(presentation.accountCreationLabel).toBe("Create practice account");
   });
 
-  it("uses private-pilot production wording when controlled onboarding is enabled", () => {
+  it("uses first-owner production wording when controlled onboarding is enabled and the workspace is empty", () => {
     const presentation = landingOnboardingPresentation({
       ...production,
       CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED: "true",
       CAPTURE_TRACKER_DATA_MODE: "fictional",
-    });
+    }, true);
 
-    expect(presentation.notice).toContain("private production pilot");
-    expect(presentation.notice).toContain("invitation");
+    expect(presentation.notice).toContain("first owner account");
+    expect(presentation.notice).not.toContain("invitation");
     expect(presentation.accountCreationLabel).toBe("Create account");
     expect(presentation.notice).not.toContain("staging");
     expect(presentation.accountCreationLabel).not.toContain("practice");
@@ -44,7 +44,7 @@ describe("landing onboarding presentation", () => {
 
     expect(presentation.accountCreationAvailable).toBe(false);
     expect(presentation.accountCreationLabel).toBeUndefined();
-    expect(presentation.notice).toContain("onboarding is currently closed");
+    expect(presentation.notice).toContain("already been set up");
     expect(presentation.notice).not.toContain("staging");
     expect(presentation.notice).not.toContain("practice-account");
   });

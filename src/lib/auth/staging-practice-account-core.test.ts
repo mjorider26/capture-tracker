@@ -117,11 +117,9 @@ describe("fictional staging practice-account guard", () => {
     expect(isFictionalStagingPracticeSignupEnabled(production)).toBe(false);
   });
 
-  it("accepts a production invitation only in an explicitly authorized production mode", async () => {
-    await expect(validatePracticeAccountInput(validInput, productionEnvironment())).resolves.toMatchObject({ email: validInput.email });
-    expect(isInvitationPracticeSignupEnabled(productionEnvironment({ CAPTURE_TRACKER_PAID_SERVICE_APPROVED: "false" }))).toBe(false);
-    expect(isInvitationPracticeSignupEnabled(productionEnvironment({ CAPTURE_TRACKER_DATA_MODE: "production" }))).toBe(false);
-    await expect(validatePracticeAccountInput(validInput, productionEnvironment({ CAPTURE_TRACKER_PRODUCTION_INVITATION_CODE: undefined }))).resolves.toBeNull();
+  it("keeps the staging invitation flow unavailable in production", async () => {
+    expect(isInvitationPracticeSignupEnabled(productionEnvironment())).toBe(false);
+    await expect(validatePracticeAccountInput(validInput, productionEnvironment())).resolves.toBeNull();
   });
 
   it("fails closed when the staging database identity is not explicit", () => {

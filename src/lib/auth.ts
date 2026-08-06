@@ -96,3 +96,10 @@ export const stagingPracticeAccountAuth = createAuth({
   // normal public handler owns the subsequent email/password sign-in session.
   autoSignIn: false,
 });
+
+// Production bootstrap uses the same approved, sessionless identity creation
+// path. The dedicated route adds the database-backed one-owner guard.
+export const productionOwnerBootstrapAuth = createAuth({
+  allowSignUp: true,
+  autoSignIn: false,
+});

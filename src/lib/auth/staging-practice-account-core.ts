@@ -48,24 +48,10 @@ export function isFictionalStagingPracticeSignupEnabled(
   return fictionalStagingPracticeSignupGuardStatus(input) === "ENABLED";
 }
 
-function isProductionInvitationSignupEnabled(
-  input: PracticeAccountEnvironment = process.env,
-) {
-  const fictionalAcceptance = input.CAPTURE_TRACKER_REAL_DATA_APPROVED === "false" && input.CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED === "false" && input.CAPTURE_TRACKER_DATA_MODE === "fictional";
-  const approvedOnboarding = input.CAPTURE_TRACKER_REAL_DATA_APPROVED === "true" && input.CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED === "true" && input.CAPTURE_TRACKER_DATA_MODE === "production";
-  return input.CAPTURE_TRACKER_ENVIRONMENT === "production" &&
-    input.CAPTURE_TRACKER_EXECUTION_CONTEXT === "cloudflare" &&
-    input.CAPTURE_TRACKER_DEPLOYMENT_PROFILE === "production-cloudflare-neon" &&
-    input.CAPTURE_TRACKER_PAID_SERVICE_APPROVED === "true" &&
-    input.CAPTURE_TRACKER_PRODUCTION_DATABASE_NAME === "capture_tracker_production" &&
-    (fictionalAcceptance || approvedOnboarding);
-}
-
 export function invitationPracticeSignupGuardStatus(
   input: PracticeAccountEnvironment = process.env,
 ): PracticeSignupGuardStatus {
   if (isFictionalStagingPracticeSignupEnabled(input)) return "ENABLED";
-  if (isProductionInvitationSignupEnabled(input)) return "ENABLED";
   return input.CAPTURE_TRACKER_ENVIRONMENT === "production" ? "PRODUCTION_GUARD_REJECTED" : "STAGING_GUARD_REJECTED";
 }
 
@@ -102,9 +88,7 @@ export async function validatePracticeAccountInput(
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return null;
 
-  const configuredCode = environment.CAPTURE_TRACKER_ENVIRONMENT === "production"
-    ? environment.CAPTURE_TRACKER_PRODUCTION_INVITATION_CODE?.trim()
-    : environment.CAPTURE_TRACKER_STAGING_INVITATION_CODE?.trim();
+  const configuredCode = environment.CAPTURE_TRACKER_STAGING_INVITATION_CODE?.trim();
   if (!configuredCode) return null;
 
   if (!(await codesMatch(configuredCode, parsed.data.invitationCode))) {
