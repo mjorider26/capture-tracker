@@ -10,7 +10,7 @@ export default function SignInPage() {
     fetch("/api/invitations/create-account", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : null)
       .then((value: unknown) => {
-        if (value && typeof value === "object" && "production" in value && "available" in value && typeof value.production === "boolean" && typeof value.available === "boolean") setState(value);
+        if (value && typeof value === "object" && "production" in value && "available" in value && typeof value.production === "boolean" && typeof value.available === "boolean") setState({ production: value.production, available: value.available });
       })
       .catch(() => undefined);
   }, []);

@@ -1,6 +1,7 @@
 import { productionOwnerBootstrapAuth } from "@/lib/auth";
 import {
   acquireProductionOwnerBootstrap,
+  isProductionOwnerBootstrapAvailable,
   isProductionWorkspaceReady,
   productionBootstrapCanResume,
   provisionProductionWorkspace,
