@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { Prisma } from "@/generated/prisma/client";
 
 vi.mock("server-only", () => ({}));
-vi.mock("../prisma", () => ({ prisma: {} }));
+const prismaMock = vi.hoisted(() => ({ journalLine: { groupBy: vi.fn(), findMany: vi.fn() }, ledgerAccount: { findMany: vi.fn(), findFirst: vi.fn() } }));
+vi.mock("../prisma", () => ({ prisma: prismaMock }));
 
-import { csvCell, parseReportRange, reportCsv } from "./reports";
+import { csvCell, getFinancialReports, getReportAccountDetail, parseReportRange, reportCsv } from "./reports";
 
 const report = {
   range: { start: "2026-08-01T00:00:00.000Z", end: "2026-08-31T23:59:59.999Z", label: "2026-08-01 to 2026-08-31", period: "custom" as const },
@@ -27,5 +29,36 @@ describe("financial report boundaries and CSV", () => {
     expect(csv).toContain("'=Formula income");
     expect(reportCsv({ ...report, trialBalance: { ...report.trialBalance, rows: [] } } as never, "trial-balance").split("\r\n")).toHaveLength(1);
     expect(reportCsv(report as never, "cash-activity")).toContain('"Ending cash"');
+  });
+
+  it("calculates statement totals from grouped database results beyond the old 2,000-line cap", async () => {
+    const decimal = (value: string) => new Prisma.Decimal(value);
+    const grouped = [
+      { ledgerAccountId: "cash", _sum: { debitAmount: decimal("20010.00"), creditAmount: decimal("0.00") }, _count: { _all: 2001 } },
+      { ledgerAccountId: "income", _sum: { debitAmount: decimal("0.00"), creditAmount: decimal("20010.00") }, _count: { _all: 2001 } },
+    ];
+    prismaMock.journalLine.groupBy.mockResolvedValueOnce(grouped).mockResolvedValueOnce(grouped).mockResolvedValueOnce([]);
+    prismaMock.ledgerAccount.findMany.mockResolvedValueOnce([
+      { id: "cash", code: "1000", name: "Checking", type: "ASSET", normalBalance: "DEBIT" },
+      { id: "income", code: "4000", name: "Revenue", type: "INCOME", normalBalance: "CREDIT" },
+    ]);
+    const reports = await getFinancialReports("business-a", { period: "custom", start: "2026-08-01", end: "2026-08-31" });
+    expect(reports.profitAndLoss.totalIncome).toBe("20010.00");
+    expect(reports.balanceSheet.totalAssets).toBe("20010.00");
+    expect(reports.trialBalance).toMatchObject({ totalDebits: "20010.00", totalCredits: "20010.00", difference: "0.00" });
+    expect(reports.cashActivity).toMatchObject({ inflows: "20010.00", endingCash: "20010.00" });
+    expect(reports.profitAndLoss.income[0]).toMatchObject({ entryCount: 2001 });
+    expect(prismaMock.journalLine.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.journalLine.groupBy).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ businessId: "business-a" }) }));
+  });
+
+  it("uses database pagination for supporting entries after the old 50-entry cap", async () => {
+    prismaMock.ledgerAccount.findFirst.mockResolvedValueOnce({ id: "income", code: "4000", name: "Revenue" });
+    prismaMock.journalLine.findMany.mockResolvedValueOnce(Array.from({ length: 51 }, (_, index) => ({ id: `line-${index}`, debitAmount: new Prisma.Decimal(0), creditAmount: new Prisma.Decimal(10), journalEntry: { id: `entry-${index}`, transactionId: null, entryDate: new Date(`2026-08-${String((index % 28) + 1).padStart(2, "0")}T00:00:00.000Z`), description: `Entry ${index}` } })));
+    const detail = await getReportAccountDetail("business-a", "income", "profit-and-loss", { period: "custom", start: "2026-08-01", end: "2026-08-31" });
+    expect(detail).toMatchObject({ page: 1, pageSize: 50, hasNextPage: true });
+    expect(detail?.entries).toHaveLength(50);
+    expect(prismaMock.journalLine.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 51 }));
+    expect(prismaMock.ledgerAccount.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "income", businessId: "business-a" } }));
   });
 });

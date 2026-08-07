@@ -72,13 +72,13 @@ export function FinancialReports({
         )}
       </form>
       {(focus === "overview" || focus === "profit-and-loss") && (
-        <ReportTable title="Profit and Loss" rows={[...reports.profitAndLoss.income, ...reports.profitAndLoss.expenses]} basePath={basePath} totals={["Total income", reports.profitAndLoss.totalIncome, "Total expenses", reports.profitAndLoss.totalExpenses, "Net income", reports.profitAndLoss.netIncome]} />
+        <ReportTable title="Profit and Loss" report="profit-and-loss" rows={[...reports.profitAndLoss.income, ...reports.profitAndLoss.expenses]} basePath={basePath} range={reports.range} totals={["Total income", reports.profitAndLoss.totalIncome, "Total expenses", reports.profitAndLoss.totalExpenses, "Net income", reports.profitAndLoss.netIncome]} />
       )}
       {(focus === "overview" || focus === "balance-sheet") && (
-        <ReportTable title="Balance Sheet" rows={[...reports.balanceSheet.assets, ...reports.balanceSheet.liabilities, ...reports.balanceSheet.equity]} basePath={basePath} totals={["Assets", reports.balanceSheet.totalAssets, "Liabilities and equity", reports.balanceSheet.totalLiabilitiesAndEquity, "Difference", reports.balanceSheet.difference]} />
+        <ReportTable title="Balance Sheet" report="balance-sheet" rows={[...reports.balanceSheet.assets, ...reports.balanceSheet.liabilities, ...reports.balanceSheet.equity]} basePath={basePath} range={reports.range} totals={["Assets", reports.balanceSheet.totalAssets, "Liabilities and equity", reports.balanceSheet.totalLiabilitiesAndEquity, "Difference", reports.balanceSheet.difference]} />
       )}
       {(focus === "overview" || focus === "trial-balance") && (
-        <ReportTable title="Trial Balance" rows={reports.trialBalance.rows} basePath={basePath} totals={["Debits", reports.trialBalance.totalDebits, "Credits", reports.trialBalance.totalCredits, "Difference", reports.trialBalance.difference]} />
+        <ReportTable title="Trial Balance" report="trial-balance" rows={reports.trialBalance.rows} basePath={basePath} range={reports.range} totals={["Debits", reports.trialBalance.totalDebits, "Credits", reports.trialBalance.totalCredits, "Difference", reports.trialBalance.difference]} />
       )}
       {(focus === "overview" || focus === "cash-activity") && (
         <section className="metric-card ui-card mt-6 p-5">
@@ -100,13 +100,17 @@ export function FinancialReports({
 
 function ReportTable({
   title,
+  report,
   rows,
   basePath,
+  range,
   totals,
 }: {
   title: string;
-  rows: Array<{ code: string; name: string; type: string; debit: string; credit: string; balance: string; entries: Array<{ journalEntryId: string; transactionId: string | null }> }>;
+  report: "profit-and-loss" | "balance-sheet" | "trial-balance";
+  rows: Array<{ accountId: string; code: string; name: string; type: string; debit: string; credit: string; balance: string; entryCount: number }>;
   basePath: "/app" | "/demo";
+  range: Reports["range"];
   totals: [string, string, string, string, string, string];
 }) {
   return (
@@ -120,7 +124,7 @@ function ReportTable({
           {rows.map((row) => (
             <tr key={`${row.type}-${row.code}`} className="border-b border-border-subtle">
               <td className="p-3 font-bold">{row.code} · {row.name}</td><td className="p-3">{row.type}</td><td className="money-value p-3 text-right">${row.debit}</td><td className="money-value p-3 text-right">${row.credit}</td><td className="money-value p-3 text-right">${row.balance}</td>
-              <td className="p-3">{row.entries[0] && <Link className="ui-link" href={`${basePath}/money/journal/${row.entries[0].journalEntryId}`}>Open entry</Link>}</td>
+              <td className="p-3">{row.entryCount > 0 && <Link className="ui-link" href={`${basePath}/reports/${report}/${row.accountId}?period=${range.period}&start=${range.start.slice(0, 10)}&end=${range.end.slice(0, 10)}`}>View {row.entryCount} {row.entryCount === 1 ? "line" : "lines"}</Link>}</td>
             </tr>
           ))}
         </tbody>
