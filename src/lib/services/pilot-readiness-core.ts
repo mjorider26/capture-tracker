@@ -55,7 +55,10 @@ export function presentAuditEvent(event: AuditInput): ActivityEvent {
   if (event.entityType === "StatementActivity") label = reconciliationLabel(event.metadataJson);
   if (event.entityType === "JournalEntry" && flag(event.metadataJson, "reversal")) label = "Transaction reversal created";
   if (event.entityType === "JournalEntry" && flag(event.metadataJson, "correctionReversal")) label = "Transaction correction recorded";
-  if (event.entityType === "Document" && event.action !== "CREATE") label = "Document updated";
+  if (event.entityType === "Document" && event.action === "VALIDATE") label = "Document security scan passed";
+  if (event.entityType === "Document" && event.action === "REJECT") label = "Document rejected by security scan";
+  if (event.entityType === "Document" && event.action === "QUARANTINE") label = "Document security scan needs attention";
+  if (event.entityType === "Document" && event.action !== "CREATE" && event.action !== "VALIDATE" && event.action !== "REJECT" && event.action !== "QUARANTINE") label = "Document updated";
   return { key: `audit-${event.id}`, module: presentation.module, label, detail: "Recorded activity", at: event.occurredAt, href: presentation.href(event.entityId) };
 }
 

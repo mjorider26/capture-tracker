@@ -87,8 +87,8 @@
     "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run docs:verify && npm run lint && npm run build"
   },
   "dependencies": {
-    "@noble/hashes": "^2.2.0",
     "@better-auth/prisma-adapter": "^1.6.25",
+    "@noble/hashes": "^2.2.0",
     "@prisma/adapter-neon": "^7.9.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
@@ -102,6 +102,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/containers": "0.3.7",
     "@opennextjs/cloudflare": "1.20.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

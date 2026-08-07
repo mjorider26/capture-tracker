@@ -14,7 +14,7 @@ function evidenceFrom(candidates: Array<{ id: string; fieldType: string; origina
   const evidence: ReviewedEvidence = { amount: first("TOTAL_AMOUNT"), date: currentDate(first("DOCUMENT_DATE")), merchant: first("MERCHANT_NAME"), currency: first("CURRENCY"), description: first("DOCUMENT_DESCRIPTION"), identifier: first("REFERENCE_NUMBER"), paymentMethod: first("PAYMENT_METHOD"), maskedAccountReference: first("MASKED_ACCOUNT_REFERENCE") };
   return { values, evidence };
 }
-function eligible(document: { status: string; malwareScanStatus: string; storageState: string; privateReadEligible: boolean; deletedAt: Date | null }) { return document.status === "ACTIVE" && document.storageState === "STORED_PRIVATE" && document.privateReadEligible && !document.deletedAt; }
+function eligible(document: { status: string; malwareScanStatus: string; storageState: string; privateReadEligible: boolean; deletedAt: Date | null }) { return document.status === "ACTIVE" && document.malwareScanStatus === "CLEAN" && document.storageState === "STORED_PRIVATE" && document.privateReadEligible && !document.deletedAt; }
 function range(date: string | Date) { const iso = typeof date === "string" ? date : date.toISOString().slice(0, 10); const center = new Date(`${iso}T00:00:00.000Z`); const before = new Date(center); before.setUTCDate(before.getUTCDate() - 31); const after = new Date(center); after.setUTCDate(after.getUTCDate() + 31); return { gte: before, lte: after }; }
 
 async function reviewedEvidence(tx: Tx, businessId: string, documentId: string) {

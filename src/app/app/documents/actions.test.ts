@@ -25,10 +25,10 @@ describe("uploadDocument camera selection", () => {
   });
 
   it("sends a selected camera receipt through the existing private upload handler", async () => {
-    uploadPrivateDocument.mockResolvedValue({ ok: true, documentId: "document", duplicate: false, outcome: "ACTIVE" });
+    uploadPrivateDocument.mockResolvedValue({ ok: true, documentId: "document", duplicate: false, outcome: "QUARANTINED" });
     const { uploadDocument } = await import("./actions");
 
-    await expect(uploadDocument({ ok: false }, new FormData())).resolves.toMatchObject({ ok: true, documentId: "document", outcome: "ACTIVE" });
+    await expect(uploadDocument({ ok: false }, new FormData())).resolves.toMatchObject({ ok: true, documentId: "document", outcome: "QUARANTINED" });
     expect(uploadPrivateDocument).toHaveBeenCalledWith({ businessId: "business", actorUserId: "user" }, cameraReceipt);
     expect(revalidatePath).toHaveBeenCalledWith("/app/documents");
   });

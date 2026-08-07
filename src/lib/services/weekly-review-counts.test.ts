@@ -73,9 +73,11 @@ describe("loadWeeklyReviewAttention", () => {
     expect(harness.calls[1].where).toEqual({
       businessId: "business-a",
       OR: [
-        { status: { in: ["PENDING_VALIDATION", "QUARANTINED"] } },
+        { status: "PENDING_VALIDATION" },
+        { status: "QUARANTINED", malwareScanStatus: { not: "PENDING" } },
+        { status: "REJECTED" },
         { extractionAttempts: { some: { status: { in: ["FAILED", "STALE"] } } } },
-        { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE" },
+        { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE", malwareScanStatus: "CLEAN" },
       ],
     });
   });

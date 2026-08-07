@@ -14,9 +14,12 @@ export function documentWorkspaceMetrics(documents: DocumentWorkspaceState[]) {
 }
 
 export function documentValidationPresentation(document: Pick<DocumentWorkspaceState, "status" | "malwareScanStatus">) {
-  if (document.status === "ACTIVE") {
+  if (document.status === "ACTIVE" && document.malwareScanStatus === "CLEAN") {
     return { tone: "success" as const, label: "Active and private" };
   }
+  if (document.status === "QUARANTINED" && document.malwareScanStatus === "PENDING") return { tone: "warning" as const, label: "Security scan pending" };
+  if (document.status === "QUARANTINED" && document.malwareScanStatus === "FAILED") return { tone: "locked" as const, label: "Security scan could not complete" };
+  if (document.status === "REJECTED" || document.malwareScanStatus === "INFECTED") return { tone: "locked" as const, label: "Rejected by security scan" };
   if (document.status === "PENDING_VALIDATION") {
     return { tone: "warning" as const, label: "Pending validation" };
   }

@@ -22,7 +22,7 @@ function normalize(field: ExtractionField) {
 }
 
 function eligible(document: { status: string; malwareScanStatus: string; storageState: string; privateReadEligible: boolean; storageKey: string | null; mimeType: string; deletedAt: Date | null }) {
-  return document.status === "ACTIVE" && document.storageState === "STORED_PRIVATE" && document.privateReadEligible && !!document.storageKey && !document.deletedAt && ["application/pdf", "image/jpeg", "image/png"].includes(document.mimeType);
+  return document.status === "ACTIVE" && document.malwareScanStatus === "CLEAN" && document.storageState === "STORED_PRIVATE" && document.privateReadEligible && !!document.storageKey && !document.deletedAt && ["application/pdf", "image/jpeg", "image/png"].includes(document.mimeType);
 }
 
 export async function runExtraction(client: Client, load: Loader, provider: ExtractionProvider, actor: ExtractionActor, documentId: string) {

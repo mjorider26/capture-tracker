@@ -28,6 +28,24 @@ export function createDocumentR2Storage(bucket: DocumentR2Bucket | undefined) {
     async removeActive(key: string) {
       await bucket.delete(`active/${key}`);
     },
+    async putQuarantined(key: string, bytes: Uint8Array, metadata: Record<string, string>, contentType: string) {
+      await bucket.put(`quarantine/${key}`, bytes, { httpMetadata: { contentType }, customMetadata: metadata });
+    },
+    async getQuarantined(key: string) {
+      return bucket.get(`quarantine/${key}`);
+    },
+    async removeQuarantined(key: string) {
+      await bucket.delete(`quarantine/${key}`);
+    },
+    async promoteQuarantined(key: string) {
+      const object = await bucket.get(`quarantine/${key}`);
+      if (!object) throw new Error("Quarantined document object is unavailable.");
+      await bucket.put(`active/${key}`, await object.arrayBuffer(), {
+        httpMetadata: object.httpMetadata,
+        customMetadata: object.customMetadata,
+      });
+      await bucket.delete(`quarantine/${key}`);
+    },
   };
 }
 

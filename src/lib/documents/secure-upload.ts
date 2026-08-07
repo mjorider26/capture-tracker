@@ -8,6 +8,7 @@ import {
   normalizeDocumentFilename,
 } from "./core";
 import { getPrivateDocumentStorage } from "./r2-storage";
+import { enqueueDocumentScan } from "./scan-queue";
 
 type Actor = { businessId: string; actorUserId: string };
 type ApprovedMimeType = "application/pdf" | "image/jpeg" | "image/png";
@@ -42,7 +43,7 @@ async function hashBytes(bytes: Uint8Array) {
 async function cleanupOrphan(key: string, fingerprint: string) {
   try {
     const storage = await getPrivateDocumentStorage();
-    await storage.removeActive(key);
+    await storage.removeQuarantined(key);
   } catch {
     // The fingerprint is intentionally non-reversible and is only for controlled recovery.
     console.error("Document object cleanup failed", { fingerprint });
@@ -66,15 +67,18 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
     const sha256 = await hashBytes(bytes);
     const existing = await prisma.document.findFirst({
       where: { businessId: actor.businessId, sha256 },
-      select: { id: true },
+      select: { id: true, status: true, malwareScanStatus: true },
     });
-    if (existing) return { ok: true as const, documentId: existing.id, duplicate: true, outcome: "EXISTING" as const };
+    if (existing?.status === "REJECTED" || existing?.malwareScanStatus === "INFECTED") {
+      return { ok: false as const, code: "REJECTED" as const, message: "This file was previously rejected by the security scan and cannot be uploaded again." };
+    }
+    if (existing) return { ok: true as const, documentId: existing.id, duplicate: true, outcome: existing.status === "QUARANTINED" ? "QUARANTINED" as const : "EXISTING" as const };
 
     // Tenant-scoped object keys keep R2 cleanup and recovery bounded even
     // though object storage itself has no relational authorization model.
     const key = `${actor.businessId}/${crypto.randomUUID().replaceAll("-", "")}`;
     const storage = await getPrivateDocumentStorage();
-    await storage.putActive(key, bytes, { sha256, version: "1" }, mimeType);
+    await storage.putQuarantined(key, bytes, { sha256, version: "1" }, mimeType);
     const now = new Date();
     try {
       const document = await prisma.$transaction(async (tx) => {
@@ -91,23 +95,20 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
             sha256,
             type: "OTHER",
             category: "OTHER",
-            status: "ACTIVE",
-            storageState: "STORED_PRIVATE",
+            status: "QUARANTINED",
+            storageState: "QUARANTINED_PRIVATE",
             storageProvider: "CLOUDFLARE_R2",
             storageKey: key,
             retentionClass: "GENERAL_TAX_SEVEN_YEARS",
             retentionUntil: calculateDocumentRetentionUntil(now),
             uploadCompletedAt: now,
-            activatedAt: now,
-            privateReadEligible: true,
-            // No malware scan has run. Strict synchronous validation is the
-            // private-pilot control until untrusted uploads are introduced.
-            malwareScanStatus: "NOT_STARTED",
+            privateReadEligible: false,
+            malwareScanStatus: "PENDING",
             statusHistory: {
               create: {
-                newStatus: "ACTIVE",
+                newStatus: "QUARANTINED",
                 actorUserId: actor.actorUserId,
-                note: "Private R2 upload passed synchronous type and size validation; malware scanning is deferred for the private pilot.",
+                note: "Private R2 upload passed structural validation and is awaiting a security scan.",
               },
             },
           },
@@ -121,17 +122,27 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
             entityType: "Document",
             entityId: created.id,
             afterJson: { mimeType, sizeBytes: String(bytes.length), sha256 },
-            metadataJson: { storage: "private-r2", validation: "synchronous", malwareScanning: "deferred-private-pilot" },
+            metadataJson: { storage: "private-r2-quarantine", validation: "synchronous", malwareScanning: "queued" },
           },
         });
         return created;
       });
-      return { ok: true as const, documentId: document.id, duplicate: false, outcome: "ACTIVE" as const };
+      let scanQueueUnavailable = false;
+      try { await enqueueDocumentScan({ documentId: document.id, version: document.version }); }
+      catch {
+        scanQueueUnavailable = true;
+        await prisma.$transaction(async (tx) => {
+          const failed = await tx.document.updateMany({ where: { id: document.id, businessId: actor.businessId, version: document.version, status: "QUARANTINED", malwareScanStatus: "PENDING" }, data: { malwareScanStatus: "FAILED", malwareScanProvider: "queue-unavailable" } });
+          if (failed.count === 1) await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: actor.businessId, action: "QUARANTINE", entityType: "Document", entityId: document.id, metadataJson: { securityScan: "queue-unavailable" } } });
+        });
+      }
+      return { ok: true as const, documentId: document.id, duplicate: false, outcome: scanQueueUnavailable ? "SCAN_FAILED" as const : "QUARANTINED" as const };
     } catch (error) {
-      await cleanupOrphan(key, sha256.slice(0, 12));
+      try { await storage.removeQuarantined(key); } catch { await cleanupOrphan(key, sha256.slice(0, 12)); }
       if (isUniqueDocumentHashError(error)) {
-        const canonical = await prisma.document.findFirst({ where: { businessId: actor.businessId, sha256 }, select: { id: true } });
-        if (canonical) return { ok: true as const, documentId: canonical.id, duplicate: true, outcome: "EXISTING" as const };
+        const canonical = await prisma.document.findFirst({ where: { businessId: actor.businessId, sha256 }, select: { id: true, status: true, malwareScanStatus: true } });
+        if (canonical?.status === "REJECTED" || canonical?.malwareScanStatus === "INFECTED") return { ok: false as const, code: "REJECTED" as const, message: "This file was previously rejected by the security scan and cannot be uploaded again." };
+        if (canonical) return { ok: true as const, documentId: canonical.id, duplicate: true, outcome: canonical.status === "QUARANTINED" ? "QUARANTINED" as const : "EXISTING" as const };
       }
       return { ok: false as const, code: "STORAGE", message: "Document could not be stored safely." };
     }

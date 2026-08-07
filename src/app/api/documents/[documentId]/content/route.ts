@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ docu
     if (!permitted) return new NextResponse(null, { status: 404 });
 
     const document = await getDocument(context.business.id, documentId);
-    if (!document || document.status !== "ACTIVE" || !document.privateReadEligible || document.storageState !== "STORED_PRIVATE" || !document.storageKey || document.deletedAt) return new NextResponse(null, { status: 404 });
+    if (!document || document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN" || !document.privateReadEligible || document.storageState !== "STORED_PRIVATE" || !document.storageKey || document.deletedAt) return new NextResponse(null, { status: 404 });
 
     const object = await (await getPrivateDocumentStorage()).getActive(document.storageKey);
     if (!object) return new NextResponse(null, { status: 404 });

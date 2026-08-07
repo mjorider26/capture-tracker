@@ -11,6 +11,8 @@ describe("Activity presentation", () => {
 
   it("presents document, reconciliation, tax, and weekly-review-safe events", () => {
     expect(presentAuditEvent({ id: "d", entityType: "Document", entityId: "doc", action: "CREATE", occurredAt: new Date() }).label).toBe("Document uploaded");
+    expect(presentAuditEvent({ id: "d-scan", entityType: "Document", entityId: "doc", action: "VALIDATE", occurredAt: new Date() }).label).toBe("Document security scan passed");
+    expect(presentAuditEvent({ id: "d-rejected", entityType: "Document", entityId: "doc", action: "REJECT", occurredAt: new Date() }).label).toBe("Document rejected by security scan");
     expect(presentAuditEvent({ id: "r", entityType: "StatementActivity", entityId: "activity", action: "UPDATE", metadataJson: { statementActivityAction: "MATCH" }, occurredAt: new Date() }).label).toBe("Statement activity matched");
     expect(presentAuditEvent({ id: "t", entityType: "TaxPaymentRecord", entityId: "payment", action: "CREATE", occurredAt: new Date() }).href).toBe("/taxes/estimates");
     expect(presentAuditEvent({ id: "j", entityType: "JournalEntry", entityId: "journal", action: "CREATE", metadataJson: { reversal: true }, occurredAt: new Date() }).label).toBe("Transaction reversal created");

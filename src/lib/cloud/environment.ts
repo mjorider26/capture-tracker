@@ -99,7 +99,19 @@ export function readCloudEnvironment(input: EnvironmentInput = process.env) {
   if (deploymentProfile === "free-preview-cloudflare-neon") {
     if (environment !== "staging" || executionContext !== "cloudflare") throw new CloudConfigurationError("Free preview is staging-only Cloudflare execution.");
     requireExplicitFalse(input, "CAPTURE_TRACKER_REAL_DATA_APPROVED", "Free preview must keep real-data approval false.");
-    requireExplicitFalse(input, "CAPTURE_TRACKER_PAID_SERVICE_APPROVED", "Free preview cannot activate paid services.");
+    const documentScanningApproved = value(input, "CAPTURE_TRACKER_DOCUMENT_SCANNING_APPROVED") === "true";
+    const paidServiceApproved = value(input, "CAPTURE_TRACKER_PAID_SERVICE_APPROVED") === "true";
+    // Fictional staging remains free-preview-only by default. The sole
+    // exception is the explicitly approved private document scanner, which
+    // requires Workers Paid Containers and Queues but introduces no external
+    // provider or customer-data egress.
+    if (paidServiceApproved && !documentScanningApproved) {
+      throw new CloudConfigurationError("Fictional staging paid services require explicit document-scanning approval.");
+    }
+    if (!paidServiceApproved && documentScanningApproved) {
+      throw new CloudConfigurationError("Document-scanning approval requires the approved Cloudflare paid-service boundary.");
+    }
+    if (!paidServiceApproved) requireExplicitFalse(input, "CAPTURE_TRACKER_PAID_SERVICE_APPROVED", "Free preview cannot activate paid services.");
     requireExplicitFalse(input, "CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED", "Free preview cannot enable customer onboarding.");
     if (value(input, "CAPTURE_TRACKER_DATA_MODE") !== "fictional") throw new CloudConfigurationError("Free preview is fictional-data-only.");
     if (!runtimeTarget.hostname.endsWith(".neon.tech") || !migrationTarget.hostname.endsWith(".neon.tech") || !runtimeTarget.hostname.includes("-pooler.")) {

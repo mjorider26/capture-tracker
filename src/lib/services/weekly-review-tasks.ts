@@ -41,12 +41,13 @@ export async function loadWeeklyReviewTasks(
         displayName: true,
         uploadedAt: true,
         status: true,
+        malwareScanStatus: true,
         extractionAttempts: { select: { status: true, candidates: { select: { id: true, fieldType: true, reviewState: true } } } },
       },
     }),
     client.documentMatchSuggestion.findMany({
       where: { businessId, status: "SUGGESTED", run: { status: "COMPLETED" } },
-      select: { id: true, status: true, score: true, transactionAmount: true, transactionPostedAt: true, run: { select: { status: true, document: { select: { id: true, displayName: true } } } } },
+      select: { id: true, status: true, score: true, transactionAmount: true, transactionPostedAt: true, run: { select: { status: true, document: { select: { id: true, displayName: true, malwareScanStatus: true } } } } },
     }),
     client.reconciliationItem.findMany({
       where: { businessId, status: "OUTSTANDING", reconciliation: { status: { in: ["DRAFT", "IN_PROGRESS"] } } },

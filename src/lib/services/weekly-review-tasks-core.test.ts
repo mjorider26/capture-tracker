@@ -42,17 +42,17 @@ describe("per-record weekly review tasks", () => {
   });
 
   it("creates a document-review task", () => {
-    const tasks = buildWeeklyReviewTasks(records({ documents: [{ id: "doc-1", displayName: "July receipt", uploadedAt: date, status: "PENDING_VALIDATION", extractionAttempts: [] }] }));
+    const tasks = buildWeeklyReviewTasks(records({ documents: [{ id: "doc-1", displayName: "July receipt", uploadedAt: date, status: "PENDING_VALIDATION", malwareScanStatus: "NOT_STARTED", extractionAttempts: [] }] }));
     expect(tasks).toContainEqual(expect.objectContaining({ id: "document-review:doc-1", href: "/documents/doc-1" }));
   });
 
   it("creates one extraction task for each actionable candidate", () => {
-    const tasks = buildWeeklyReviewTasks(records({ documents: [{ id: "doc-1", displayName: "July receipt", uploadedAt: date, status: "ACTIVE", extractionAttempts: [{ status: "COMPLETED", candidates: [{ id: "candidate-1", fieldType: "TOTAL_AMOUNT", reviewState: "UNREVIEWED" }] }] }] }));
+    const tasks = buildWeeklyReviewTasks(records({ documents: [{ id: "doc-1", displayName: "July receipt", uploadedAt: date, status: "ACTIVE", malwareScanStatus: "CLEAN", extractionAttempts: [{ status: "COMPLETED", candidates: [{ id: "candidate-1", fieldType: "TOTAL_AMOUNT", reviewState: "UNREVIEWED" }] }] }] }));
     expect(tasks.map((task) => task.id)).toEqual(["extraction-candidate:candidate-1"]);
   });
 
   it("creates a matching task only for a current actionable suggestion", () => {
-    const tasks = buildWeeklyReviewTasks(records({ matchSuggestions: [{ id: "match-1", status: "SUGGESTED", score: 91, transactionAmount: amount("12.00"), transactionPostedAt: date, run: { status: "COMPLETED", document: { id: "doc-1", displayName: "July receipt" } } }] }));
+    const tasks = buildWeeklyReviewTasks(records({ matchSuggestions: [{ id: "match-1", status: "SUGGESTED", score: 91, transactionAmount: amount("12.00"), transactionPostedAt: date, run: { status: "COMPLETED", document: { id: "doc-1", displayName: "July receipt", malwareScanStatus: "CLEAN" } } }] }));
     expect(tasks).toContainEqual(expect.objectContaining({ id: "document-match:match-1", href: "/documents/doc-1" }));
   });
 
@@ -91,8 +91,8 @@ describe("per-record weekly review tasks", () => {
 
   it("omits stale targets that cannot safely be acted on", () => {
     const tasks = buildWeeklyReviewTasks(records({
-      documents: [{ id: "doc-1", displayName: "Old receipt", uploadedAt: date, status: "ACTIVE", extractionAttempts: [{ status: "STALE", candidates: [{ id: "candidate-1", fieldType: "TOTAL_AMOUNT", reviewState: "UNREVIEWED" }] }] }],
-      matchSuggestions: [{ id: "match-1", status: "SUGGESTED", score: 91, transactionAmount: amount("12.00"), transactionPostedAt: date, run: { status: "STALE", document: { id: "doc-1", displayName: "Old receipt" } } }],
+      documents: [{ id: "doc-1", displayName: "Old receipt", uploadedAt: date, status: "ACTIVE", malwareScanStatus: "CLEAN", extractionAttempts: [{ status: "STALE", candidates: [{ id: "candidate-1", fieldType: "TOTAL_AMOUNT", reviewState: "UNREVIEWED" }] }] }],
+      matchSuggestions: [{ id: "match-1", status: "SUGGESTED", score: 91, transactionAmount: amount("12.00"), transactionPostedAt: date, run: { status: "STALE", document: { id: "doc-1", displayName: "Old receipt", malwareScanStatus: "CLEAN" } } }],
       reconciliationItems: [{ id: "item-1", status: "OUTSTANDING", reconciliation: { id: "recon-1", status: "COMPLETED", statementEndDate: date, financialAccount: { name: "Checking" } }, transaction: { id: "tx-1", description: "Office supplies", amount: amount("25.00"), postedAt: date } }],
     }));
     expect(tasks).toEqual([]);
@@ -113,5 +113,14 @@ describe("per-record weekly review tasks", () => {
     const weeklyReviewCount = countWeeklyReviewTasks(tasks);
     const todayCount = countWeeklyReviewTasks(tasks);
     expect(todayCount).toBe(weeklyReviewCount);
+  });
+
+  it("keeps pending scans informational while making scan failures and rejections actionable", () => {
+    const tasks = buildWeeklyReviewTasks(records({ documents: [
+      { id: "pending", displayName: "Pending receipt", uploadedAt: date, status: "QUARANTINED", malwareScanStatus: "PENDING", extractionAttempts: [] },
+      { id: "failed", displayName: "Failed receipt", uploadedAt: date, status: "QUARANTINED", malwareScanStatus: "FAILED", extractionAttempts: [] },
+      { id: "rejected", displayName: "Rejected receipt", uploadedAt: date, status: "REJECTED", malwareScanStatus: "INFECTED", extractionAttempts: [] },
+    ] }));
+    expect(tasks.map((task) => task.id)).toEqual(["document-scan-failed:failed", "document-security-rejected:rejected"]);
   });
 });

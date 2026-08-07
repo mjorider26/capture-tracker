@@ -1,0 +1,115 @@
+import "server-only";
+
+import { prisma } from "@/lib/prisma";
+
+import { getPrivateDocumentStorage } from "./r2-storage";
+import type { DocumentScanJob, DocumentScanResult } from "./scan-contract";
+
+export type { DocumentScanJob, DocumentScanResult } from "./scan-contract";
+
+type ScanTarget = {
+  id: string;
+  businessId: string;
+  version: number;
+  storageKey: string;
+  mimeType: string;
+  uploadedByMembershipId: string;
+};
+
+const scanTargetWhere = (job: DocumentScanJob) => ({
+  id: job.documentId,
+  version: job.version,
+  status: "QUARANTINED" as const,
+  storageState: "QUARANTINED_PRIVATE" as const,
+  malwareScanStatus: "PENDING" as const,
+  deletedAt: null,
+});
+
+function safeScannerValue(value: string | undefined, fallback: string) {
+  const normalized = value?.trim().slice(0, 80);
+  return normalized && /^[A-Za-z0-9._-]+$/.test(normalized) ? normalized : fallback;
+}
+
+async function targetFor(job: DocumentScanJob): Promise<ScanTarget | null> {
+  return prisma.document.findFirst({
+    where: scanTargetWhere(job),
+    select: { id: true, businessId: true, version: true, storageKey: true, mimeType: true, uploadedByMembershipId: true },
+  }) as Promise<ScanTarget | null>;
+}
+
+/**
+ * Returns bytes only to the authenticated internal scanner boundary. It never
+ * returns a storage key, business ID, or any client-visible document metadata.
+ */
+export async function readQuarantinedDocumentForScan(job: DocumentScanJob) {
+  const target = await targetFor(job);
+  if (!target?.storageKey) return null;
+  const object = await (await getPrivateDocumentStorage()).getQuarantined(target.storageKey);
+  if (!object) return null;
+  return { bytes: new Uint8Array(await object.arrayBuffer()), mimeType: target.mimeType };
+}
+
+/**
+ * Applies a scanner outcome with a conditional update. Queue delivery is
+ * at-least-once, so only the first current result can change the document or
+ * append an audit event. Old/replayed messages deliberately become no-ops.
+ */
+export async function applyDocumentScanResult(job: DocumentScanJob, result: DocumentScanResult) {
+  const target = await targetFor(job);
+  if (!target?.storageKey) return { state: "STALE" as const };
+
+  const scannerId = safeScannerValue(result.scannerId, "clamav");
+  const scannerVersion = safeScannerValue(result.scannerVersion, "unknown");
+  const scannedAt = new Date();
+
+  if (result.category === "CLEAN") {
+    // Copying the original object between private prefixes preserves the bytes.
+    // Reads stay denied until the conditional database update commits.
+    await (await getPrivateDocumentStorage()).promoteQuarantined(target.storageKey);
+    const activated = await prisma.$transaction(async (tx) => {
+      const update = await tx.document.updateMany({
+        where: scanTargetWhere(job),
+        data: {
+          status: "ACTIVE",
+          storageState: "STORED_PRIVATE",
+          privateReadEligible: true,
+          malwareScanStatus: "CLEAN",
+          malwareScanProvider: scannerId,
+          malwareScannedAt: scannedAt,
+          activatedAt: scannedAt,
+          version: { increment: 1 },
+        },
+      });
+      if (update.count !== 1) return false;
+      await tx.documentStatusHistory.create({ data: { businessId: target.businessId, documentId: target.id, previousStatus: "QUARANTINED", newStatus: "ACTIVE", actorUserId: target.uploadedByMembershipId, note: "Security scan passed; private document access was enabled." } });
+      await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "VALIDATE", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "passed", scanner: scannerId, scannerVersion } } });
+      return true;
+    });
+    return { state: activated ? "ACTIVATED" as const : "STALE" as const };
+  }
+
+  if (result.category === "INFECTED") {
+    const rejected = await prisma.$transaction(async (tx) => {
+      const update = await tx.document.updateMany({
+        where: scanTargetWhere(job),
+        data: { status: "REJECTED", privateReadEligible: false, malwareScanStatus: "INFECTED", malwareScanProvider: scannerId, malwareScannedAt: scannedAt, quarantineReasonCode: "SECURITY_SCAN_REJECTED", quarantineExplanation: "This file could not be accepted because it failed the security scan.", version: { increment: 1 } },
+      });
+      if (update.count !== 1) return false;
+      await tx.documentStatusHistory.create({ data: { businessId: target.businessId, documentId: target.id, previousStatus: "QUARANTINED", newStatus: "REJECTED", reasonCode: "SECURITY_SCAN_REJECTED", actorUserId: target.uploadedByMembershipId, note: "Document rejected by the security scan." } });
+      await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "REJECT", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "rejected", scanner: scannerId, scannerVersion } } });
+      return true;
+    });
+    return { state: rejected ? "REJECTED" as const : "STALE" as const };
+  }
+
+  const failed = await prisma.$transaction(async (tx) => {
+    const update = await tx.document.updateMany({
+      where: scanTargetWhere(job),
+      data: { malwareScanStatus: "FAILED", malwareScanProvider: scannerId, malwareScannedAt: scannedAt, quarantineReasonCode: "SECURITY_SCAN_UNAVAILABLE", quarantineExplanation: "We could not finish the security scan yet. The document remains private and unavailable until scanning succeeds.", version: { increment: 1 } },
+    });
+    if (update.count !== 1) return false;
+    await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "QUARANTINE", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "failed", scanner: scannerId, scannerVersion } } });
+    return true;
+  });
+  return { state: failed ? "FAILED" as const : "STALE" as const };
+}

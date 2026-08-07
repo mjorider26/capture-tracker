@@ -7,6 +7,7 @@
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "capture-tracker-production" }],
   "r2_buckets": [{ "binding": "CAPTURE_TRACKER_DOCUMENTS", "bucket_name": "capture-tracker-production-documents" }],
+  "queues": { "producers": [{ "binding": "CAPTURE_TRACKER_DOCUMENT_SCAN_QUEUE", "queue": "capture-tracker-production-document-scan" }] },
   "vars": {
     "BETTER_AUTH_URL": "https://capture-tracker-production.mjorider.workers.dev",
     "CAPTURE_TRACKER_ENVIRONMENT": "production",

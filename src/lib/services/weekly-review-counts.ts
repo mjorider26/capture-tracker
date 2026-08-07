@@ -23,13 +23,15 @@ export async function loadWeeklyReviewAttention(
     where: {
       businessId,
       OR: [
-        { status: { in: ["PENDING_VALIDATION", "QUARANTINED"] } },
+        { status: "PENDING_VALIDATION" },
+        { status: "QUARANTINED", malwareScanStatus: { not: "PENDING" } },
+        { status: "REJECTED" },
         {
           extractionAttempts: {
             some: { status: { in: ["FAILED", "STALE"] } },
           },
         },
-        { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE" },
+        { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE", malwareScanStatus: "CLEAN" },
       ],
     },
   });

@@ -33,6 +33,7 @@ assert(!runtime["@opennextjs/cloudflare"] && tooling["@opennextjs/cloudflare"] =
 for (const dependency of ["prisma", "wrangler", "vitest", "typescript", "eslint"]) {
   assert(!runtime[dependency] && tooling[dependency], `${dependency} must remain build, validation, or local tooling only.`);
 }
+assert(!runtime["@cloudflare/containers"] && tooling["@cloudflare/containers"] === "0.3.7", "The Cloudflare Container interface must remain an exact scanner build dependency, not application runtime code.");
 assert(!runtime["aws-cdk-lib"] && !runtime["constructs"], "AWS infrastructure dependencies must not enter application runtime dependencies.");
 assert(runtime.pg && !tooling.pg, "The PostgreSQL driver must remain an application runtime dependency.");
 assert(!runtime["pg-cloudflare"] && !tooling["pg-cloudflare"], "pg-cloudflare must remain the locked pg optional dependency; do not add an unreviewed duplicate declaration.");
@@ -66,8 +67,8 @@ for (const file of source) {
 }
 
 const wrangler = text("wrangler.jsonc");
-assert(wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS"') && wrangler.includes('"capture-tracker-staging-documents"'), "Worker configuration must contain only the dedicated private document R2 binding.");
-assert(!/CAPTURE_TRACKER_DOCUMENTS_BUCKET|DATABASE_URL|DIRECT_DATABASE_URL|BETTER_AUTH_SECRET|account_id|api[_-]?token|r2\.dev|custom_domains|queues/i.test(wrangler), "Worker configuration must exclude database/local-tooling settings, secrets, account credentials, public R2 access, and queues.");
+assert(wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS"') && wrangler.includes('"capture-tracker-staging-documents"') && wrangler.includes('"CAPTURE_TRACKER_DOCUMENT_SCAN_QUEUE"'), "Worker configuration must contain only the dedicated private document R2 and scan Queue bindings.");
+assert(!/CAPTURE_TRACKER_DOCUMENTS_BUCKET|DATABASE_URL|DIRECT_DATABASE_URL|BETTER_AUTH_SECRET|account_id|api[_-]?token|r2\.dev|custom_domains/i.test(wrangler), "Worker configuration must exclude database/local-tooling settings, secrets, account credentials, and public R2 access.");
 const dockerfile = text("Dockerfile");
 assert(!/next dev|wrangler dev|vitest|prisma (?:studio|dev)|aws-cdk/i.test(dockerfile) && /CMD \["node", "server\.js"\]/.test(dockerfile), "Container runtime must not run development, test, database, or infrastructure tooling.");
 assert(manifest.scripts.start === "next start" && manifest.scripts.dev === "next dev", "Production and development server entry points must remain distinct.");

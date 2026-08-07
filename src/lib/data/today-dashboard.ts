@@ -179,7 +179,7 @@ export async function getTodayDashboard(
     cashLedgerIds.length ? prisma.journalLine.findMany({ where: { businessId, ledgerAccountId: { in: cashLedgerIds }, journalEntry: { status: "POSTED" } }, select: { ledgerAccountId: true, debitAmount: true, creditAmount: true } }) : [],
     prisma.journalLine.findMany({ where: { businessId, journalEntry: { status: "POSTED", entryDate: { gte: monthStart } } }, select: { debitAmount: true, creditAmount: true, ledgerAccount: { select: { type: true } } } }),
     prisma.transaction.count({ where: { businessId, status: "PENDING_REVIEW" } }),
-    prisma.document.count({ where: { businessId, OR: [{ status: { in: ["PENDING_VALIDATION", "QUARANTINED"] } }, { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE" }] } }),
+    prisma.document.count({ where: { businessId, OR: [{ status: "PENDING_VALIDATION" }, { status: "QUARANTINED", malwareScanStatus: { not: "PENDING" } }, { status: "REJECTED" }, { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE", malwareScanStatus: "CLEAN" }] } }),
   ]);
 
   const cashBalance = (accounts: typeof cashAccounts, ids: string[]) => accounts.reduce((total, account) => total.plus(account.openingBalance), new Prisma.Decimal(0)).plus(cashLines.filter((line) => ids.includes(line.ledgerAccountId)).reduce((total, line) => total.plus(line.debitAmount).minus(line.creditAmount), new Prisma.Decimal(0)));

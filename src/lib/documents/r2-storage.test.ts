@@ -7,18 +7,26 @@ describe("private R2 document storage", () => {
     expect(() => createDocumentR2Storage(undefined)).toThrow(DocumentR2UnavailableError);
   });
 
-  it("uses an active-only private namespace", async () => {
+  it("keeps quarantined bytes separate from active private bytes and promotes without changing content", async () => {
     const operations: string[] = [];
+    const contents = new Map<string, Uint8Array>();
     const bucket: DocumentR2Bucket = {
-      put: async (key) => { operations.push(`put:${key}`); },
-      get: async (key) => { operations.push(`get:${key}`); return null; },
+      put: async (key, value) => { operations.push(`put:${key}`); contents.set(key, new Uint8Array(value)); },
+      get: async (key) => {
+        operations.push(`get:${key}`);
+        const value = contents.get(key);
+        return value ? { arrayBuffer: async () => value.slice().buffer, httpMetadata: { contentType: "image/png" }, customMetadata: { version: "1" } } : null;
+      },
       head: async () => null,
-      delete: async (key) => { operations.push(`delete:${key}`); },
+      delete: async (key) => { operations.push(`delete:${key}`); contents.delete(key); },
     };
     const storage = createDocumentR2Storage(bucket);
-    await storage.putActive("opaque", new Uint8Array([1]), { version: "1" }, "image/png");
+    await storage.putQuarantined("opaque", new Uint8Array([1]), { version: "1" }, "image/png");
+    await storage.getQuarantined("opaque");
+    await storage.promoteQuarantined("opaque");
     await storage.getActive("opaque");
-    await storage.removeActive("opaque");
-    expect(operations).toEqual(["put:active/opaque", "get:active/opaque", "delete:active/opaque"]);
+    expect(operations).toEqual(["put:quarantine/opaque", "get:quarantine/opaque", "get:quarantine/opaque", "put:active/opaque", "delete:quarantine/opaque", "get:active/opaque"]);
+    expect([...contents.keys()]).toEqual(["active/opaque"]);
+    expect([...contents.get("active/opaque") ?? []]).toEqual([1]);
   });
 });

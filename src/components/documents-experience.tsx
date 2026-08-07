@@ -108,8 +108,8 @@ function DocumentTableRow({ document, basePath }: { document: DocumentRow; baseP
   return <tr className="border-t border-border-subtle transition-colors hover:bg-surface-secondary/60">
     <td className="min-w-64 px-5 py-4"><DocumentName document={document} basePath={basePath} /></td>
     <td className="px-5 py-4"><Validation document={document} /></td>
-    <td className="px-5 py-4"><PipelineStatus status={document.extractionAttempts[0]?.status} unavailable={document.status !== "ACTIVE"} /></td>
-    <td className="px-5 py-4"><PipelineStatus status={document.matchRuns[0]?.status} unavailable={document.status !== "ACTIVE"} /></td>
+    <td className="px-5 py-4"><PipelineStatus status={document.extractionAttempts[0]?.status} unavailable={document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN"} /></td>
+    <td className="px-5 py-4"><PipelineStatus status={document.matchRuns[0]?.status} unavailable={document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN"} /></td>
     <td className="px-5 py-4"><LinkStatus linked={document.transactions.length > 0} /></td>
   </tr>;
 }
@@ -117,7 +117,7 @@ function DocumentTableRow({ document, basePath }: { document: DocumentRow; baseP
 function DocumentCard({ document, basePath }: { document: DocumentRow; basePath: "/app" | "/demo" }) {
   return <article className="p-4 sm:p-5">
     <DocumentName document={document} basePath={basePath} />
-    <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs"><StatusGroup label="Validation"><Validation document={document} /></StatusGroup><StatusGroup label="Extraction"><PipelineStatus status={document.extractionAttempts[0]?.status} unavailable={document.status !== "ACTIVE"} /></StatusGroup><StatusGroup label="Match"><PipelineStatus status={document.matchRuns[0]?.status} unavailable={document.status !== "ACTIVE"} /></StatusGroup><StatusGroup label="Link"><LinkStatus linked={document.transactions.length > 0} /></StatusGroup></div>
+    <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs"><StatusGroup label="Validation"><Validation document={document} /></StatusGroup><StatusGroup label="Extraction"><PipelineStatus status={document.extractionAttempts[0]?.status} unavailable={document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN"} /></StatusGroup><StatusGroup label="Match"><PipelineStatus status={document.matchRuns[0]?.status} unavailable={document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN"} /></StatusGroup><StatusGroup label="Link"><LinkStatus linked={document.transactions.length > 0} /></StatusGroup></div>
   </article>;
 }
 
@@ -147,11 +147,14 @@ function documentAttention(document: DocumentRow) {
   const extraction = document.extractionAttempts[0];
   const match = document.matchRuns[0];
   if (document.status === "PENDING_VALIDATION") return ["Validation is pending; protected bytes remain unavailable."];
+  if (document.status === "QUARANTINED" && document.malwareScanStatus === "PENDING") return [];
+  if (document.status === "QUARANTINED" && document.malwareScanStatus === "FAILED") return ["Security scan could not be completed; the document remains private and unavailable."];
+  if (document.status === "REJECTED" || document.malwareScanStatus === "INFECTED") return ["This document failed the security scan and cannot be used."];
   if (document.status === "QUARANTINED") return ["This document is quarantined and cannot be opened."];
   if (extraction?.status === "FAILED" || extraction?.status === "STALE") return [`Extraction is ${extraction.status.toLowerCase()} and needs review.`];
   if (extraction?.candidates.some((candidate) => candidate.reviewState === "UNREVIEWED")) return ["Reviewed extraction fields are still needed."];
   if (match?.status === "STALE") return ["Suggested matches are stale and cannot be approved."];
   if (match?.suggestions.length) return ["A suggested transaction match needs an explicit decision."];
-  if (document.status === "ACTIVE" && document.transactions.length === 0) return ["Active evidence has no linked transaction."];
+  if (document.status === "ACTIVE" && document.malwareScanStatus === "CLEAN" && document.transactions.length === 0) return ["Active evidence has no linked transaction."];
   return [];
 }

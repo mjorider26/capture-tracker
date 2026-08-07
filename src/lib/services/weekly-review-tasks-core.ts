@@ -29,6 +29,7 @@ type Document = {
   displayName: string;
   uploadedAt: Date;
   status: string;
+  malwareScanStatus: string;
   extractionAttempts: Array<{
     status: string;
     candidates: Array<{ id: string; fieldType: string; reviewState: string }>;
@@ -41,7 +42,7 @@ type MatchSuggestion = {
   score: number;
   transactionAmount: { toFixed: (digits: number) => string };
   transactionPostedAt: Date;
-  run: { status: string; document: { id: string; displayName: string } };
+  run: { status: string; document: { id: string; displayName: string; malwareScanStatus: string } };
 };
 
 type ReconciliationItem = {
@@ -155,7 +156,7 @@ export function buildWeeklyReviewTasks(
 
   for (const document of records.documents) {
     const detail = `${formatDate(document.uploadedAt)} · ${document.status.replaceAll("_", " ").toLowerCase()}`;
-    if (["PENDING_VALIDATION", "QUARANTINED"].includes(document.status)) {
+    if (document.status === "PENDING_VALIDATION") {
       add(tasks, {
         id: `document-review:${document.id}`,
         category: "Documents",
@@ -166,6 +167,13 @@ export function buildWeeklyReviewTasks(
         state: "UNRESOLVED",
       });
     }
+    if (document.status === "QUARANTINED" && document.malwareScanStatus === "FAILED") {
+      add(tasks, { id: `document-scan-failed:${document.id}`, category: "Documents", title: `Security scan could not complete for ${document.displayName}`, explanation: "The document remains private and unavailable until security scanning succeeds.", detail, href: `/documents/${document.id}`, state: "UNRESOLVED" });
+    }
+    if (document.status === "REJECTED" || document.malwareScanStatus === "INFECTED") {
+      add(tasks, { id: `document-security-rejected:${document.id}`, category: "Documents", title: `Replace rejected document ${document.displayName}`, explanation: "This document failed its security scan and cannot be used as evidence.", detail, href: `/documents/${document.id}`, state: "UNRESOLVED" });
+    }
+    if (document.status !== "ACTIVE" || document.malwareScanStatus !== "CLEAN") continue;
     for (const attempt of document.extractionAttempts) {
       if (attempt.status !== "COMPLETED") continue;
       for (const candidate of attempt.candidates) {
@@ -184,7 +192,7 @@ export function buildWeeklyReviewTasks(
   }
 
   for (const suggestion of records.matchSuggestions) {
-    if (suggestion.status !== "SUGGESTED" || suggestion.run.status !== "COMPLETED") continue;
+    if (suggestion.status !== "SUGGESTED" || suggestion.run.status !== "COMPLETED" || suggestion.run.document.malwareScanStatus !== "CLEAN") continue;
     add(tasks, {
       id: `document-match:${suggestion.id}`,
       category: "Documents",

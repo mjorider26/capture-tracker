@@ -9,9 +9,9 @@ import { decideDocumentTransactionMatch, dismissDocumentTransactionMatchRun, gen
 import { requireBusinessContext } from "@/lib/security/business-context";
 
 export type DocumentUploadState = {
-  code?: "INVALID" | "STORAGE" | "UNAVAILABLE";
+  code?: "INVALID" | "STORAGE" | "UNAVAILABLE" | "REJECTED";
   documentId?: string;
-  outcome?: "ACTIVE" | "EXISTING";
+  outcome?: "QUARANTINED" | "SCAN_FAILED" | "EXISTING";
   message?: string;
   ok: boolean;
 };
@@ -49,7 +49,7 @@ export async function uploadDocument(_: DocumentUploadState, formData: FormData)
     const context = await requireBusinessContext();
     const result = await uploadPrivateDocument({ businessId: context.business.id, actorUserId: context.user.id }, file);
     if (!result.ok) {
-      const code = result.code === "INVALID" || result.code === "STORAGE" ? result.code : "UNAVAILABLE";
+      const code = result.code === "INVALID" || result.code === "STORAGE" || result.code === "REJECTED" ? result.code : "UNAVAILABLE";
       return { ok: false, code, message: result.message };
     }
     revalidatePath("/app/documents");
@@ -57,7 +57,7 @@ export async function uploadDocument(_: DocumentUploadState, formData: FormData)
       ok: true,
       documentId: result.documentId,
       outcome: result.outcome,
-      message: result.duplicate ? "This file already has a canonical document record." : undefined,
+      message: result.duplicate ? result.outcome === "QUARANTINED" ? "This file is already awaiting its security scan." : "This file already has a canonical document record." : undefined,
     };
   } catch {
     return { ok: false, code: "UNAVAILABLE", message: "Private document storage is unavailable. Please try again." };

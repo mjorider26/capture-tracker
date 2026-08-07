@@ -11,7 +11,7 @@ import {
 type Actor = TransactionDocumentActor;
 type Outcome = TransactionDocumentLinkOutcome;
 
-const activeDocument = { status: "ACTIVE" as const, storageState: "STORED_PRIVATE" as const, privateReadEligible: true, deletedAt: null };
+const activeDocument = { status: "ACTIVE" as const, malwareScanStatus: "CLEAN" as const, storageState: "STORED_PRIVATE" as const, privateReadEligible: true, deletedAt: null };
 
 export async function linkDocumentToTransaction(actor: Actor, transactionId: string, documentId: string): Promise<Outcome> {
   return linkDocumentToTransactionCore(prisma, actor, transactionId, documentId);

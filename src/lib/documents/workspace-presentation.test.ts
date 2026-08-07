@@ -11,8 +11,8 @@ describe("document workspace presentation", () => {
     ])).toEqual({ pending: 1, active: 1, attention: 2, linked: 1 });
   });
 
-  it("presents an active private-pilot document without claiming a malware scan", () => {
-    expect(documentValidationPresentation({ status: "ACTIVE", malwareScanStatus: "NOT_STARTED" })).toEqual({ tone: "success", label: "Active and private" });
+  it("requires a clean scan before presenting an active document as available", () => {
+    expect(documentValidationPresentation({ status: "ACTIVE", malwareScanStatus: "NOT_STARTED" })).toEqual({ tone: "locked", label: "Active" });
     expect(documentValidationPresentation({ status: "ACTIVE", malwareScanStatus: "CLEAN" })).toEqual({ tone: "success", label: "Active and private" });
   });
 
