@@ -1,5 +1,9 @@
 # Phase 9A cloud foundation
 
+> **SUPERSEDED / HISTORICAL**
+>
+> This document describes an earlier Capture Tracker implementation state and must not be used as the current production operations source of truth. See [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
+
 > Phase 9B.1 dependency-security update (2026-07-25): no external account, provider resource, deployment, migration, bootstrap, restore drill, billing check, paid activation, AWS action, or R2 subscription occurred. The documented free-preview profile remains fictional-only with no R2 binding; production is undeployed and real-data approval remains false. A compatible Next patch and build-only OpenNext dependency separation were applied, but the staging release gate is blocked pending Linux OpenNext artifact evidence and runtime-high remediation. See `DEPENDENCY_SECURITY_REVIEW.md`, `REAL_DATA_BOUNDARY.md`, and `CLOUD_DEPLOYMENT_RUNBOOK.md`.
 
 ## Deployment gate

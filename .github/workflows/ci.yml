@@ -43,6 +43,7 @@ jobs:
       - run: npm run cloud:postgres:verify:installed
       - run: npx prisma migrate deploy
       - run: npm run check:phase
+      - run: npm run docs:verify
       - run: npm run cloud:config:verify
       - run: npm run cloud:phase-9b:verify
       - run: npm run cloud:runtime:verify

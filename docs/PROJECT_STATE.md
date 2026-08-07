@@ -1,5 +1,9 @@
 # Capture Tracker project state
 
+> **SUPERSEDED / HISTORICAL**
+>
+> This document describes earlier Capture Tracker implementation states and must not be used as the current production operations source of truth. See [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
+
 Capture Tracker is a mobile-first S-corporation bookkeeping and financial-review application using Next.js App Router, PostgreSQL, Prisma, Better Auth, and server-derived business scope.
 
 ## Completed foundation

@@ -1,5 +1,9 @@
 # Real-data boundary
 
+> **SUPERSEDED / HISTORICAL**
+>
+> This document describes an earlier Capture Tracker implementation state and must not be used as the current production operations source of truth. See [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
+
 ## Current state
 
 All local development, local PostgreSQL validation, tests, and demo records are fictional-only. Free-preview staging is also fictional-only. Production is undeployed and `CAPTURE_TRACKER_REAL_DATA_APPROVED` remains `false`.

@@ -1,5 +1,9 @@
 # Documents foundation — Phases 10A–10B
 
+> **SUPERSEDED / HISTORICAL**
+>
+> This document describes earlier Capture Tracker implementation states and must not be used as the current production operations source of truth. See [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
+
 Phase 10A retains fictional metadata-only document records. Phase 10B adds a local-fictional secure upload workflow for PDF, JPEG, and PNG files up to 10 MiB. It is not approved for real documents, staging, or production.
 
 The upload service derives MIME type from file signatures, computes an actual-byte Web Crypto SHA-256, and uses the existing per-business hash uniqueness constraint as the final duplicate authority. The same bytes can be stored by different businesses. A temporary private object is promoted before the visible database state is committed; a losing concurrent request removes only its own opaque key, and a failed database write attempts compensation cleanup. Local objects live under the ignored `.document-storage/` root using opaque random keys and are never returned to the browser.

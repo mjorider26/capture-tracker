@@ -38,6 +38,7 @@
     "document-matching:verify": "node scripts/verify-document-matching.mjs",
     "weekly-review:verify": "node scripts/verify-weekly-review.mjs",
     "reports:verify": "node scripts/verify-reports.mjs",
+    "docs:verify": "tsx scripts/check-production-docs.ts",
     "ask-ai:verify": "node scripts/verify-ask-ai.mjs",
     "onboarding:verify": "node scripts/verify-pilot-readiness.mjs onboarding",
     "settings:verify": "node scripts/verify-pilot-readiness.mjs settings",
@@ -83,7 +84,7 @@
     "infra:test": "npm --prefix infra/aws test",
     "infra:synth": "npm --prefix infra/aws run synth:staging && npm --prefix infra/aws run synth:production",
     "check:cloud-foundation": "npm run cloud:config:verify && npm run cloud:phase-9b:verify && npm run cloud:runtime:verify && npm run dependency:separation:verify && npm run cloud:postgres:verify:installed && npm run data-boundary:verify && npm run client-secret:verify && npm run cloud:bundle:verify:synthetic && npm run container:verify && npm run infra:test && npm run infra:synth",
-    "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run lint && npm run build"
+    "check:phase": "npx prisma validate && npm run test:run && npm run db:test && npm run db:verify && npm run docs:verify && npm run lint && npm run build"
   },
   "dependencies": {
     "@noble/hashes": "^2.2.0",

@@ -1,5 +1,9 @@
 # Free fictional staging deployment runbook
 
+> **SUPERSEDED / HISTORICAL**
+>
+> This document describes an earlier Capture Tracker implementation state and must not be used as the current production operations source of truth. See [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
+
 This is a later-session runbook. It performs no provider action merely by existing.
 
 ## Preconditions

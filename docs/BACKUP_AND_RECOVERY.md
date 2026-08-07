@@ -1,5 +1,9 @@
 # Backup and recovery
 
+> **SUPERSEDED / HISTORICAL**
+>
+> This document describes an earlier Capture Tracker implementation state and must not be used as the current production operations source of truth. See [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
+
 ## Truthful current posture
 
 Gate 2B completed one manual logical-recovery proof for the fictional Neon staging database. PostgreSQL 18.4 custom-format backup and PostgreSQL 18.4 local restore matched sanitized manifests exactly; the temporary `257,409`-byte archive was deleted after verification. This establishes neither automated daily backups nor retention, provider point-in-time recovery, or production recovery. No Worker or R2 resource exists; R2 remains blocked.

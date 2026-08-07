@@ -1,5 +1,9 @@
 # Production provisioning plan
 
+> **SUPERSEDED / HISTORICAL**
+>
+> This document describes an earlier Capture Tracker implementation state and must not be used as the current production operations source of truth. See [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
+
 This plan is for a separate private-pilot production environment. It does not authorize a provider write, deployment, migration, seed, or real-data onboarding.
 
 ## Isolated resource contract
