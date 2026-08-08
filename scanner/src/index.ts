@@ -1,6 +1,7 @@
 import { Container, ContainerProxy } from "@cloudflare/containers";
 
-type ScanJob = { documentId: string; version: number };
+type ScanTrace = { correlationId: string; uploadAcceptedAt?: string; documentQuarantinedAt?: string; queueProducedAt?: string };
+type ScanJob = { documentId: string; version: number; trace?: ScanTrace };
 type QueueMessage = { body: unknown; attempts: number; ack(): void; retry(options?: { delaySeconds?: number }): void };
 type QueueBatch = { messages: readonly QueueMessage[] };
 type Service = { fetch(request: Request): Promise<Response> };
@@ -28,11 +29,13 @@ async function waitForScannerReady(scanner: ScannerStub) {
   const deadline = Date.now() + scanTimeoutMs;
   let lastReason = "UNAVAILABLE";
   let lastTrace = "";
+  let attempts = 0;
   while (Date.now() < deadline) {
+    attempts += 1;
     try {
       const response = await scanner.fetch(new Request("https://document-scanner.internal/health", { signal: AbortSignal.timeout(10_000) }));
       const health = await response.json() as { ready?: unknown; reason?: unknown; trace?: unknown };
-      if (health?.ready === true) return Date.now() - startedAt;
+      if (health?.ready === true) return { durationMs: Date.now() - startedAt, cold: attempts > 1 };
       if (typeof health?.reason === "string" && /^[A-Z0-9_]{1,48}$/.test(health.reason)) lastReason = health.reason;
       const trace = health?.trace && typeof health.trace === "object"
         ? Object.entries(health.trace as Record<string, unknown>)
@@ -55,9 +58,18 @@ async function waitForScannerReady(scanner: ScannerStub) {
 
 function parseJob(input: unknown): ScanJob | null {
   if (!input || typeof input !== "object") return null;
-  const candidate = input as { documentId?: unknown; version?: unknown };
+  const candidate = input as { documentId?: unknown; version?: unknown; trace?: unknown };
   if (typeof candidate.documentId !== "string" || !/^[A-Za-z0-9_-]{1,191}$/.test(candidate.documentId) || typeof candidate.version !== "number" || !Number.isSafeInteger(candidate.version) || candidate.version < 1) return null;
-  return { documentId: candidate.documentId, version: candidate.version };
+  if (candidate.trace === undefined) return { documentId: candidate.documentId, version: candidate.version };
+  if (!candidate.trace || typeof candidate.trace !== "object") return null;
+  const trace = candidate.trace as { correlationId?: unknown; uploadAcceptedAt?: unknown; documentQuarantinedAt?: unknown; queueProducedAt?: unknown };
+  if (typeof trace.correlationId !== "string" || !/^[a-f0-9]{32}$/.test(trace.correlationId)) return null;
+  return { documentId: candidate.documentId, version: candidate.version, trace: { correlationId: trace.correlationId, ...(typeof trace.uploadAcceptedAt === "string" ? { uploadAcceptedAt: trace.uploadAcceptedAt } : {}), ...(typeof trace.documentQuarantinedAt === "string" ? { documentQuarantinedAt: trace.documentQuarantinedAt } : {}), ...(typeof trace.queueProducedAt === "string" ? { queueProducedAt: trace.queueProducedAt } : {}) } };
+}
+
+function timing(stage: "QUEUE_CONSUMER_STARTED" | "SCANNER_INSTANCE_REQUESTED" | "SCANNER_READY" | "CLAMAV_SCAN_STARTED" | "CLAMAV_SCAN_COMPLETED" | "QUEUE_ACKNOWLEDGED", job: ScanJob, extra: Record<string, boolean | number> = {}) {
+  if (!job.trace) return;
+  console.warn(JSON.stringify({ event: "document_scan_timing", stage, correlationId: job.trace.correlationId, at: new Date().toISOString(), ...extra }));
 }
 
 function retryDelay(attempts: number) {
@@ -92,6 +104,7 @@ async function processMessage(env: Env, message: QueueMessage) {
   }
   let stage = "private_content";
   const startedAt = Date.now();
+  timing("QUEUE_CONSUMER_STARTED", job, { attempt: message.attempts });
   console.warn(JSON.stringify({ event: "document_scan_stage", stage: "consumer_delivery", outcome: "STARTED", attempt: message.attempts }));
   try {
     const contentStartedAt = Date.now();
@@ -105,13 +118,17 @@ async function processMessage(env: Env, message: QueueMessage) {
     const bytes = await content.arrayBuffer();
     if (bytes.byteLength === 0 || bytes.byteLength > 10 * 1024 * 1024) throw new ScanStageError("private_content_boundary");
     console.warn(JSON.stringify({ event: "document_scan_stage", stage: "private_content", outcome: "PASS", attempt: message.attempts, durationMs: Date.now() - contentStartedAt }));
+    timing("SCANNER_INSTANCE_REQUESTED", job);
     const scanner = env.CAPTURE_TRACKER_DOCUMENT_SCANNER.getByName("singleton");
     stage = "scanner_readiness";
     console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "STARTED", attempt: message.attempts }));
-    const readinessMs = await waitForScannerReady(scanner);
+    const readiness = await waitForScannerReady(scanner);
+    const readinessMs = readiness.durationMs;
     console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "PASS", attempt: message.attempts, durationMs: readinessMs }));
+    timing("SCANNER_READY", job, { cold: readiness.cold, durationMs: readinessMs });
     stage = "scanner_scan";
     const scanStartedAt = Date.now();
+    timing("CLAMAV_SCAN_STARTED", job);
     console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "STARTED", attempt: message.attempts }));
     const response = await scanner.fetch(new Request("https://document-scanner.internal/scan", { method: "POST", headers: { "content-type": content.headers.get("content-type") ?? "application/octet-stream" }, body: bytes, signal: AbortSignal.timeout(45_000) }));
     if (!response.ok) throw new ScanStageError(stage, response.status);
@@ -119,11 +136,13 @@ async function processMessage(env: Env, message: QueueMessage) {
     const scannerVersion = typeof result.scannerVersion === "string" ? result.scannerVersion.slice(0, 80) : undefined;
     if (result.signaturesReady !== true || (result.outcome !== "CLEAN" && result.outcome !== "INFECTED")) throw new ScanStageError("scanner_result_contract");
     console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "PASS", attempt: message.attempts, durationMs: Date.now() - scanStartedAt }));
+    timing("CLAMAV_SCAN_COMPLETED", job, { durationMs: Date.now() - scanStartedAt });
     stage = "apply_result";
     const applyStartedAt = Date.now();
     await applyResult(env, job, result.outcome, scannerVersion);
     console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "PASS", attempt: message.attempts, durationMs: Date.now() - applyStartedAt }));
     message.ack();
+    timing("QUEUE_ACKNOWLEDGED", job, { totalConsumerMs: Date.now() - startedAt });
     console.warn(JSON.stringify({ event: "document_scan_stage", stage: "consumer_delivery", outcome: "ACKED", attempt: message.attempts, durationMs: Date.now() - startedAt }));
   } catch (error) {
     // Queue observability intentionally records only delivery state. Document

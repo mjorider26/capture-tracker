@@ -15,9 +15,11 @@ vi.mock("./r2-storage", () => ({ getPrivateDocumentStorage: vi.fn(async () => st
 describe("document scan lifecycle contracts", () => {
   it("accepts only minimal opaque queue identifiers", () => {
     expect(parseDocumentScanJob({ documentId: "doc_123", version: 1 })).toEqual({ documentId: "doc_123", version: 1 });
+    expect(parseDocumentScanJob({ documentId: "doc_123", version: 1, trace: { correlationId: "a".repeat(32), uploadAcceptedAt: "2026-08-08T04:00:00.000Z" } })).toEqual({ documentId: "doc_123", version: 1, trace: { correlationId: "a".repeat(32), uploadAcceptedAt: "2026-08-08T04:00:00.000Z" } });
     expect(parseDocumentScanJob({ documentId: "doc_123", version: 0 })).toBeNull();
     expect(parseDocumentScanJob({ documentId: "doc/123", version: 1 })).toBeNull();
     expect(parseDocumentScanJob({ documentId: "doc_123", version: "1" })).toBeNull();
+    expect(parseDocumentScanJob({ documentId: "doc_123", version: 1, trace: { correlationId: "not-safe" } })).toBeNull();
   });
 
   it("accepts only sanitized scanner result categories", () => {

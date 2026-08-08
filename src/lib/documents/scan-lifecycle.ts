@@ -25,6 +25,11 @@ const scanTargetWhere = (job: DocumentScanJob) => ({
   deletedAt: null,
 });
 
+function scanTimingEvent(stage: "ACTIVE_COPY_COMPLETED" | "DATABASE_FINALIZATION_STARTED" | "DATABASE_FINALIZATION_COMMITTED" | "QUARANTINE_DELETE_COMPLETED", correlationId: string | undefined) {
+  if (!correlationId) return;
+  console.warn(JSON.stringify({ event: "document_scan_timing", stage, correlationId, at: new Date().toISOString() }));
+}
+
 function safeScannerValue(value: string | undefined, fallback: string) {
   const normalized = value?.trim().slice(0, 80);
   return normalized && /^[A-Za-z0-9._-]+$/.test(normalized) ? normalized : fallback;
@@ -69,6 +74,8 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
     // Copying the original object between private prefixes preserves the bytes.
     // Reads stay denied until the conditional database update commits.
     await (await getPrivateDocumentStorage()).promoteQuarantined(target.storageKey);
+    scanTimingEvent("ACTIVE_COPY_COMPLETED", job.trace?.correlationId);
+    scanTimingEvent("DATABASE_FINALIZATION_STARTED", job.trace?.correlationId);
     const activated = await prisma.$transaction(async (tx) => {
       const update = await tx.document.updateMany({
         where: scanTargetWhere(job),
@@ -88,11 +95,15 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
       await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "VALIDATE", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "passed", scanner: scannerId, scannerVersion } } });
       return true;
     });
+    scanTimingEvent("DATABASE_FINALIZATION_COMMITTED", job.trace?.correlationId);
     // Preserve the quarantine source until the authoritative database state
     // commits. Cleanup failure leaves a private duplicate, never a readable
     // unscanned document, and must not undo a completed clean activation.
     if (activated) {
-      try { await (await getPrivateDocumentStorage()).finalizeQuarantinedPromotion(target.storageKey); } catch { /* safe private cleanup can retry later */ }
+      try {
+        await (await getPrivateDocumentStorage()).finalizeQuarantinedPromotion(target.storageKey);
+        scanTimingEvent("QUARANTINE_DELETE_COMPLETED", job.trace?.correlationId);
+      } catch { /* safe private cleanup can retry later */ }
     }
     return { state: activated ? "ACTIVATED" as const : "STALE" as const };
   }

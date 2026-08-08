@@ -9,6 +9,7 @@ import {
 } from "./core";
 import { getPrivateDocumentStorage } from "./r2-storage";
 import { enqueueDocumentScan } from "./scan-queue";
+import type { DocumentScanTrace } from "./scan-contract";
 
 type Actor = { businessId: string; actorUserId: string };
 type ApprovedMimeType = "application/pdf" | "image/jpeg" | "image/png";
@@ -19,6 +20,10 @@ const extensions: Record<ApprovedMimeType, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
 };
+
+function scanTimingEvent(stage: "UPLOAD_ACCEPTED" | "DOCUMENT_QUARANTINED" | "QUEUE_PRODUCED", correlationId: string, at: string) {
+  console.warn(JSON.stringify({ event: "document_scan_timing", stage, correlationId, at }));
+}
 
 function detectMimeType(bytes: Uint8Array): ApprovedMimeType | null {
   const text = new TextDecoder().decode(bytes.slice(0, 5));
@@ -63,6 +68,10 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
     if (!mimeType || file.type !== mimeType || !extensionMatches(name, mimeType)) {
       return { ok: false as const, code: "INVALID", message: "File name, declared type, and validated file content must be the same approved type." };
     }
+
+    const uploadAcceptedAt = new Date().toISOString();
+    const trace: DocumentScanTrace = { correlationId: crypto.randomUUID().replaceAll("-", ""), uploadAcceptedAt };
+    scanTimingEvent("UPLOAD_ACCEPTED", trace.correlationId, uploadAcceptedAt);
 
     const sha256 = await hashBytes(bytes);
     const existing = await prisma.document.findFirst({
@@ -127,8 +136,15 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
         });
         return created;
       });
+      const documentQuarantinedAt = (document.uploadCompletedAt ?? new Date()).toISOString();
+      trace.documentQuarantinedAt = documentQuarantinedAt;
+      scanTimingEvent("DOCUMENT_QUARANTINED", trace.correlationId, documentQuarantinedAt);
       let scanQueueUnavailable = false;
-      try { await enqueueDocumentScan({ documentId: document.id, version: document.version }); }
+      try {
+        trace.queueProducedAt = new Date().toISOString();
+        await enqueueDocumentScan({ documentId: document.id, version: document.version, trace });
+        scanTimingEvent("QUEUE_PRODUCED", trace.correlationId, new Date().toISOString());
+      }
       catch {
         scanQueueUnavailable = true;
         await prisma.$transaction(async (tx) => {

@@ -16,6 +16,7 @@ export async function POST(request: Request) {
   const job = parseDocumentScanJob(body.job);
   const result = parseDocumentScanResult(body.result);
   if (!job || !result) return new NextResponse(null, { status: 400 });
+  if (job.trace && result.category === "CLEAN") console.warn(JSON.stringify({ event: "document_scan_timing", stage: "CLEAN_RESULT_RECEIVED", correlationId: job.trace.correlationId, at: new Date().toISOString() }));
   const { applyDocumentScanResult } = await import("@/lib/documents/scan-lifecycle");
   const outcome = await applyDocumentScanResult(job, result);
   return NextResponse.json({ state: outcome.state }, { headers: { "cache-control": "no-store" } });
