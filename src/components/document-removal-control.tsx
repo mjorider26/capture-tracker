@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import type { DocumentRemovalActionState } from "@/app/app/documents/actions";
 
@@ -8,6 +9,8 @@ const initialState: DocumentRemovalActionState = { ok: false };
 
 export function DocumentRemovalControl({ documentId, readable, removeAction }: { documentId: string; readable: boolean; removeAction: (previous: DocumentRemovalActionState, formData: FormData) => Promise<DocumentRemovalActionState> }) {
   const [state, action, pending] = useActionState(removeAction, initialState);
+  const router = useRouter();
+  useEffect(() => { if (state.ok) router.replace("/app/documents"); }, [router, state.ok]);
   return <details className="mt-4">
     <summary className="inline-flex min-h-11 cursor-pointer items-center rounded-[var(--radius-sm)] border border-border px-4 text-sm font-bold text-text-primary">••• <span className="ml-2">Document actions</span></summary>
     <form action={action} className="mt-3 rounded-[var(--radius-sm)] border border-border bg-surface p-4 text-sm">
