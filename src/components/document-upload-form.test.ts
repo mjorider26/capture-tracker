@@ -25,4 +25,13 @@ describe("mobile receipt camera upload form", () => {
     expect(source).toContain("min-h-12");
     expect(source).toContain("overflow-hidden");
   });
+
+  it("submits the prepared local File rather than the original picker File", async () => {
+    const source = await readFile(new URL("./document-upload-form.tsx", import.meta.url), "utf8");
+    expect(source).toContain("normalizeReceiptImage(file)");
+    expect(source).toContain('formData.delete("cameraDocument")');
+    expect(source).toContain('formData.delete("document")');
+    expect(source).toContain('formData.set(selected.source === "camera" ? "cameraDocument" : "document", selected.file, selected.file.name)');
+    expect(source).toContain("Ready to upload");
+  });
 });
