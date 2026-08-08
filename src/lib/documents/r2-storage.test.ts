@@ -7,7 +7,7 @@ describe("private R2 document storage", () => {
     expect(() => createDocumentR2Storage(undefined)).toThrow(DocumentR2UnavailableError);
   });
 
-  it("keeps quarantined bytes separate from active private bytes and promotes without changing content", async () => {
+  it("keeps quarantined bytes until activation is finalized and promotes without changing content", async () => {
     const operations: string[] = [];
     const contents = new Map<string, Uint8Array>();
     const bucket: DocumentR2Bucket = {
@@ -25,8 +25,10 @@ describe("private R2 document storage", () => {
     await storage.getQuarantined("opaque");
     await storage.promoteQuarantined("opaque");
     await storage.getActive("opaque");
-    expect(operations).toEqual(["put:quarantine/opaque", "get:quarantine/opaque", "get:quarantine/opaque", "put:active/opaque", "delete:quarantine/opaque", "get:active/opaque"]);
-    expect([...contents.keys()]).toEqual(["active/opaque"]);
+    expect(operations).toEqual(["put:quarantine/opaque", "get:quarantine/opaque", "get:quarantine/opaque", "put:active/opaque", "get:active/opaque"]);
+    expect([...contents.keys()].sort()).toEqual(["active/opaque", "quarantine/opaque"]);
     expect([...contents.get("active/opaque") ?? []]).toEqual([1]);
+    await storage.finalizeQuarantinedPromotion("opaque");
+    expect([...contents.keys()]).toEqual(["active/opaque"]);
   });
 });

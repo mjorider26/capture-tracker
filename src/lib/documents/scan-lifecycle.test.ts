@@ -6,7 +6,7 @@ const prisma = vi.hoisted(() => ({
   document: { findFirst: vi.fn() },
   $transaction: vi.fn(),
 }));
-const storage = vi.hoisted(() => ({ promoteQuarantined: vi.fn(), getQuarantined: vi.fn() }));
+const storage = vi.hoisted(() => ({ promoteQuarantined: vi.fn(), finalizeQuarantinedPromotion: vi.fn(), getQuarantined: vi.fn(), getActive: vi.fn() }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({ prisma }));
@@ -36,6 +36,9 @@ describe("document scan lifecycle application", () => {
     prisma.document.findFirst.mockReset();
     prisma.$transaction.mockReset();
     storage.promoteQuarantined.mockReset();
+    storage.finalizeQuarantinedPromotion.mockReset();
+    storage.getQuarantined.mockReset();
+    storage.getActive.mockReset();
     tx.document.updateMany.mockReset();
     tx.documentStatusHistory.create.mockReset();
     tx.auditEvent.create.mockReset();
@@ -45,12 +48,14 @@ describe("document scan lifecycle application", () => {
     tx.documentStatusHistory.create.mockResolvedValue({});
     tx.auditEvent.create.mockResolvedValue({});
     storage.promoteQuarantined.mockResolvedValue(undefined);
+    storage.finalizeQuarantinedPromotion.mockResolvedValue(undefined);
   });
 
   it("promotes only a current quarantined document after a clean result and records one audit event", async () => {
     const { applyDocumentScanResult } = await import("./scan-lifecycle");
     await expect(applyDocumentScanResult({ documentId: "doc_123", version: 1 }, { category: "CLEAN", scannerId: "clamav", scannerVersion: "1.4.3" })).resolves.toEqual({ state: "ACTIVATED" });
     expect(storage.promoteQuarantined).toHaveBeenCalledWith("opaque-key");
+    expect(storage.finalizeQuarantinedPromotion).toHaveBeenCalledWith("opaque-key");
     expect(tx.document.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: "doc_123", version: 1, status: "QUARANTINED", malwareScanStatus: "PENDING" }), data: expect.objectContaining({ status: "ACTIVE", malwareScanStatus: "CLEAN", privateReadEligible: true }) }));
     expect(tx.documentStatusHistory.create).toHaveBeenCalledTimes(1);
     expect(tx.auditEvent.create).toHaveBeenCalledTimes(1);

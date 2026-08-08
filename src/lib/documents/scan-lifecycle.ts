@@ -44,7 +44,10 @@ async function targetFor(job: DocumentScanJob): Promise<ScanTarget | null> {
 export async function readQuarantinedDocumentForScan(job: DocumentScanJob) {
   const target = await targetFor(job);
   if (!target?.storageKey) return null;
-  const object = await (await getPrivateDocumentStorage()).getQuarantined(target.storageKey);
+  const storage = await getPrivateDocumentStorage();
+  // Only the internal scanner can use this recovery fallback. App reads still
+  // require ACTIVE + CLEAN, so an orphaned active-prefix copy is never exposed.
+  const object = await storage.getQuarantined(target.storageKey) ?? await storage.getActive(target.storageKey);
   if (!object) return null;
   return { bytes: new Uint8Array(await object.arrayBuffer()), mimeType: target.mimeType };
 }
@@ -85,6 +88,12 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
       await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "VALIDATE", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "passed", scanner: scannerId, scannerVersion } } });
       return true;
     });
+    // Preserve the quarantine source until the authoritative database state
+    // commits. Cleanup failure leaves a private duplicate, never a readable
+    // unscanned document, and must not undo a completed clean activation.
+    if (activated) {
+      try { await (await getPrivateDocumentStorage()).finalizeQuarantinedPromotion(target.storageKey); } catch { /* safe private cleanup can retry later */ }
+    }
     return { state: activated ? "ACTIVATED" as const : "STALE" as const };
   }
 

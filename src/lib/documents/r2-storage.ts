@@ -39,11 +39,19 @@ export function createDocumentR2Storage(bucket: DocumentR2Bucket | undefined) {
     },
     async promoteQuarantined(key: string) {
       const object = await bucket.get(`quarantine/${key}`);
-      if (!object) throw new Error("Quarantined document object is unavailable.");
+      // A previous attempt may have copied the bytes before a database
+      // transaction failed. It remains unreadable while the record is
+      // quarantined, and a new clean scan can safely complete that recovery.
+      if (!object) {
+        if (await bucket.head(`active/${key}`)) return;
+        throw new Error("Quarantined document object is unavailable.");
+      }
       await bucket.put(`active/${key}`, await object.arrayBuffer(), {
         httpMetadata: object.httpMetadata,
         customMetadata: object.customMetadata,
       });
+    },
+    async finalizeQuarantinedPromotion(key: string) {
       await bucket.delete(`quarantine/${key}`);
     },
   };
