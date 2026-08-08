@@ -53,7 +53,7 @@ describe("production logical restore source-derived verification", () => {
     const inventory = deriveSourceSchemaInventory();
     const reconstructed = migrationInventoryFromNames(inventory.names);
     expect(reconstructed.digest).toBe(inventory.digest);
-    expect(inventory.names.at(-1)).toBe("20260805190000_add_production_owner_bootstrap");
+    expect(inventory.names.at(-1)).toBe("20260807090000_document_scan_quarantine");
     expect(inventory.tables).toContain("ProductionBootstrap");
     expect(inventory.functions.length).toBeGreaterThan(0);
     expect(inventory.triggers.length).toBeGreaterThan(0);

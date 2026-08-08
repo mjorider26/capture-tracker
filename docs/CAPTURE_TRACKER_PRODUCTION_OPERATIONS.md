@@ -1,8 +1,8 @@
 # Capture Tracker Production Operations
 
 **Status:** CURRENT AUTHORITATIVE OPERATIONS RUNBOOK  
-**Last updated:** 2026-08-06  
-**Source commit:** `45b70ed3e3a69de3d6421ac46638b2bd1e0f2081`
+**Last updated:** 2026-08-08
+**Source commit:** `683b1e7b2974c0147586e50fa12ebec9cddfb6a0`
 
 This runbook is for the operators of the current private production pilot. It is the source of truth for live Capture Tracker operations. Older planning, staging, and phase documents may accurately preserve their original context but can describe superseded states; do not use them as current production instructions.
 
@@ -30,7 +30,7 @@ The earlier invitation-based first-owner production flow is superseded. Legacy o
 - Never run `prisma migrate dev`, `prisma db push`, reset, or seed against production.
 - Use a direct, unpooled connection only in approved migration or backup operator workflows; the Worker uses its approved runtime database path.
 - Do not copy staging, demo, or local PostgreSQL data into production.
-- The required migration inventory is derived from the source checkout. The current count at time of writing is 17, but the count is not a maintained gate and must not be hardcoded.
+- The required migration inventory is derived from the source checkout. Production has all 18 source migrations applied, including 20260807090000_document_scan_quarantine; the count is not a maintained gate and must not be hardcoded.
 
 ## Backup and recovery
 
@@ -54,9 +54,22 @@ Supporting journal lines are database-paginated. CSV report exports remain tenan
 
 ## Documents and private-pilot limitation
 
-Production accepts PDF, PNG, and JPEG uploads, including mobile camera receipt capture and existing-file selection. The upload path performs strict byte, MIME, and extension validation, duplicate detection, tenant-scoped private R2 storage, authorized protected reads, and audit history.
+Production accepts PDF, PNG, and JPEG uploads, including mobile camera receipt capture and existing-file selection. Camera receipt images are normalized locally before upload: orientation is corrected by browser decode, the longest edge is capped near 1,920 pixels without upscaling, and JPEG encoding uses 0.82 quality so EXIF/GPS metadata is not carried into the normalized upload. PDFs are unchanged and the existing 10 MB server limit remains authoritative. The upload path performs strict byte, MIME, and extension validation, duplicate detection, tenant-scoped private R2 storage, authorized protected reads, and audit history.
 
-**Current private-pilot limitation:** malware scanning and quarantine are not implemented for the live upload path. Only trusted owner/private-pilot documents may be uploaded. Untrusted external uploads, including a second-client or broader external rollout, are not approved until malware scanning and quarantine are implemented.
+Capture Tracker now quarantines and malware-scans new document uploads before they become readable or trusted. New bytes remain private through QUARANTINED/PENDING → Queue → SCANNING → ACTIVE + CLEAN, or remain fail-closed as QUARANTINED + SCAN_FAILED or REJECTED + INFECTED. Normal reads, signed grants, extraction, matching, transaction evidence, and Ask AI document evidence require the current document to be ACTIVE, CLEAN, private-read eligible, and not deleted.
+
+### Scanner and document-removal operations
+
+- Production uses the private Queue `capture-tracker-production-document-scan`, its isolated DLQ `capture-tracker-production-document-scan-dlq`, and a private ClamAV Container on `standard-1`, `max_instances=1`. No document bytes appear in Queue messages or public URLs.
+- The app Worker is `cd6465ea-8ca7-4474-ac48-a991f8ff0831`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
+- The scanner has a 15-minute warm window. A measured cold run spent about 93.77 seconds on FreshClam/ClamAV readiness; Queue wait was about 1.63 seconds, private R2 fetch about 1.24 seconds, and scan time about 215 ms. Recheck a scan still pending beyond 60 seconds with sanitized Worker and Queue logs; do not weaken quarantine.
+- Queue deliveries are idempotent and version-aware. Scanner unavailable, timeout, malformed response, or exhausted retries leaves the document quarantined and unreadable. Consumer retries are bounded at three with a 30-second delay, then route to the isolated DLQ.
+- Promotion is database-authoritative: validate the current document version and CLEAN result, commit ACTIVE plus private-read eligibility, then clean up the quarantine object. A stale delivery cannot promote a deleted or replaced document.
+- Removal is database-authoritative: tenant and relationship checks, DELETED tombstone plus private-read revocation plus version increment, commit, then exact-object R2 cleanup. A cleanup failure never resurrects bytes or grants; stale Queue work acknowledges the tombstone safely.
+- Sanitized observability covers Worker failures, queue retries/DLQ, scanner readiness and latency, scan finalization/promotion recovery, and R2 cleanup/removal failures. Never log bytes, object keys, credentials, or raw antivirus output.
+- The encrypted logical-backup and disposable-restore drill was revalidated with all 18 migrations: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, and a disposable restore with matching sanitized counts. Plaintext archives remain temporary only.
+- Current provider pricing is usage-based under the existing Workers Paid plan; no separate scanner subscription is used. Conservative incremental estimate with a 15-minute warm window is about $0.03 for 25 scans/month, $1.32 for 100, and $9.53 for 500. Actual per-container usage analytics are provider-side and must be checked before billing decisions.
+- A genuine warm production scan measurement remains an authenticated owner acceptance item; no estimate should be presented as a measured warm result.
 
 ## Product navigation and Ask AI
 
