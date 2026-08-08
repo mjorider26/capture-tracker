@@ -5,13 +5,14 @@ import { DocumentsExperience } from "@/components/documents-experience";
 import { DocumentUploadForm } from "@/components/document-upload-form";
 import { ButtonLink } from "@/components/ui";
 import { listDocuments } from "@/lib/documents/service";
+import { workspaceFailureMetadata } from "@/lib/observability/workspace-failure";
 import { isAccessControlError, requireBusinessContext } from "@/lib/security/business-context";
 
 export const dynamic = "force-dynamic";
 
 export default async function DocumentsPage() {
   const context = await getContext();
-  const documents = await listDocuments(context.business.id);
+  const documents = await loadDocuments(context.business.id);
   return (
     <AppShell mode="app" destination="documents" businessName={context.business.displayName}>
       <div className="space-y-6">
@@ -24,6 +25,15 @@ export default async function DocumentsPage() {
       </div>
     </AppShell>
   );
+}
+
+async function loadDocuments(businessId: string) {
+  try {
+    return await listDocuments(businessId);
+  } catch (error) {
+    console.error(JSON.stringify(workspaceFailureMetadata("documents_list", error)));
+    throw error;
+  }
 }
 
 async function getContext() {

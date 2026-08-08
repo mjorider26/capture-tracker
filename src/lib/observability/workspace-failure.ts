@@ -1,4 +1,4 @@
-export function workspaceFailureMetadata(scope: "session" | "business_context" | "today_dashboard" | "money_dashboard", error: unknown) {
+export function workspaceFailureMetadata(scope: "session" | "business_context" | "today_dashboard" | "money_dashboard" | "documents_list", error: unknown) {
   const record = error as { name?: unknown; code?: unknown; message?: unknown } | null;
   const message = typeof record?.message === "string" ? record.message : "";
   const code = typeof record?.code === "string" && /^[A-Z]\d{4}$/.test(record.code) ? record.code : undefined;
