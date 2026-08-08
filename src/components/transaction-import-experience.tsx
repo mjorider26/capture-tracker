@@ -7,7 +7,7 @@ import { confirmImport, ignoreImportedTransaction, postImportedTransaction, prev
 
 type Props = {
   accounts: Array<{ id: string; name: string }>;
-  categories: Array<{ id: string; name: string; type: "INCOME" | "EXPENSE" }>;
+  categories: Array<{ id: string; name: string; type: string }>;
   imports: Array<{ id: string; sourceFilename: string; status: string; rowCount: number; newCount: number; duplicateCount: number; possibleDuplicateCount: number; invalidCount: number; createdAt: string; financialAccount: { name: string } }>;
   items: Array<{ id: string; date: string; description: string; amount: string; direction: "INFLOW" | "OUTFLOW"; status: string; suggestionReason: string | null; suggestedLedgerAccountId: string | null; financialAccount: { name: string } }>;
   profiles: Array<{ id: string; name: string; financialAccountId: string; mappingJson: unknown }>;
