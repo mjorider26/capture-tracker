@@ -6,10 +6,25 @@ import { Prisma } from "@/generated/prisma/client";
 import { getPrivateDocumentStorage } from "./r2-storage";
 
 type Actor = { businessId: string; actorUserId: string };
+type RemovalTraceStage = "AUTH_CONTEXT" | "DOCUMENT_LOADED" | "RELATIONSHIPS_CHECKED" | "MODE_SELECTED" | "DB_TOMBSTONE_STARTED" | "DB_TOMBSTONE_COMMITTED" | "R2_CLEANUP_ELIGIBILITY" | "R2_CLEANUP_COMPLETED" | "ACTION_RESPONSE";
+type RemovalTraceOutcome = "PASS" | "FAIL";
 
 export type DocumentRemovalResult =
   | { ok: true; mode: "DELETED" | "ARCHIVED"; cleanupPending: boolean }
   | { ok: false; code: "NOT_FOUND" | "CONFLICT" | "STORAGE" };
+
+function safeErrorCategory(error: unknown) {
+  const candidate = error as { code?: unknown; name?: unknown } | null;
+  if (typeof candidate?.code === "string" && /^[A-Z]\d{4}$/.test(candidate.code)) return candidate.code;
+  if (typeof candidate?.name === "string" && /^[A-Za-z]{1,48}$/.test(candidate.name)) return candidate.name;
+  return "UNKNOWN";
+}
+
+export async function traceDocumentRemoval(businessId: string, correlationId: string, stage: RemovalTraceStage, outcome: RemovalTraceOutcome, category?: string) {
+  try {
+    await prisma.auditEvent.create({ data: { actorType: "SYSTEM", businessId, action: "UPDATE", entityType: "DocumentRemovalTrace", entityId: correlationId, metadataJson: { stage, outcome, ...(category && /^[A-Za-z0-9_]{1,64}$/.test(category) ? { category } : {}) } } });
+  } catch { /* Internal diagnostics must never affect document state. */ }
+}
 
 /**
  * Removal is deliberately a tombstone, rather than a hard database delete:
@@ -17,8 +32,9 @@ export type DocumentRemovalResult =
  * Queue message fail its `deletedAt: null` conditional lookup. Unlinked bytes
  * are removed from both private prefixes after the tombstone commits.
  */
-export async function removePrivateDocument(actor: Actor, documentId: string): Promise<DocumentRemovalResult> {
-  const document = await prisma.document.findFirst({
+export async function removePrivateDocument(actor: Actor, documentId: string, correlationId?: string): Promise<DocumentRemovalResult> {
+  let document;
+  try { document = await prisma.document.findFirst({
     where: { id: documentId, businessId: actor.businessId, deletedAt: null },
     select: {
       id: true, businessId: true, storageKey: true,
@@ -27,16 +43,24 @@ export async function removePrivateDocument(actor: Actor, documentId: string): P
       payrollRuns: { select: { id: true }, take: 1 },
       taxPayments: { select: { id: true }, take: 1 },
     },
-  });
+  }); } catch (error) {
+    if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "DOCUMENT_LOADED", "FAIL", safeErrorCategory(error));
+    throw error;
+  }
   if (!document) return { ok: false, code: "NOT_FOUND" };
+  if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "DOCUMENT_LOADED", "PASS");
 
   const linked = document.transactions.length > 0 || document.reimbursementExpenses.length > 0 || document.payrollRuns.length > 0 || document.taxPayments.length > 0;
+  if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "RELATIONSHIPS_CHECKED", "PASS");
   const now = new Date();
   const removal = linked ? "ARCHIVED_LINKED_EVIDENCE" : "DELETED_UNLINKED";
+  if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "MODE_SELECTED", "PASS", linked ? "ARCHIVE" : "DELETE");
   // This deployment uses a driver configuration that does not support
   // Prisma's interactive transactions. One parameterized PostgreSQL CTE
   // preserves the required all-or-nothing conditional tombstone plus audit.
-  const changed = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+  if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "DB_TOMBSTONE_STARTED", "PASS");
+  let changed: { id: string }[];
+  try { changed = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     WITH updated AS (
       UPDATE "Document"
       SET "deletedAt" = ${now}, "privateReadEligible" = false, "version" = "version" + 1
@@ -48,15 +72,22 @@ export async function removePrivateDocument(actor: Actor, documentId: string): P
       FROM updated
     )
     SELECT "id" FROM updated
-  `);
+  `); } catch (error) {
+    if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "DB_TOMBSTONE_COMMITTED", "FAIL", safeErrorCategory(error));
+    throw error;
+  }
   if (changed.length !== 1) return { ok: false, code: "CONFLICT" };
+  if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "DB_TOMBSTONE_COMMITTED", "PASS");
   if (linked || !document.storageKey) return { ok: true, mode: "ARCHIVED", cleanupPending: false };
+  if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "R2_CLEANUP_ELIGIBILITY", "PASS");
 
   try {
     const storage = await getPrivateDocumentStorage();
     await Promise.all([storage.removeQuarantined(document.storageKey), storage.removeActive(document.storageKey)]);
+    if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "R2_CLEANUP_COMPLETED", "PASS");
     return { ok: true, mode: "DELETED", cleanupPending: false };
   } catch {
+    if (correlationId) await traceDocumentRemoval(actor.businessId, correlationId, "R2_CLEANUP_COMPLETED", "FAIL", "STORAGE");
     // The authorization tombstone is already durable, so content cannot be
     // served or resurrected. A later private cleanup can safely remove bytes.
     return { ok: true, mode: "DELETED", cleanupPending: true };

@@ -6,7 +6,7 @@ import { uploadPrivateDocument } from "@/lib/documents/secure-upload";
 import { selectedDocumentUpload } from "@/lib/documents/upload-selection";
 import { extractDocument, reviewDocumentExtraction } from "@/lib/documents/extraction";
 import { decideDocumentTransactionMatch, dismissDocumentTransactionMatchRun, generateDocumentTransactionMatches } from "@/lib/documents/transaction-matching";
-import { removePrivateDocument } from "@/lib/documents/removal";
+import { removePrivateDocument, traceDocumentRemoval } from "@/lib/documents/removal";
 import { requireBusinessContext } from "@/lib/security/business-context";
 
 export type DocumentUploadState = {
@@ -23,13 +23,20 @@ const idPattern = /^[A-Za-z0-9_-]{1,191}$/;
 export async function removeAuthenticatedDocument(_: DocumentRemovalActionState, formData: FormData): Promise<DocumentRemovalActionState> {
   const documentId = String(formData.get("documentId") ?? "");
   if (!idPattern.test(documentId) || formData.get("confirmed") !== "yes") return { ok: false, message: "Confirm removal before continuing." };
+  let context: Awaited<ReturnType<typeof requireBusinessContext>> | undefined;
+  const traceId = crypto.randomUUID().replaceAll("-", "");
   try {
-    const context = await requireBusinessContext();
-    const result = await removePrivateDocument({ businessId: context.business.id, actorUserId: context.user.id }, documentId);
+    context = await requireBusinessContext();
+    await traceDocumentRemoval(context.business.id, traceId, "AUTH_CONTEXT", "PASS");
+    const result = await removePrivateDocument({ businessId: context.business.id, actorUserId: context.user.id }, documentId, traceId);
     if (!result.ok) return { ok: false, message: result.code === "NOT_FOUND" ? "Document not found." : "This document changed before it could be removed." };
-    revalidatePath("/app/documents"); revalidatePath("/app/today"); revalidatePath("/app/weekly-review"); revalidatePath("/app/activity");
+    revalidatePath("/app/documents"); revalidatePath("/app/today"); revalidatePath("/app/review"); revalidatePath("/app/activity");
+    await traceDocumentRemoval(context.business.id, traceId, "ACTION_RESPONSE", "PASS");
     return { ok: true, message: result.mode === "ARCHIVED" ? "The linked evidence was archived. Its financial history was preserved." : result.cleanupPending ? "The document was removed. Private storage cleanup will finish safely." : "The document and its private storage were removed." };
-  } catch { return { ok: false, message: "The document could not be removed safely." }; }
+  } catch (error) {
+    if (context) await traceDocumentRemoval(context.business.id, traceId, "ACTION_RESPONSE", "FAIL", error instanceof Error && /^[A-Za-z]{1,48}$/.test(error.name) ? error.name : "UNKNOWN");
+    return { ok: false, message: "The document could not be removed safely." };
+  }
 }
 export async function runAuthenticatedExtraction(_: ExtractionActionState, formData: FormData): Promise<ExtractionActionState> {
   const documentId = String(formData.get("documentId") ?? "");
