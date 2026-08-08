@@ -4,6 +4,7 @@
   "main": "./src/index.ts",
   "compatibility_date": "2026-08-06",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "secrets": { "required": ["CAPTURE_TRACKER_DOCUMENT_SCANNER_INTERNAL_TOKEN"] },
   "workers_dev": false,
   "services": [{ "binding": "CAPTURE_TRACKER_APP", "service": "capture-tracker-staging" }],
   "containers": [{ "class_name": "DocumentScannerContainer", "image": "./Dockerfile", "max_instances": 1, "instance_type": "standard-1" }],

@@ -7,6 +7,11 @@ function text(path) {
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+function assertRequiredSecrets(configuration, expected, label) {
+  const match = configuration.match(/"secrets"\s*:\s*\{\s*"required"\s*:\s*\[([\s\S]*?)\]\s*\}/);
+  const names = match ? [...match[1].matchAll(/"([A-Z0-9_]+)"/g)].map((entry) => entry[1]).sort() : [];
+  assert(JSON.stringify(names) === JSON.stringify([...expected].sort()), `${label} must declare exactly the approved secret binding names, never values.`);
+}
 
 const wrangler = text("wrangler.jsonc");
 const productionWrangler = text("wrangler.production.jsonc");
@@ -22,14 +27,16 @@ const auth = text("src/lib/auth.ts");
 
 assert(wrangler.includes('"nodejs_compat"'), "Cloudflare Node compatibility flag is required.");
 assert(wrangler.includes('"global_fetch_strictly_public"') && wrangler.includes('"no_handle_cross_request_promise_resolution"') && wrangler.includes('"compatibility_date": "2026-07-23"'), "Pinned Worker compatibility date and required request-lifecycle flags are required.");
-assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\/|BETTER_AUTH_SECRET/i.test(wrangler), "Wrangler configuration must remain non-secret and account-free.");
+assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\//i.test(wrangler), "Wrangler configuration must remain account-free and contain no secret values.");
+assertRequiredSecrets(wrangler, ["BETTER_AUTH_SECRET", "DOCUMENT_READ_GRANT_SECRET", "CAPTURE_TRACKER_DOCUMENT_SCANNER_INTERNAL_TOKEN"], "Staging Worker");
 assert(wrangler.includes('"r2_buckets"') && wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS"') && wrangler.includes('"capture-tracker-staging-documents"'), "Fictional staging must bind its dedicated private document bucket.");
 assert(!/r2\.dev|custom_domains|public[_ -]?access/i.test(wrangler), "Fictional staging must not expose document storage.");
 assert(wrangler.includes('"CAPTURE_TRACKER_DOCUMENT_SCAN_QUEUE"') && wrangler.includes('"capture-tracker-staging-document-scan"'), "Fictional staging must use only its dedicated document scan Queue producer.");
 assert(scannerWrangler.includes('"capture-tracker-staging-document-scanner"') && scannerWrangler.includes('"capture-tracker-staging-document-scan-dlq"') && scannerWrangler.includes('"max_instances": 1') && scannerWrangler.includes('"workers_dev": false'), "The staging scanner must be private, isolated, DLQ-backed, and limited to one instance.");
 assert(wrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "false"'), "Free preview must keep real-data approval false.");
 assert(wrangler.includes('"CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false"'), "Free preview must block customer onboarding.");
-assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\/|BETTER_AUTH_SECRET/i.test(productionWrangler), "Production Wrangler configuration must remain non-secret and account-free.");
+assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\//i.test(productionWrangler), "Production Wrangler configuration must remain account-free and contain no secret values.");
+assertRequiredSecrets(productionWrangler, ["BETTER_AUTH_SECRET", "DOCUMENT_READ_GRANT_SECRET", "CAPTURE_TRACKER_DOCUMENT_SCANNER_INTERNAL_TOKEN"], "Production Worker");
 assert(productionWrangler.includes('"name": "capture-tracker-production"') && productionWrangler.includes('"capture-tracker-production-documents"'), "Production must target only its dedicated Worker and private document bucket.");
 assert(productionWrangler.includes('"CAPTURE_TRACKER_ENVIRONMENT": "production"') && productionWrangler.includes('"CAPTURE_TRACKER_DEPLOYMENT_PROFILE": "production-cloudflare-neon"'), "Production must declare its Cloudflare/Neon deployment profile.");
 assert(productionWrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "true"') && productionWrangler.includes('"CAPTURE_TRACKER_PAID_SERVICE_APPROVED": "true"') && productionWrangler.includes('"CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "true"') && productionWrangler.includes('"CAPTURE_TRACKER_DATA_MODE": "production"'), "Production must explicitly enable approved real-data first-owner onboarding.");

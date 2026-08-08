@@ -7,6 +7,10 @@ function assert(condition, message) {
 function text(path) {
   return readFileSync(path, "utf8");
 }
+function declaredRequiredSecrets(configuration) {
+  const match = configuration.match(/"secrets"\s*:\s*\{\s*"required"\s*:\s*\[([\s\S]*?)\]\s*\}/);
+  return match ? [...match[1].matchAll(/"([A-Z0-9_]+)"/g)].map((entry) => entry[1]).sort() : [];
+}
 function filesUnder(directory) {
   const files = [];
   const walk = (current) => {
@@ -68,7 +72,8 @@ for (const file of source) {
 
 const wrangler = text("wrangler.jsonc");
 assert(wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS"') && wrangler.includes('"capture-tracker-staging-documents"') && wrangler.includes('"CAPTURE_TRACKER_DOCUMENT_SCAN_QUEUE"'), "Worker configuration must contain only the dedicated private document R2 and scan Queue bindings.");
-assert(!/CAPTURE_TRACKER_DOCUMENTS_BUCKET|DATABASE_URL|DIRECT_DATABASE_URL|BETTER_AUTH_SECRET|account_id|api[_-]?token|r2\.dev|custom_domains/i.test(wrangler), "Worker configuration must exclude database/local-tooling settings, secrets, account credentials, and public R2 access.");
+assert(JSON.stringify(declaredRequiredSecrets(wrangler)) === JSON.stringify(["BETTER_AUTH_SECRET", "CAPTURE_TRACKER_DOCUMENT_SCANNER_INTERNAL_TOKEN", "DOCUMENT_READ_GRANT_SECRET"].sort()), "Worker configuration must declare only the approved runtime secret binding names.");
+assert(!/CAPTURE_TRACKER_DOCUMENTS_BUCKET|DATABASE_URL|DIRECT_DATABASE_URL|account_id|api[_-]?token|r2\.dev|custom_domains/i.test(wrangler), "Worker configuration must exclude database/local-tooling settings, secret values, account credentials, and public R2 access.");
 const dockerfile = text("Dockerfile");
 assert(!/next dev|wrangler dev|vitest|prisma (?:studio|dev)|aws-cdk/i.test(dockerfile) && /CMD \["node", "server\.js"\]/.test(dockerfile), "Container runtime must not run development, test, database, or infrastructure tooling.");
 assert(manifest.scripts.start === "next start" && manifest.scripts.dev === "next dev", "Production and development server entry points must remain distinct.");

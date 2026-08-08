@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 
-import { scannerRequestIsAuthorized } from "@/lib/documents/internal-scan-auth";
+import { scannerRequestAuthorizationState } from "@/lib/documents/internal-scan-auth";
 import { parseDocumentScanJob, parseDocumentScanResult } from "@/lib/documents/scan-contract";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  if (!scannerRequestIsAuthorized(request)) return new NextResponse(null, { status: 404 });
+  const authorization = scannerRequestAuthorizationState(request);
+  if (!authorization.authorized) {
+    console.warn(JSON.stringify({ event: "document_scan_internal_auth_denied", ...authorization, authorized: undefined }));
+    return new NextResponse(null, { status: 404 });
+  }
   let body: { job?: unknown; result?: unknown };
   try { body = await request.json(); } catch { return new NextResponse(null, { status: 400 }); }
   const job = parseDocumentScanJob(body.job);
