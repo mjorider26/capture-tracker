@@ -6,7 +6,6 @@ export type NavigationIconName =
   | "taxes"
   | "review"
   | "reconciliation"
-  | "ask-ai"
   | "activity"
   | "settings"
   | "more";
@@ -18,7 +17,6 @@ export const destinations = [
   { slug: "reports", label: "Reports", icon: "reports" },
   { slug: "taxes", label: "Taxes", icon: "taxes" },
   { slug: "review", label: "Weekly Review", icon: "review" },
-  { slug: "ask-ai", label: "Ask AI", icon: "ask-ai" },
   { slug: "activity", label: "Activity", icon: "activity" },
   { slug: "settings", label: "Settings", icon: "settings" },
 ] as const satisfies readonly {
@@ -44,7 +42,7 @@ export const navigationItems: readonly NavigationItem[] = [
     icon: "reconciliation",
     path: "/money/reconciliations",
   },
-  ...destinations.slice(7),
+  ...destinations.slice(6),
 ];
 
 export const mobilePrimaryDestinationSlugs = [

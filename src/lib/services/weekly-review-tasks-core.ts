@@ -78,6 +78,9 @@ type ExternalTransaction = {
   status: string;
   financialAccount: { name: string };
 };
+type OwnerTransfer = { id: string; direction: string; classification: string; externalTransaction: { description: string; amount: { toFixed: (digits: number) => string } } };
+type PayrollMatch = { id: string; kind: string; status: string; payrollRun: { payDate: Date } };
+type FixedAsset = { id: string; name: string; acquisitionCost: { toFixed: (digits: number) => string }; acquisitionDate: Date; status: string };
 
 export type WeeklyReviewTaskRecords = {
   transactions: Transaction[];
@@ -87,6 +90,9 @@ export type WeeklyReviewTaskRecords = {
   statementActivities: StatementActivity[];
   taxEstimates: TaxEstimate[];
   externalTransactions?: ExternalTransaction[];
+  ownerTransfers?: OwnerTransfer[];
+  payrollMatches?: PayrollMatch[];
+  fixedAssets?: FixedAsset[];
 };
 
 const formatDate = (value: Date) =>
@@ -174,6 +180,18 @@ export function buildWeeklyReviewTasks(
       href: "/money/import",
       state: "UNRESOLVED",
     });
+  }
+
+  for (const transfer of records.ownerTransfers ?? []) {
+    add(tasks, { id: `owner-transfer:${transfer.id}`, category: "Taxes", title: `Resolve owner transfer: ${transfer.externalTransaction.description}`, explanation: "Company-to-owner and owner-to-company activity requires an explicit accounting treatment.", detail: `${transfer.direction.replaceAll("_", " ").toLowerCase()} · ${money(transfer.externalTransaction.amount)} · ${transfer.classification.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/owner-money", state: "UNRESOLVED" });
+  }
+
+  for (const match of records.payrollMatches ?? []) {
+    add(tasks, { id: `payroll-match:${match.id}`, category: "Taxes", title: `Reconcile payroll ${match.kind.replaceAll("_", " ").toLowerCase()}`, explanation: "Payroll provider facts and bank evidence do not yet agree.", detail: `${formatDate(match.payrollRun.payDate)} · ${match.status.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/payroll", state: "UNRESOLVED" });
+  }
+
+  for (const asset of records.fixedAssets ?? []) {
+    add(tasks, { id: `fixed-asset:${asset.id}`, category: "Taxes", title: `Review possible fixed asset: ${asset.name}`, explanation: "Do not capitalize or choose depreciation treatment until the owner or CPA explicitly reviews it.", detail: `${formatDate(asset.acquisitionDate)} · ${money(asset.acquisitionCost)} · ${asset.status.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/fixed-assets", state: "UNRESOLVED" });
   }
 
   for (const document of records.documents) {

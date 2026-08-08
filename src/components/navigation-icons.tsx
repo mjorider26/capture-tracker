@@ -32,7 +32,6 @@ const iconPaths: Record<NavigationIconName, React.ReactNode> = {
   taxes: <><path d="M4 5h16" /><path d="M7 5 5 20h14L17 5" /><path d="M9 10h6M9 14h4" /></>,
   review: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="m8 12 2.4 2.4L16.5 8" /></>,
   reconciliation: <><path d="M7 7h10l-2.5-2.5" /><path d="M17 17H7l2.5 2.5" /><path d="M17 7v4M7 17v-4" /></>,
-  "ask-ai": <><path d="m12 3 1.35 4.65L18 9l-4.65 1.35L12 15l-1.35-4.65L6 9l4.65-1.35L12 3Z" /><path d="m18.5 15 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z" /></>,
   activity: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3.5 2" /></>,
   settings: <><circle cx="12" cy="12" r="3" /><path d="M19 12a7.2 7.2 0 0 0-.1-1.2l2-1.5-2-3.4-2.35 1a7.8 7.8 0 0 0-2.05-1.2L14.2 3h-4.4l-.3 2.7A7.8 7.8 0 0 0 7.45 6.9l-2.35-1-2 3.4 2 1.5A7.2 7.2 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.35-1a7.8 7.8 0 0 0 2.05 1.2l.3 2.7h4.4l.3-2.7a7.8 7.8 0 0 0 2.05-1.2l2.35 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z" /></>,
   more: <><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" /></>,

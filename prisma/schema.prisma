@@ -373,6 +373,10 @@ model Business {
   reimbursementExpenses      ReimbursementExpense[]
   ownerMoneyTransfers        OwnerMoneyTransfer[]
   payrollRuns                PayrollRun[]
+  payrollMatches             PayrollBankMatch[]
+  reasonableCompWorkpapers   ReasonableCompWorkpaper[]
+  fixedAssets                FixedAsset[]
+  monthEndCloses             MonthEndClose[]
   ownerDistributions         OwnerDistribution[]
   quarterlyTaxEstimates      QuarterlyTaxEstimate[]
   taxPaymentRecords          TaxPaymentRecord[]
@@ -473,11 +477,11 @@ model FinancialAccount {
   updatedAt       DateTime         @updatedAt
   version         Int              @default(1)
 
-  business                   Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  business                   Business                   @relation(fields: [businessId], references: [id], onDelete: Restrict)
   transactions               Transaction[]
-  reimbursementAccounts      ReimbursementClaim[] @relation("ReimbursementPaymentAccount")
-  distributionSourceAccounts OwnerDistribution[]  @relation("DistributionSourceAccount")
-  ledgerAccount              LedgerAccount?       @relation("FinancialAccountLedgerAccount")
+  reimbursementAccounts      ReimbursementClaim[]       @relation("ReimbursementPaymentAccount")
+  distributionSourceAccounts OwnerDistribution[]        @relation("DistributionSourceAccount")
+  ledgerAccount              LedgerAccount?             @relation("FinancialAccountLedgerAccount")
   reconciliations            Reconciliation[]
   transactionImports         TransactionImport[]
   transactionImportProfiles  TransactionImportProfile[]
@@ -490,47 +494,48 @@ model FinancialAccount {
 }
 
 model Transaction {
-  id                     String               @id @default(cuid())
-  businessId             String
-  accountId              String
-  postedAt               DateTime
-  description            String
-  merchantName           String?
-  amount                 Decimal              @db.Decimal(18, 2)
-  direction              TransactionDirection
-  intent                 TransactionIntent    @default(UNREVIEWED)
-  status                 TransactionStatus    @default(PENDING_REVIEW)
-  sourceReference        String?
-  manualEntryKey        String?
-  correctionKey         String?
-  correctionReason      String?
-  correctionOfId        String?
+  id                          String               @id @default(cuid())
+  businessId                  String
+  accountId                   String
+  postedAt                    DateTime
+  description                 String
+  merchantName                String?
+  amount                      Decimal              @db.Decimal(18, 2)
+  direction                   TransactionDirection
+  intent                      TransactionIntent    @default(UNREVIEWED)
+  status                      TransactionStatus    @default(PENDING_REVIEW)
+  sourceReference             String?
+  manualEntryKey              String?
+  correctionKey               String?
+  correctionReason            String?
+  correctionOfId              String?
   correctionReversalJournalId String?
-  notes                  String?
-  approvedAt             DateTime?
-  approvedByMembershipId String?
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  voidedAt               DateTime?
-  version                Int                  @default(1)
+  notes                       String?
+  approvedAt                  DateTime?
+  approvedByMembershipId      String?
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+  voidedAt                    DateTime?
+  version                     Int                  @default(1)
 
-  business              Business                  @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  account               FinancialAccount          @relation(fields: [businessId, accountId], references: [businessId, id], onDelete: Restrict)
-  approvedByMembership  BusinessMember?           @relation("TransactionApproverMembership", fields: [businessId, approvedByMembershipId], references: [businessId, userId], onDelete: Restrict)
-  splits                TransactionSplit[]
-  documents             TransactionDocument[]
-  matchSuggestions      DocumentMatchSuggestion[]
-  reimbursementPayments ReimbursementClaim[]      @relation("ReimbursementPaymentTransaction")
-  reimbursementExpenses ReimbursementExpense[]    @relation("ReimbursementExpenseTransaction")
-  distributions         OwnerDistribution[]       @relation("DistributionTransaction")
-  journalEntry          JournalEntry?             @relation("TransactionJournalEntry")
-  reconciliationItems   ReconciliationItem[]
-  matchedStatementActivities StatementActivity[] @relation("StatementActivityMatchedTransaction")
+  business                            Business                             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  account                             FinancialAccount                     @relation(fields: [businessId, accountId], references: [businessId, id], onDelete: Restrict)
+  approvedByMembership                BusinessMember?                      @relation("TransactionApproverMembership", fields: [businessId, approvedByMembershipId], references: [businessId, userId], onDelete: Restrict)
+  splits                              TransactionSplit[]
+  documents                           TransactionDocument[]
+  matchSuggestions                    DocumentMatchSuggestion[]
+  reimbursementPayments               ReimbursementClaim[]                 @relation("ReimbursementPaymentTransaction")
+  reimbursementExpenses               ReimbursementExpense[]               @relation("ReimbursementExpenseTransaction")
+  distributions                       OwnerDistribution[]                  @relation("DistributionTransaction")
+  journalEntry                        JournalEntry?                        @relation("TransactionJournalEntry")
+  reconciliationItems                 ReconciliationItem[]
+  matchedStatementActivities          StatementActivity[]                  @relation("StatementActivityMatchedTransaction")
   statementActivityCandidateDecisions StatementActivityCandidateDecision[] @relation("StatementActivityCandidateTransaction")
-  correctionOf          Transaction?             @relation("TransactionCorrections", fields: [businessId, correctionOfId], references: [businessId, id], onDelete: Restrict)
-  corrections           Transaction[]            @relation("TransactionCorrections")
-  correctionReversalJournal JournalEntry?        @relation("TransactionCorrectionReversal", fields: [businessId, correctionReversalJournalId], references: [businessId, id], onDelete: Restrict)
-  externalTransaction       ExternalTransaction? @relation("ExternalTransactionPostedTransaction")
+  correctionOf                        Transaction?                         @relation("TransactionCorrections", fields: [businessId, correctionOfId], references: [businessId, id], onDelete: Restrict)
+  corrections                         Transaction[]                        @relation("TransactionCorrections")
+  correctionReversalJournal           JournalEntry?                        @relation("TransactionCorrectionReversal", fields: [businessId, correctionReversalJournalId], references: [businessId, id], onDelete: Restrict)
+  externalTransaction                 ExternalTransaction?                 @relation("ExternalTransactionPostedTransaction")
+  fixedAssetSources                   FixedAsset[]                         @relation("FixedAssetTransactionSource")
 
   @@unique([businessId, id])
   @@unique([accountId, sourceReference])
@@ -546,30 +551,30 @@ model Transaction {
 
 /// A persisted import contains safe mapping and outcome evidence, never the source CSV itself.
 model TransactionImport {
-  id                 String                  @id @default(cuid())
-  businessId         String
-  financialAccountId String
-  createdByUserId    String
-  profileId          String?
-  sourceFilename     String
-  sourceSha256       String
-  mappingJson        Json
-  rowCount           Int                     @default(0)
-  newCount           Int                     @default(0)
-  duplicateCount     Int                     @default(0)
-  possibleDuplicateCount Int                 @default(0)
-  invalidCount       Int                     @default(0)
-  status             TransactionImportStatus @default(UPLOADED)
-  confirmedAt        DateTime?
-  completedAt        DateTime?
-  failureReason      String?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  version            Int                     @default(1)
+  id                     String                  @id @default(cuid())
+  businessId             String
+  financialAccountId     String
+  createdByUserId        String
+  profileId              String?
+  sourceFilename         String
+  sourceSha256           String
+  mappingJson            Json
+  rowCount               Int                     @default(0)
+  newCount               Int                     @default(0)
+  duplicateCount         Int                     @default(0)
+  possibleDuplicateCount Int                     @default(0)
+  invalidCount           Int                     @default(0)
+  status                 TransactionImportStatus @default(UPLOADED)
+  confirmedAt            DateTime?
+  completedAt            DateTime?
+  failureReason          String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  version                Int                     @default(1)
 
-  business         Business                  @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  financialAccount FinancialAccount          @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
-  profile          TransactionImportProfile? @relation(fields: [businessId, profileId], references: [businessId, id], onDelete: Restrict)
+  business             Business                  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount     FinancialAccount          @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  profile              TransactionImportProfile? @relation(fields: [businessId, profileId], references: [businessId, id], onDelete: Restrict)
   externalTransactions ExternalTransaction[]
 
   @@unique([businessId, id])
@@ -589,8 +594,8 @@ model TransactionImportProfile {
   updatedAt          DateTime @updatedAt
   version            Int      @default(1)
 
-  business         Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  financialAccount FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  business         Business            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount    @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
   imports          TransactionImport[]
 
   @@unique([businessId, id])
@@ -599,42 +604,44 @@ model TransactionImportProfile {
 }
 
 model ExternalTransaction {
-  id                    String                    @id @default(cuid())
-  businessId            String
-  transactionImportId   String
-  financialAccountId    String
-  rowNumber             Int
-  transactionDate       DateTime
-  postedDate            DateTime?
-  description           String
-  normalizedMerchant    String?
-  amount                Decimal                   @db.Decimal(18, 2)
-  direction             TransactionDirection
-  externalTransactionId String?
-  sourceReference       String?
-  fingerprint           String
-  bankCategory          String?
-  status                ExternalTransactionStatus @default(IMPORTED)
-  suggestionReason      String?
+  id                       String                    @id @default(cuid())
+  businessId               String
+  transactionImportId      String
+  financialAccountId       String
+  rowNumber                Int
+  transactionDate          DateTime
+  postedDate               DateTime?
+  description              String
+  normalizedMerchant       String?
+  amount                   Decimal                   @db.Decimal(18, 2)
+  direction                TransactionDirection
+  externalTransactionId    String?
+  sourceReference          String?
+  fingerprint              String
+  bankCategory             String?
+  status                   ExternalTransactionStatus @default(IMPORTED)
+  suggestionReason         String?
   suggestedLedgerAccountId String?
-  reviewLedgerAccountId String?
-  reviewedAt            DateTime?
-  reviewedByUserId      String?
-  postedTransactionId   String?
-  duplicateOfId         String?
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  version               Int                       @default(1)
+  reviewLedgerAccountId    String?
+  reviewedAt               DateTime?
+  reviewedByUserId         String?
+  postedTransactionId      String?
+  duplicateOfId            String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  version                  Int                       @default(1)
 
-  business              Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  transactionImport     TransactionImport    @relation(fields: [businessId, transactionImportId], references: [businessId, id], onDelete: Restrict)
-  financialAccount      FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
-  suggestedLedgerAccount LedgerAccount?      @relation("ExternalTransactionSuggestedAccount", fields: [businessId, suggestedLedgerAccountId], references: [businessId, id], onDelete: Restrict)
-  reviewLedgerAccount   LedgerAccount?       @relation("ExternalTransactionReviewAccount", fields: [businessId, reviewLedgerAccountId], references: [businessId, id], onDelete: Restrict)
-  postedTransaction     Transaction?         @relation("ExternalTransactionPostedTransaction", fields: [businessId, postedTransactionId], references: [businessId, id], onDelete: Restrict)
-  duplicateOf           ExternalTransaction? @relation("ExternalTransactionDuplicates", fields: [businessId, duplicateOfId], references: [businessId, id], onDelete: Restrict)
-  duplicates            ExternalTransaction[] @relation("ExternalTransactionDuplicates")
-  ownerTransfer         OwnerMoneyTransfer?
+  business               Business              @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  transactionImport      TransactionImport     @relation(fields: [businessId, transactionImportId], references: [businessId, id], onDelete: Restrict)
+  financialAccount       FinancialAccount      @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  suggestedLedgerAccount LedgerAccount?        @relation("ExternalTransactionSuggestedAccount", fields: [businessId, suggestedLedgerAccountId], references: [businessId, id], onDelete: Restrict)
+  reviewLedgerAccount    LedgerAccount?        @relation("ExternalTransactionReviewAccount", fields: [businessId, reviewLedgerAccountId], references: [businessId, id], onDelete: Restrict)
+  postedTransaction      Transaction?          @relation("ExternalTransactionPostedTransaction", fields: [businessId, postedTransactionId], references: [businessId, id], onDelete: Restrict)
+  duplicateOf            ExternalTransaction?  @relation("ExternalTransactionDuplicates", fields: [businessId, duplicateOfId], references: [businessId, id], onDelete: Restrict)
+  duplicates             ExternalTransaction[] @relation("ExternalTransactionDuplicates")
+  ownerTransfer          OwnerMoneyTransfer?
+  payrollMatches         PayrollBankMatch[]
+  fixedAssetSources      FixedAsset[]          @relation("FixedAssetExternalSource")
 
   @@unique([businessId, id])
   @@unique([businessId, transactionImportId, rowNumber])
@@ -645,18 +652,18 @@ model ExternalTransaction {
 }
 
 model MerchantCategoryRule {
-  id                    String                   @id @default(cuid())
-  businessId            String
-  financialAccountId    String?
-  normalizedMerchant    String
-  direction             TransactionDirection?
-  ledgerAccountId       String
-  mode                  MerchantCategoryRuleMode @default(SUGGEST_ONLY)
-  isActive              Boolean                  @default(true)
-  applicationCount      Int                      @default(0)
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
-  version               Int                      @default(1)
+  id                 String                   @id @default(cuid())
+  businessId         String
+  financialAccountId String?
+  normalizedMerchant String
+  direction          TransactionDirection?
+  ledgerAccountId    String
+  mode               MerchantCategoryRuleMode @default(SUGGEST_ONLY)
+  isActive           Boolean                  @default(true)
+  applicationCount   Int                      @default(0)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  version            Int                      @default(1)
 
   business         Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
   financialAccount FinancialAccount? @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
@@ -722,17 +729,19 @@ model Document {
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
-  business              Business                    @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  uploadedByMembership  BusinessMember              @relation("DocumentUploaderMembership", fields: [businessId, uploadedByMembershipId], references: [businessId, userId], onDelete: Restrict)
-  replacedBy            Document?                   @relation("DocumentVersions", fields: [businessId, replacedById], references: [businessId, id], onDelete: Restrict)
-  previousVersions      Document[]                  @relation("DocumentVersions")
-  transactions          TransactionDocument[]
-  reimbursementExpenses ReimbursementExpense[]      @relation("ReimbursementExpenseDocument")
-  payrollRuns           PayrollRun[]                @relation("PayrollRunDocument")
-  taxPayments           TaxPaymentRecord[]          @relation("TaxPaymentDocument")
-  statusHistory         DocumentStatusHistory[]
-  extractionAttempts    DocumentExtractionAttempt[]
-  matchRuns             DocumentMatchRun[]
+  business                 Business                    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  uploadedByMembership     BusinessMember              @relation("DocumentUploaderMembership", fields: [businessId, uploadedByMembershipId], references: [businessId, userId], onDelete: Restrict)
+  replacedBy               Document?                   @relation("DocumentVersions", fields: [businessId, replacedById], references: [businessId, id], onDelete: Restrict)
+  previousVersions         Document[]                  @relation("DocumentVersions")
+  transactions             TransactionDocument[]
+  reimbursementExpenses    ReimbursementExpense[]      @relation("ReimbursementExpenseDocument")
+  payrollRuns              PayrollRun[]                @relation("PayrollRunDocument")
+  taxPayments              TaxPaymentRecord[]          @relation("TaxPaymentDocument")
+  reasonableCompWorkpapers ReasonableCompWorkpaper[]
+  fixedAssets              FixedAsset[]
+  statusHistory            DocumentStatusHistory[]
+  extractionAttempts       DocumentExtractionAttempt[]
+  matchRuns                DocumentMatchRun[]
 
   @@unique([businessId, id])
   @@unique([businessId, replacedById])
@@ -1048,6 +1057,26 @@ enum PayrollRunStatus {
   VOIDED
 }
 
+enum PayrollMatchStatus {
+  UNMATCHED
+  PARTIAL
+  MATCHED
+  DIFFERENCE
+}
+
+enum FixedAssetStatus {
+  POSSIBLE_REVIEW
+  IN_SERVICE
+  DISPOSED
+  VOIDED
+}
+
+enum MonthEndCloseStatus {
+  NOT_READY
+  READY_TO_CLOSE
+  CLOSED
+}
+
 enum DistributionStatus {
   DRAFT
   PENDING_APPROVAL
@@ -1238,36 +1267,143 @@ model ReimbursementExpense {
 }
 
 model PayrollRun {
-  id                  String           @id @default(cuid())
-  businessId          String
-  payPeriodStart      DateTime
-  payPeriodEnd        DateTime
-  payDate             DateTime
-  status              PayrollRunStatus @default(DRAFT)
-  grossWages          Decimal          @db.Decimal(18, 2)
-  employeeWithholding Decimal          @db.Decimal(18, 2)
-  employeePayrollTax  Decimal          @db.Decimal(18, 2)
-  otherDeductions     Decimal          @default(0) @db.Decimal(18, 2)
-  employerPayrollTax  Decimal          @db.Decimal(18, 2)
-  netPay              Decimal          @db.Decimal(18, 2)
-  payrollProvider     String?
-  externalReference   String?
-  documentId          String?
-  approvedAt          DateTime?
-  processedAt         DateTime?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  version             Int              @default(1)
+  id                      String           @id @default(cuid())
+  businessId              String
+  payPeriodStart          DateTime
+  payPeriodEnd            DateTime
+  payDate                 DateTime
+  status                  PayrollRunStatus @default(DRAFT)
+  grossWages              Decimal          @db.Decimal(18, 2)
+  employeeWithholding     Decimal          @db.Decimal(18, 2)
+  employeePayrollTax      Decimal          @db.Decimal(18, 2)
+  federalWithholding      Decimal          @default(0) @db.Decimal(18, 2)
+  stateLocalWithholding   Decimal          @default(0) @db.Decimal(18, 2)
+  employeeSocialSecurity  Decimal          @default(0) @db.Decimal(18, 2)
+  employeeMedicare        Decimal          @default(0) @db.Decimal(18, 2)
+  otherDeductions         Decimal          @default(0) @db.Decimal(18, 2)
+  employerPayrollTax      Decimal          @db.Decimal(18, 2)
+  employerSocialSecurity  Decimal          @default(0) @db.Decimal(18, 2)
+  employerMedicare        Decimal          @default(0) @db.Decimal(18, 2)
+  otherEmployerPayrollTax Decimal          @default(0) @db.Decimal(18, 2)
+  netPay                  Decimal          @db.Decimal(18, 2)
+  providerFee             Decimal          @default(0) @db.Decimal(18, 2)
+  cashAccountId           String?
+  payrollProvider         String?
+  externalReference       String?
+  documentId              String?
+  approvedAt              DateTime?
+  processedAt             DateTime?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  version                 Int              @default(1)
 
   business     Business           @relation(fields: [businessId], references: [id], onDelete: Restrict)
   document     Document?          @relation("PayrollRunDocument", fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
   approvals    ApprovalDecision[] @relation("PayrollApprovals")
   journalEntry JournalEntry?      @relation("PayrollRunJournalEntry")
+  matches      PayrollBankMatch[]
 
   @@unique([businessId, id])
   @@unique([businessId, externalReference])
   @@index([businessId, payDate])
   @@index([businessId, status])
+}
+
+/// Each match is explicit evidence, not a conclusion drawn from a bank description.
+model PayrollBankMatch {
+  id                    String             @id @default(cuid())
+  businessId            String
+  payrollRunId          String
+  externalTransactionId String
+  kind                  String             @db.VarChar(32)
+  expectedAmount        Decimal            @db.Decimal(18, 2)
+  matchedAmount         Decimal            @db.Decimal(18, 2)
+  status                PayrollMatchStatus @default(UNMATCHED)
+  notes                 String?
+  matchedAt             DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  version               Int                @default(1)
+
+  business            Business            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  payrollRun          PayrollRun          @relation(fields: [businessId, payrollRunId], references: [businessId, id], onDelete: Restrict)
+  externalTransaction ExternalTransaction @relation(fields: [businessId, externalTransactionId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@unique([businessId, payrollRunId, externalTransactionId, kind])
+  @@index([businessId, status])
+}
+
+model ReasonableCompWorkpaper {
+  id              String    @id @default(cuid())
+  businessId      String
+  effectiveStart  DateTime
+  effectiveEnd    DateTime?
+  targetLow       Decimal?  @db.Decimal(18, 2)
+  targetHigh      Decimal?  @db.Decimal(18, 2)
+  supportingNotes String
+  reviewDate      DateTime?
+  documentId      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  version         Int       @default(1)
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  document Document? @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, effectiveStart])
+}
+
+model FixedAsset {
+  id                          String           @id @default(cuid())
+  businessId                  String
+  name                        String           @db.VarChar(180)
+  category                    String           @db.VarChar(100)
+  vendor                      String?          @db.VarChar(180)
+  acquisitionDate             DateTime
+  acquisitionCost             Decimal          @db.Decimal(18, 2)
+  placedInServiceDate         DateTime?
+  dispositionDate             DateTime?
+  dispositionProceeds         Decimal?         @db.Decimal(18, 2)
+  status                      FixedAssetStatus @default(POSSIBLE_REVIEW)
+  sourceExternalTransactionId String?
+  sourceTransactionId         String?
+  documentId                  String?
+  workpaperNotes              String?
+  cpaNotes                    String?
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
+  version                     Int              @default(1)
+
+  business                  Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  sourceExternalTransaction ExternalTransaction? @relation("FixedAssetExternalSource", fields: [businessId, sourceExternalTransactionId], references: [businessId, id], onDelete: Restrict)
+  sourceTransaction         Transaction?         @relation("FixedAssetTransactionSource", fields: [businessId, sourceTransactionId], references: [businessId, id], onDelete: Restrict)
+  document                  Document?            @relation(fields: [businessId, documentId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@index([businessId, status])
+  @@index([businessId, acquisitionDate])
+}
+
+model MonthEndClose {
+  id                String              @id @default(cuid())
+  businessId        String
+  periodStart       DateTime
+  periodEnd         DateTime
+  status            MonthEndCloseStatus @default(NOT_READY)
+  checklistJson     Json
+  confirmedAt       DateTime?
+  confirmedByUserId String?
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  version           Int                 @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, periodStart, periodEnd])
+  @@index([businessId, status, periodEnd])
 }
 
 model OwnerDistribution {
@@ -1692,16 +1828,16 @@ model LedgerAccount {
   updatedAt          DateTime             @updatedAt
   version            Int                  @default(1)
 
-  business           Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  financialAccount   FinancialAccount? @relation("FinancialAccountLedgerAccount", fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
-  parentAccount      LedgerAccount?    @relation("LedgerAccountHierarchy", fields: [businessId, parentAccountId], references: [businessId, id], onDelete: Restrict)
-  childAccounts      LedgerAccount[]   @relation("LedgerAccountHierarchy")
-  journalLines       JournalLine[]
-  debitPostingRules  PostingRule[]     @relation("PostingRuleDebitAccount")
-  creditPostingRules PostingRule[]     @relation("PostingRuleCreditAccount")
-  suggestedExternalTransactions ExternalTransaction[] @relation("ExternalTransactionSuggestedAccount")
-  reviewedExternalTransactions ExternalTransaction[] @relation("ExternalTransactionReviewAccount")
-  merchantCategoryRules MerchantCategoryRule[]
+  business                      Business               @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount              FinancialAccount?      @relation("FinancialAccountLedgerAccount", fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  parentAccount                 LedgerAccount?         @relation("LedgerAccountHierarchy", fields: [businessId, parentAccountId], references: [businessId, id], onDelete: Restrict)
+  childAccounts                 LedgerAccount[]        @relation("LedgerAccountHierarchy")
+  journalLines                  JournalLine[]
+  debitPostingRules             PostingRule[]          @relation("PostingRuleDebitAccount")
+  creditPostingRules            PostingRule[]          @relation("PostingRuleCreditAccount")
+  suggestedExternalTransactions ExternalTransaction[]  @relation("ExternalTransactionSuggestedAccount")
+  reviewedExternalTransactions  ExternalTransaction[]  @relation("ExternalTransactionReviewAccount")
+  merchantCategoryRules         MerchantCategoryRule[]
 
   @@unique([businessId, id])
   @@unique([businessId, code])
@@ -1753,17 +1889,17 @@ model JournalEntry {
   updatedAt              DateTime               @updatedAt
   version                Int                    @default(1)
 
-  business           Business            @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  accountingPeriod   AccountingPeriod    @relation(fields: [businessId, accountingPeriodId], references: [businessId, id], onDelete: Restrict)
-  transaction        Transaction?        @relation("TransactionJournalEntry", fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
-  reimbursementClaim ReimbursementClaim? @relation("ReimbursementClaimJournalEntry", fields: [businessId, reimbursementClaimId], references: [businessId, id], onDelete: Restrict)
-  payrollRun         PayrollRun?         @relation("PayrollRunJournalEntry", fields: [businessId, payrollRunId], references: [businessId, id], onDelete: Restrict)
-  ownerDistribution  OwnerDistribution?  @relation("OwnerDistributionJournalEntry", fields: [businessId, ownerDistributionId], references: [businessId, id], onDelete: Restrict)
-  taxPaymentRecord   TaxPaymentRecord?   @relation("TaxPaymentJournalEntry", fields: [businessId, taxPaymentRecordId], references: [businessId, id], onDelete: Restrict)
-  reversalOfEntry    JournalEntry?       @relation("JournalEntryReversals", fields: [businessId, reversalOfEntryId], references: [businessId, id], onDelete: Restrict)
-  reversedByEntries  JournalEntry[]      @relation("JournalEntryReversals")
-  lines              JournalLine[]
-  correctionReversalFor Transaction? @relation("TransactionCorrectionReversal")
+  business              Business            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  accountingPeriod      AccountingPeriod    @relation(fields: [businessId, accountingPeriodId], references: [businessId, id], onDelete: Restrict)
+  transaction           Transaction?        @relation("TransactionJournalEntry", fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
+  reimbursementClaim    ReimbursementClaim? @relation("ReimbursementClaimJournalEntry", fields: [businessId, reimbursementClaimId], references: [businessId, id], onDelete: Restrict)
+  payrollRun            PayrollRun?         @relation("PayrollRunJournalEntry", fields: [businessId, payrollRunId], references: [businessId, id], onDelete: Restrict)
+  ownerDistribution     OwnerDistribution?  @relation("OwnerDistributionJournalEntry", fields: [businessId, ownerDistributionId], references: [businessId, id], onDelete: Restrict)
+  taxPaymentRecord      TaxPaymentRecord?   @relation("TaxPaymentJournalEntry", fields: [businessId, taxPaymentRecordId], references: [businessId, id], onDelete: Restrict)
+  reversalOfEntry       JournalEntry?       @relation("JournalEntryReversals", fields: [businessId, reversalOfEntryId], references: [businessId, id], onDelete: Restrict)
+  reversedByEntries     JournalEntry[]      @relation("JournalEntryReversals")
+  lines                 JournalLine[]
+  correctionReversalFor Transaction?        @relation("TransactionCorrectionReversal")
 
   @@unique([businessId, id])
   @@unique([businessId, entryNumber])
@@ -1839,9 +1975,9 @@ model Reconciliation {
   updatedAt               DateTime             @updatedAt
   version                 Int                  @default(1)
 
-  business         Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  financialAccount FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
-  items            ReconciliationItem[]
+  business            Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount    FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  items               ReconciliationItem[]
   statementActivities StatementActivity[]
 
   @@unique([businessId, id])
