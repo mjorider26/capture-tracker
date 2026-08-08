@@ -371,6 +371,7 @@ model Business {
   auditEvents                AuditEvent[]
   reimbursementClaims        ReimbursementClaim[]
   reimbursementExpenses      ReimbursementExpense[]
+  ownerMoneyTransfers        OwnerMoneyTransfer[]
   payrollRuns                PayrollRun[]
   ownerDistributions         OwnerDistribution[]
   quarterlyTaxEstimates      QuarterlyTaxEstimate[]
@@ -633,6 +634,7 @@ model ExternalTransaction {
   postedTransaction     Transaction?         @relation("ExternalTransactionPostedTransaction", fields: [businessId, postedTransactionId], references: [businessId, id], onDelete: Restrict)
   duplicateOf           ExternalTransaction? @relation("ExternalTransactionDuplicates", fields: [businessId, duplicateOfId], references: [businessId, id], onDelete: Restrict)
   duplicates            ExternalTransaction[] @relation("ExternalTransactionDuplicates")
+  ownerTransfer         OwnerMoneyTransfer?
 
   @@unique([businessId, id])
   @@unique([businessId, transactionImportId, rowNumber])
@@ -990,6 +992,52 @@ enum ReimbursementExpenseType {
   INTERNET
   EDUCATION
   OTHER
+}
+
+/// Explicit owner/company transfer treatment. Classification is always selected by a reviewer; imports never infer it.
+model OwnerMoneyTransfer {
+  id                    String                      @id @default(cuid())
+  businessId            String
+  externalTransactionId String
+  direction             OwnerTransferDirection
+  classification        OwnerTransferClassification @default(UNRESOLVED)
+  status                OwnerTransferStatus         @default(PENDING_REVIEW)
+  notes                 String?
+  classifiedAt          DateTime?
+  classifiedByUserId    String?
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  version               Int                         @default(1)
+
+  business            Business            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  externalTransaction ExternalTransaction @relation(fields: [businessId, externalTransactionId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, id])
+  @@unique([businessId, externalTransactionId])
+  @@index([businessId, status, direction])
+}
+
+enum OwnerTransferDirection {
+  COMPANY_TO_OWNER
+  OWNER_TO_COMPANY
+}
+
+enum OwnerTransferClassification {
+  UNRESOLVED
+  PAYROLL_NET_SALARY
+  SHAREHOLDER_DISTRIBUTION
+  REIMBURSEMENT
+  SHAREHOLDER_LOAN_REPAYMENT
+  OWNER_CONTRIBUTION
+  SHAREHOLDER_LOAN
+  OTHER
+}
+
+enum OwnerTransferStatus {
+  PENDING_REVIEW
+  CLASSIFIED
+  MATCHED
+  VOIDED
 }
 
 enum PayrollRunStatus {

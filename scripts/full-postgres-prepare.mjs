@@ -22,6 +22,7 @@ const expectedTables = new Set([
   "TransactionImportProfile",
   "ExternalTransaction",
   "MerchantCategoryRule",
+  "OwnerMoneyTransfer",
   "Transaction",
   "TransactionSplit",
   "Document",
