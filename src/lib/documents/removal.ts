@@ -67,7 +67,7 @@ export async function removePrivateDocument(actor: Actor, documentId: string, co
   try { changed = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     WITH updated AS (
       UPDATE "Document"
-      SET "deletedAt" = ${now}, "privateReadEligible" = false, "version" = "version" + 1
+      SET "deletedAt" = ${now}, "status" = ${"DELETED"}, "privateReadEligible" = false, "version" = "version" + 1
       WHERE "id" = ${document.id} AND "businessId" = ${actor.businessId} AND "deletedAt" IS NULL
       RETURNING "id"
     ), audit AS (

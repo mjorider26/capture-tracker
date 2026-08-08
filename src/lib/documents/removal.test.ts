@@ -22,6 +22,7 @@ describe("private document removal", () => {
     const { removePrivateDocument } = await import("./removal");
     await expect(removePrivateDocument(actor, "doc_a")).resolves.toEqual({ ok: true, mode: "DELETED", cleanupPending: false });
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+
     expect(storage.removeQuarantined).toHaveBeenCalledWith("opaque");
     expect(storage.removeActive).toHaveBeenCalledWith("opaque");
   });
@@ -31,6 +32,14 @@ describe("private document removal", () => {
     const { removePrivateDocument } = await import("./removal");
     await expect(removePrivateDocument(actor, "doc_a")).resolves.toEqual({ ok: true, mode: "ARCHIVED", cleanupPending: false });
     expect(storage.removeQuarantined).not.toHaveBeenCalled(); expect(storage.removeActive).not.toHaveBeenCalled();
+  });
+
+  it("atomically leaves the ACTIVE state before revoking private reads", async () => {
+    const { removePrivateDocument } = await import("./removal");
+    await removePrivateDocument(actor, "doc_a");
+    const statement = prisma.$queryRaw.mock.calls[0][0] as { strings: readonly string[]; values: readonly unknown[] };
+    expect(statement.strings.join("")).toContain('"status" = ');
+    expect(statement.values).toContain("DELETED");
   });
 
   it("denies another tenant or an already deleted document before storage access", async () => {
