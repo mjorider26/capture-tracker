@@ -47,7 +47,12 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/app/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex" }],
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex" },
+          // Authenticated RSC responses must never survive a deployment in a
+          // mobile browser cache with an obsolete client bundle.
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
       },
       {
         source: "/:path*",
