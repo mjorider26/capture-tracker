@@ -5,7 +5,13 @@ import Link from "next/link";
 import { InlineAlert, PageHeader, StatusBadge } from "./ui";
 import { confirmImport, ignoreImportedTransaction, postImportedTransaction, previewImport } from "@/app/app/money/import/actions";
 
-type Props = Awaited<ReturnType<typeof import("@/lib/services/financial-ingestion")["getImportWorkspace"]>>;
+type Props = {
+  accounts: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string; type: "INCOME" | "EXPENSE" }>;
+  imports: Array<{ id: string; sourceFilename: string; status: string; rowCount: number; newCount: number; duplicateCount: number; possibleDuplicateCount: number; invalidCount: number; createdAt: string; financialAccount: { name: string } }>;
+  items: Array<{ id: string; date: string; description: string; amount: string; direction: "INFLOW" | "OUTFLOW"; status: string; suggestionReason: string | null; suggestedLedgerAccountId: string | null; financialAccount: { name: string } }>;
+  profiles: Array<{ id: string; name: string; financialAccountId: string; mappingJson: unknown }>;
+};
 type ActionState = Awaited<ReturnType<typeof previewImport>>;
 const initial: ActionState = { ok: false };
 export function TransactionImportExperience({ accounts, categories, imports, items, profiles }: Props) {
