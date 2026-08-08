@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
   // Development-only Next resource access for explicitly configured private
   // LAN addresses. This does not affect API CORS or production behavior.
   ...(allowedDevOrigins.length ? { allowedDevOrigins } : {}),
+  experimental: {
+    // Next Server Actions default to a 1 MB request body, while the existing
+    // document boundary admits a 10 MiB file. Reserve a small multipart
+    // envelope without increasing the document validator's 10 MiB limit.
+    serverActions: { bodySizeLimit: "11mb" },
+  },
   async headers() {
     return [
       {
