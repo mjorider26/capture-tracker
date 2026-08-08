@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { workspaceFailureMetadata } from "./workspace-failure";
+import { workspaceClientFailureMetadata, workspaceFailureMetadata } from "./workspace-failure";
 
 describe("workspaceFailureMetadata", () => {
   it("records a finite scan-schema category without retaining the raw error", () => {
@@ -19,6 +19,14 @@ describe("workspaceFailureMetadata", () => {
       category: "DATABASE_QUERY",
       code: "P2022",
       name: "PrismaClientKnownRequestError",
+    });
+  });
+
+  it("reports a finite client category without retaining the message", () => {
+    expect(workspaceClientFailureMetadata({ message: "Loading chunk 12 failed", digest: "safe_digest" }, "/app/documents")).toEqual({
+      category: "CLIENT_ASSET",
+      pathname: "/app/documents",
+      digest: "safe_digest",
     });
   });
 });

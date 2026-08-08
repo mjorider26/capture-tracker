@@ -2,13 +2,25 @@
 
 import { useEffect } from "react";
 
+import { workspaceClientFailureMetadata } from "@/lib/observability/workspace-failure";
+
 export default function ApplicationError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {}, []);
+  useEffect(() => {
+    const body = workspaceClientFailureMetadata(error, window.location.pathname);
+    void fetch("/api/internal/workspace-failure", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      keepalive: true,
+      body: JSON.stringify(body),
+    }).catch(() => {});
+  }, [error]);
   return (
     <main className="mx-auto max-w-2xl p-6 sm:p-10">
       <section
