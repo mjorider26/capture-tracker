@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { workspaceFailureMetadata } from "@/lib/observability/workspace-failure";
 
 import {
   AccessControlError,
@@ -21,9 +22,15 @@ export type {
 } from "./business-context-core";
 
 export async function requireBusinessContext() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let session;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers(),
+    });
+  } catch (error) {
+    console.error(JSON.stringify(workspaceFailureMetadata("session", error)));
+    throw error;
+  }
 
   if (!session) {
     throw new AccessControlError(
@@ -33,12 +40,13 @@ export async function requireBusinessContext() {
     );
   }
 
-  return resolveBusinessContext({
-    sessionId: session.session.id,
-    userId: session.user.id,
+  try {
+    return await resolveBusinessContext({
+      sessionId: session.session.id,
+      userId: session.user.id,
 
-    loadMemberships: async (userId) =>
-      prisma.businessMember.findMany({
+      loadMemberships: async (userId) =>
+        prisma.businessMember.findMany({
         where: {
           userId,
         },
@@ -77,6 +85,10 @@ export async function requireBusinessContext() {
         // We need only enough results to distinguish:
         // zero, exactly one, or more than one.
         take: 2,
-      }),
-  });
+        }),
+    });
+  } catch (error) {
+    if (!(error instanceof AccessControlError)) console.error(JSON.stringify(workspaceFailureMetadata("business_context", error)));
+    throw error;
+  }
 }

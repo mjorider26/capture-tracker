@@ -5,6 +5,7 @@ import { MoneyExperience } from "@/components/money-experience";
 import { TodayExperience } from "@/components/today-experience";
 import { getMoneyDashboard } from "@/lib/data/money-dashboard";
 import { getTodayDashboard } from "@/lib/data/today-dashboard";
+import { workspaceFailureMetadata } from "@/lib/observability/workspace-failure";
 import {
   isAccessControlError,
   requireBusinessContext,
@@ -27,12 +28,12 @@ export default async function ApplicationDestinationPage({
   const content =
     destination === "today" ? (
       <TodayExperience
-        dashboard={await getTodayDashboard(context.business.id)}
+        dashboard={await loadTodayDashboard(context.business.id)}
         basePath="/app"
       />
     ) : destination === "money" ? (
       <MoneyExperience
-        dashboard={await getMoneyDashboard(
+        dashboard={await loadMoneyDashboard(
           context.business.id,
           await searchParams,
         )}
@@ -55,6 +56,24 @@ async function getApplicationContext() {
     return await requireBusinessContext();
   } catch (error) {
     if (isAccessControlError(error)) notFound();
+    throw error;
+  }
+}
+
+async function loadTodayDashboard(businessId: string) {
+  try {
+    return await getTodayDashboard(businessId);
+  } catch (error) {
+    console.error(JSON.stringify(workspaceFailureMetadata("today_dashboard", error)));
+    throw error;
+  }
+}
+
+async function loadMoneyDashboard(businessId: string, searchParams: Record<string, string | string[] | undefined>) {
+  try {
+    return await getMoneyDashboard(businessId, searchParams);
+  } catch (error) {
+    console.error(JSON.stringify(workspaceFailureMetadata("money_dashboard", error)));
     throw error;
   }
 }
