@@ -49,6 +49,7 @@ next-env.d.ts
 /.artifacts/
 /.document-storage/
 /.wrangler/
+/scanner/__pycache__/
 
 .env
 
