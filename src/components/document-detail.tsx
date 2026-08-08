@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { DocumentScanRefresh } from "./document-scan-refresh";
 import { Card, PageHeader, StatusBadge } from "./ui";
 
 type Detail = {
-  displayName: string; originalFilename: string; status: string; storageState: string; malwareScanStatus: string; retentionUntil: Date; quarantineReasonCode: string | null;
+  id: string; displayName: string; originalFilename: string; status: string; storageState: string; malwareScanStatus: string; retentionUntil: Date; quarantineReasonCode: string | null;
   statusHistory: Array<{ id: string; newStatus: string; createdAt: Date; reasonCode: string | null }>;
 };
 
@@ -16,6 +17,7 @@ export function DocumentDetail({ document, basePath, actions, contentHref }: { d
   const readable = document.status === "ACTIVE" && document.malwareScanStatus === "CLEAN" && !metadataOnly;
   const scanMessage = document.malwareScanStatus === "CLEAN" ? "Passed before private access was enabled" : document.malwareScanStatus === "PENDING" ? "Security scan pending" : document.malwareScanStatus === "FAILED" ? "Security scan could not complete" : document.malwareScanStatus === "INFECTED" ? "Rejected by security scan" : "Not available";
   return <section className="space-y-6">
+    <DocumentScanRefresh documentId={document.id} status={document.status} malwareScanStatus={document.malwareScanStatus} />
     <Link className="inline-flex min-h-11 items-center text-sm font-bold text-brand-teal underline underline-offset-4" href={`${basePath}/documents`}>Back to Documents</Link>
     <PageHeader eyebrow={metadataOnly ? "Metadata-only record" : "Private document record"} title={document.displayName} description="Evidence is available only through authenticated, business-scoped access to private object storage." action={<StatusBadge tone={readable ? "success" : document.status === "PENDING_VALIDATION" ? "warning" : "locked"}>{readable ? "Active and private" : display(document.status)}</StatusBadge>} />
     <Card className="document-safeguards p-5 sm:p-6">

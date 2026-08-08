@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect, RedirectType } from "next/navigation";
 
 import { uploadPrivateDocument } from "@/lib/documents/secure-upload";
 import { selectedDocumentUpload } from "@/lib/documents/upload-selection";
@@ -32,11 +33,14 @@ export async function removeAuthenticatedDocument(_: DocumentRemovalActionState,
     if (!result.ok) return { ok: false, message: result.code === "NOT_FOUND" ? "Document not found." : "This document changed before it could be removed." };
     revalidatePath("/app/documents"); revalidatePath("/app/today"); revalidatePath("/app/review"); revalidatePath("/app/activity");
     await traceDocumentRemoval(context.business.id, traceId, "ACTION_RESPONSE", "PASS");
-    return { ok: true, message: result.mode === "ARCHIVED" ? "The linked evidence was archived. Its financial history was preserved." : result.cleanupPending ? "The document was removed. Private storage cleanup will finish safely." : "The document and its private storage were removed." };
+    // A deleted detail route cannot safely re-render. Let the Server Action
+    // replace that route directly without constructing or mutating a Better
+    // Auth cookie.
   } catch (error) {
     if (context) await traceDocumentRemoval(context.business.id, traceId, "ACTION_RESPONSE", "FAIL", error instanceof Error && /^[A-Za-z]{1,48}$/.test(error.name) ? error.name : "UNKNOWN");
     return { ok: false, message: "The document could not be removed safely." };
   }
+  redirect("/app/documents", RedirectType.replace);
 }
 export async function runAuthenticatedExtraction(_: ExtractionActionState, formData: FormData): Promise<ExtractionActionState> {
   const documentId = String(formData.get("documentId") ?? "");

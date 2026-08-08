@@ -51,6 +51,13 @@ export async function listDocuments(businessId: string) {
 export async function getDocument(businessId: string, documentId: string) {
   return prisma.document.findFirst({ where: { businessId, id: documentId, deletedAt: null }, include: { statusHistory: { orderBy: { createdAt: "asc" } } } });
 }
+
+export async function getDocumentScanStatus(businessId: string, documentId: string) {
+  return prisma.document.findFirst({
+    where: { businessId, id: documentId, deletedAt: null },
+    select: { status: true, malwareScanStatus: true },
+  });
+}
 export async function createMetadataDocument(actor: Actor, input: unknown): Promise<Result<{ id: string }>> {
   const parsed = documentMetadataSchema.safeParse(input);
   if (!parsed.success) return { ok: false, code: "INVALID", message: "Document metadata is invalid." };
