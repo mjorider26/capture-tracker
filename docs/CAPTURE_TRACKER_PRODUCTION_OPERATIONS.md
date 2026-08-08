@@ -1,5 +1,7 @@
 # Capture Tracker Production Operations
 
+> **Wave 1 release note (2026-08-08):** V2 Wave 1 is deployed from `50d2096a8985f69624aba6590e0223de24049129`; exact-SHA CI `31280440924` passed and the application Worker is `f9eae9a0-9f6c-4497-b3a5-5ac97abba36b`. Production migration inventory includes `20260808120000_add_financial_ingestion`.
+
 **Status:** CAPTURE TRACKER V1.0.0 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
 **Last updated:** 2026-08-08
 **Accepted V1 application release:** `78dbb0c37991b1dbf23706bc906687eb6b24b574` (`v1.0.0`)
@@ -82,6 +84,12 @@ The primary mobile navigation is: Today, Money, Documents, Reports, and More. Mo
 - **More:** secondary operational workflows.
 
 Ask AI has been removed from product navigation and direct product surfaces. Capture Tracker has no external AI provider or AI cost.
+
+### CSV import and review
+
+Money imports bank or credit-card CSV exports; it does not provide a bank feed. The operator selects the financial account, reviews detected or corrected mappings, then sees total rows, new rows, duplicates, possible duplicates, and invalid rows before confirmation. Repeating the same file is duplicate-safe. Imported activity remains separate bank evidence until an authorized reviewer accepts a deterministic classification and creates the corresponding balanced accounting entry. Ambiguous transfers, owner activity, payroll withdrawals, and possible duplicates stay unresolved rather than receiving guessed treatment. Today and Weekly Review show unresolved import exceptions only.
+
+Authenticated fictional Wave 1 acceptance is not currently authorized by an approved production pilot session. Do not create test users, businesses, financial records, or cleanup records through database/operator workarounds. When a controlled test session and cleanup lifecycle are approved, follow the dedicated acceptance procedure and preserve required audit evidence.
 
 ## Release process
 

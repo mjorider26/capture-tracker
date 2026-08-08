@@ -1,5 +1,9 @@
 # Current Capture Tracker Production State
 
+> Current release note (2026-08-08): V2 Wave 1 is deployed from `50d2096a8985f69624aba6590e0223de24049129`; exact-SHA CI run `31280440924` passed and the production application Worker is `f9eae9a0-9f6c-4497-b3a5-5ac97abba36b`. The production migration inventory includes `20260808120000_add_financial_ingestion`.
+
+> Money now accepts bank and credit-card CSV exports through **Import transactions**. Imports are previewed, validated, duplicate-classified, and retained as bank evidence; deterministic suggestions may prepare review, but no imported transaction posts automatically. Authenticated fictional acceptance and controlled cleanup remain pending an approved pilot session; operators must not create accounts or write production financial records to simulate that work.
+
 **CAPTURE TRACKER V1.0.0 — PRODUCTION READY (2026-08-08).** The authoritative operating instructions are in [Capture Tracker Production Operations](CAPTURE_TRACKER_PRODUCTION_OPERATIONS.md).
 
 - The accepted V1 application release is `78dbb0c37991b1dbf23706bc906687eb6b24b574` (`v1.0.0`); exact-SHA CI run `31275008219` passed.

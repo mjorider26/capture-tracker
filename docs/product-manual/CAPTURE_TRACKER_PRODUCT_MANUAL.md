@@ -1,5 +1,7 @@
 # Capture Tracker Product Manual
 
+> **Current product note:** Ask AI has been removed. Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans.
+
 **SPENDING TRACKED. BUSINESS GROWN.**
 
 Private-pilot client guide · V1.0.0 · Documented source: `78dbb0c37991b1dbf23706bc906687eb6b24b574`
