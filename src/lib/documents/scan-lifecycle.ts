@@ -30,6 +30,18 @@ function scanTimingEvent(stage: "ACTIVE_COPY_COMPLETED" | "DATABASE_FINALIZATION
   console.warn(JSON.stringify({ event: "document_scan_timing", stage, correlationId, at: new Date().toISOString() }));
 }
 
+async function persistApplicationScanTrace(target: ScanTarget, job: DocumentScanJob, result: DocumentScanResult) {
+  if (!job.trace) return;
+  try {
+    await prisma.auditEvent.create({ data: {
+      actorType: "SYSTEM", businessId: target.businessId, action: "UPDATE", entityType: "DocumentScanTrace", entityId: job.trace.correlationId,
+      metadataJson: { result: result.category, timings: job.trace.timings },
+    } });
+  } catch {
+    // This internal trace must never influence document state or Queue retry.
+  }
+}
+
 export async function persistDocumentScanTrace(job: DocumentScanJob) {
   if (!job.trace) return;
   try {
@@ -129,6 +141,7 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
         scanTimingEvent("QUARANTINE_DELETE_COMPLETED", job.trace?.correlationId);
       } catch { /* safe private cleanup can retry later */ }
     }
+    await persistApplicationScanTrace(target, job, result);
     return { state: activated ? "ACTIVATED" as const : "STALE" as const };
   }
 
@@ -143,6 +156,7 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
       await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "REJECT", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "rejected", scanner: scannerId, scannerVersion } } });
       return true;
     });
+    await persistApplicationScanTrace(target, job, result);
     return { state: rejected ? "REJECTED" as const : "STALE" as const };
   }
 
@@ -155,5 +169,6 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
     await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "QUARANTINE", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "failed", scanner: scannerId, scannerVersion } } });
     return true;
   });
+  await persistApplicationScanTrace(target, job, result);
   return { state: failed ? "FAILED" as const : "STALE" as const };
 }

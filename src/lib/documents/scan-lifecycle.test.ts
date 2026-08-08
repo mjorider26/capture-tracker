@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { parseDocumentScanJob, parseDocumentScanResult } from "./scan-contract";
 
 const prisma = vi.hoisted(() => ({
-  document: { findFirst: vi.fn() },
+  document: { findFirst: vi.fn() }, auditEvent: { create: vi.fn() },
   $transaction: vi.fn(),
 }));
 const storage = vi.hoisted(() => ({ promoteQuarantined: vi.fn(), finalizeQuarantinedPromotion: vi.fn(), getQuarantined: vi.fn(), getActive: vi.fn() }));
@@ -36,6 +36,7 @@ describe("document scan lifecycle application", () => {
 
   beforeEach(() => {
     prisma.document.findFirst.mockReset();
+    prisma.auditEvent.create.mockReset();
     prisma.$transaction.mockReset();
     storage.promoteQuarantined.mockReset();
     storage.finalizeQuarantinedPromotion.mockReset();
@@ -51,6 +52,7 @@ describe("document scan lifecycle application", () => {
     tx.auditEvent.create.mockResolvedValue({});
     storage.promoteQuarantined.mockResolvedValue(undefined);
     storage.finalizeQuarantinedPromotion.mockResolvedValue(undefined);
+    prisma.auditEvent.create.mockResolvedValue({});
   });
 
   it("promotes only a current quarantined document after a clean result and records one audit event", async () => {

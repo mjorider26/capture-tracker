@@ -190,7 +190,10 @@ async function processMessage(env: Env, message: QueueMessage) {
 
 export class DocumentScannerContainer extends Container {
   defaultPort = 8080;
-  sleepAfter = "2m";
+  // Container disk is ephemeral after sleep, so a cold restart must safely
+  // refresh ClamAV signatures before it can scan. Fifteen minutes keeps a
+  // normal receipt session warm without pinning an instance indefinitely.
+  sleepAfter = "15m";
   enableInternet = false;
   interceptHttps = true;
   allowedHosts = ["database.clamav.net", "*.clamav.net"];
