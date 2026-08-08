@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 
 import { getPrivateDocumentStorage } from "./r2-storage";
 
@@ -31,19 +32,24 @@ export async function removePrivateDocument(actor: Actor, documentId: string): P
 
   const linked = document.transactions.length > 0 || document.reimbursementExpenses.length > 0 || document.payrollRuns.length > 0 || document.taxPayments.length > 0;
   const now = new Date();
-  const changed = await prisma.$transaction(async (tx) => {
-    const update = await tx.document.updateMany({
-      where: { id: document.id, businessId: actor.businessId, deletedAt: null },
-      data: { deletedAt: now, privateReadEligible: false, version: { increment: 1 } },
-    });
-    if (update.count !== 1) return false;
-    await tx.auditEvent.create({ data: {
-      actorType: "USER", actorMembershipId: actor.actorUserId, businessId: actor.businessId, action: linked ? "UPDATE" : "DELETE", entityType: "Document", entityId: document.id,
-      metadataJson: { documentRemoval: linked ? "ARCHIVED_LINKED_EVIDENCE" : "DELETED_UNLINKED" },
-    } });
-    return true;
-  });
-  if (!changed) return { ok: false, code: "CONFLICT" };
+  const removal = linked ? "ARCHIVED_LINKED_EVIDENCE" : "DELETED_UNLINKED";
+  // This deployment uses a driver configuration that does not support
+  // Prisma's interactive transactions. One parameterized PostgreSQL CTE
+  // preserves the required all-or-nothing conditional tombstone plus audit.
+  const changed = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    WITH updated AS (
+      UPDATE "Document"
+      SET "deletedAt" = ${now}, "privateReadEligible" = false, "version" = "version" + 1
+      WHERE "id" = ${document.id} AND "businessId" = ${actor.businessId} AND "deletedAt" IS NULL
+      RETURNING "id"
+    ), audit AS (
+      INSERT INTO "AuditEvent" ("id", "actorType", "actorMembershipId", "businessId", "action", "entityType", "entityId", "metadataJson")
+      SELECT ${crypto.randomUUID()}, 'USER', ${actor.actorUserId}, ${actor.businessId}, ${linked ? "UPDATE" : "DELETE"}, 'Document', "id", ${JSON.stringify({ documentRemoval: removal })}::jsonb
+      FROM updated
+    )
+    SELECT "id" FROM updated
+  `);
+  if (changed.length !== 1) return { ok: false, code: "CONFLICT" };
   if (linked || !document.storageKey) return { ok: true, mode: "ARCHIVED", cleanupPending: false };
 
   try {
