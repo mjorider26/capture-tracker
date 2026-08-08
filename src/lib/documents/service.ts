@@ -8,7 +8,7 @@ type Result<T> = { ok: true; value: T; duplicate?: boolean } | { ok: false; code
 
 export async function listDocuments(businessId: string) {
   return prisma.document.findMany({
-    where: { businessId },
+    where: { businessId, deletedAt: null },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: {
       id: true,
@@ -49,7 +49,7 @@ export async function listDocuments(businessId: string) {
   });
 }
 export async function getDocument(businessId: string, documentId: string) {
-  return prisma.document.findFirst({ where: { businessId, id: documentId }, include: { statusHistory: { orderBy: { createdAt: "asc" } } } });
+  return prisma.document.findFirst({ where: { businessId, id: documentId, deletedAt: null }, include: { statusHistory: { orderBy: { createdAt: "asc" } } } });
 }
 export async function createMetadataDocument(actor: Actor, input: unknown): Promise<Result<{ id: string }>> {
   const parsed = documentMetadataSchema.safeParse(input);

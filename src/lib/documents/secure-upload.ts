@@ -9,7 +9,7 @@ import {
 } from "./core";
 import { getPrivateDocumentStorage } from "./r2-storage";
 import { enqueueDocumentScan } from "./scan-queue";
-import type { DocumentScanTrace } from "./scan-contract";
+import { appendDocumentScanTiming, type DocumentScanTrace } from "./scan-contract";
 
 type Actor = { businessId: string; actorUserId: string };
 type ApprovedMimeType = "application/pdf" | "image/jpeg" | "image/png";
@@ -69,9 +69,8 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
       return { ok: false as const, code: "INVALID", message: "File name, declared type, and validated file content must be the same approved type." };
     }
 
-    const uploadAcceptedAt = new Date().toISOString();
-    const trace: DocumentScanTrace = { correlationId: crypto.randomUUID().replaceAll("-", ""), uploadAcceptedAt };
-    scanTimingEvent("UPLOAD_ACCEPTED", trace.correlationId, uploadAcceptedAt);
+    const trace: DocumentScanTrace = { correlationId: crypto.randomUUID().replaceAll("-", ""), timings: [] };
+    appendDocumentScanTiming(trace, "UPLOAD_COMPLETED");
 
     const sha256 = await hashBytes(bytes);
     const existing = await prisma.document.findFirst({
@@ -136,12 +135,10 @@ export async function uploadPrivateDocument(actor: Actor, file: File) {
         });
         return created;
       });
-      const documentQuarantinedAt = (document.uploadCompletedAt ?? new Date()).toISOString();
-      trace.documentQuarantinedAt = documentQuarantinedAt;
-      scanTimingEvent("DOCUMENT_QUARANTINED", trace.correlationId, documentQuarantinedAt);
+      appendDocumentScanTiming(trace, "DOCUMENT_QUARANTINED");
       let scanQueueUnavailable = false;
       try {
-        trace.queueProducedAt = new Date().toISOString();
+        appendDocumentScanTiming(trace, "QUEUE_PRODUCED");
         await enqueueDocumentScan({ documentId: document.id, version: document.version, trace });
         scanTimingEvent("QUEUE_PRODUCED", trace.correlationId, new Date().toISOString());
       }

@@ -11,6 +11,7 @@ vi.mock("@/lib/documents/upload-selection", () => ({ selectedDocumentUpload }));
 vi.mock("@/lib/security/business-context", () => ({ requireBusinessContext }));
 vi.mock("@/lib/documents/extraction", () => ({ extractDocument: vi.fn(), reviewDocumentExtraction: vi.fn() }));
 vi.mock("@/lib/documents/transaction-matching", () => ({ decideDocumentTransactionMatch: vi.fn(), dismissDocumentTransactionMatchRun: vi.fn(), generateDocumentTransactionMatches: vi.fn() }));
+vi.mock("@/lib/documents/removal", () => ({ removePrivateDocument: vi.fn() }));
 
 const cameraReceipt = new File(["receipt"], "camera-receipt.jpg", { type: "image/jpeg" });
 

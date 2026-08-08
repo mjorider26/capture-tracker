@@ -63,7 +63,7 @@ const activityModules = new Set(["Accounting", "Transactions", "Documents", "Rec
 export async function getActivity(businessId: string, raw: ActivityQuery = {}) {
   const activeModule = activityModules.has(raw.module ?? "") ? raw.module : "";
   const [audits, docs, reviews, ai, settings, exports] = await Promise.all([
-    prisma.auditEvent.findMany({ where: { businessId }, orderBy: { occurredAt: "desc" }, take: 100, select: { id: true, entityType: true, entityId: true, action: true, occurredAt: true, metadataJson: true, afterJson: true } }),
+    prisma.auditEvent.findMany({ where: { businessId, entityType: { not: "DocumentScanTrace" } }, orderBy: { occurredAt: "desc" }, take: 100, select: { id: true, entityType: true, entityId: true, action: true, occurredAt: true, metadataJson: true, afterJson: true } }),
     prisma.documentStatusHistory.findMany({ where: { businessId }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, documentId: true, newStatus: true, createdAt: true } }),
     prisma.weeklyReviewHistory.findMany({ where: { businessId }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, action: true, createdAt: true } }),
     prisma.askAiEvent.findMany({ where: { businessId }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, action: true, createdAt: true } }),

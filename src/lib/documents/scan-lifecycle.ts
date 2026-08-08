@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 
 import { getPrivateDocumentStorage } from "./r2-storage";
-import type { DocumentScanJob, DocumentScanResult } from "./scan-contract";
+import { appendDocumentScanTiming, type DocumentScanJob, type DocumentScanResult } from "./scan-contract";
 
 export type { DocumentScanJob, DocumentScanResult } from "./scan-contract";
 
@@ -28,6 +28,24 @@ const scanTargetWhere = (job: DocumentScanJob) => ({
 function scanTimingEvent(stage: "ACTIVE_COPY_COMPLETED" | "DATABASE_FINALIZATION_STARTED" | "DATABASE_FINALIZATION_COMMITTED" | "QUARANTINE_DELETE_COMPLETED", correlationId: string | undefined) {
   if (!correlationId) return;
   console.warn(JSON.stringify({ event: "document_scan_timing", stage, correlationId, at: new Date().toISOString() }));
+}
+
+export async function persistDocumentScanTrace(job: DocumentScanJob) {
+  if (!job.trace) return;
+  try {
+    const document = await prisma.document.findFirst({
+      where: { id: job.documentId },
+      select: { businessId: true },
+    });
+    if (!document) return;
+    const result = [...job.trace.timings].reverse().find((timing) => timing.result)?.result;
+    await prisma.auditEvent.create({ data: {
+      actorType: "SYSTEM", businessId: document.businessId, action: "UPDATE", entityType: "DocumentScanTrace", entityId: job.trace.correlationId,
+      metadataJson: { ...(result ? { result } : {}), timings: job.trace.timings },
+    } });
+  } catch {
+    // Internal timing must never change a document scan outcome.
+  }
 }
 
 function safeScannerValue(value: string | undefined, fallback: string) {
@@ -73,8 +91,11 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
   if (result.category === "CLEAN") {
     // Copying the original object between private prefixes preserves the bytes.
     // Reads stay denied until the conditional database update commits.
+    appendDocumentScanTiming(job.trace, "ACTIVE_COPY_STARTED");
     await (await getPrivateDocumentStorage()).promoteQuarantined(target.storageKey);
+    appendDocumentScanTiming(job.trace, "ACTIVE_COPY_COMPLETED");
     scanTimingEvent("ACTIVE_COPY_COMPLETED", job.trace?.correlationId);
+    appendDocumentScanTiming(job.trace, "DATABASE_FINALIZATION_STARTED");
     scanTimingEvent("DATABASE_FINALIZATION_STARTED", job.trace?.correlationId);
     const activated = await prisma.$transaction(async (tx) => {
       const update = await tx.document.updateMany({
@@ -95,13 +116,16 @@ export async function applyDocumentScanResult(job: DocumentScanJob, result: Docu
       await tx.auditEvent.create({ data: { actorType: "SYSTEM", businessId: target.businessId, action: "VALIDATE", entityType: "Document", entityId: target.id, metadataJson: { securityScan: "passed", scanner: scannerId, scannerVersion } } });
       return true;
     });
+    appendDocumentScanTiming(job.trace, "DATABASE_FINALIZATION_COMMITTED");
     scanTimingEvent("DATABASE_FINALIZATION_COMMITTED", job.trace?.correlationId);
     // Preserve the quarantine source until the authoritative database state
     // commits. Cleanup failure leaves a private duplicate, never a readable
     // unscanned document, and must not undo a completed clean activation.
     if (activated) {
       try {
+        appendDocumentScanTiming(job.trace, "QUARANTINE_DELETE_STARTED");
         await (await getPrivateDocumentStorage()).finalizeQuarantinedPromotion(target.storageKey);
+        appendDocumentScanTiming(job.trace, "QUARANTINE_DELETE_COMPLETED");
         scanTimingEvent("QUARANTINE_DELETE_COMPLETED", job.trace?.correlationId);
       } catch { /* safe private cleanup can retry later */ }
     }
