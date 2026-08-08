@@ -28,6 +28,7 @@ function createCountClient() {
       reconciliation: { count: count("reconciliation", 4) },
       quarterlyTaxEstimate: { count: count("quarterlyTaxEstimate", 5) },
       payrollRun: { count: count("payrollRun", 6) },
+      externalTransaction: { count: count("externalTransaction", 7) },
       $disconnect: () => {
         disconnectCalls += 1;
       },
@@ -55,7 +56,8 @@ describe("loadWeeklyReviewAttention", () => {
       reconciliations: 4,
       tax: 5,
       payroll: 6,
-      total: 21,
+      importedActivity: 7,
+      total: 28,
     });
 
     expect(harness.calls.map((call) => call.model)).toEqual([
@@ -65,6 +67,7 @@ describe("loadWeeklyReviewAttention", () => {
       "reconciliation",
       "quarterlyTaxEstimate",
       "payrollRun",
+      "externalTransaction",
     ]);
     expect(harness.peakActiveReads).toBe(1);
     expect(harness.calls.every((call) => call.where.businessId === "business-a")).toBe(
@@ -88,11 +91,11 @@ describe("loadWeeklyReviewAttention", () => {
     await loadWeeklyReviewAttention(harness.client as never, "business-a");
     await loadWeeklyReviewAttention(harness.client as never, "business-b");
 
-    expect(harness.calls).toHaveLength(12);
-    expect(harness.calls.slice(0, 6).every((call) => call.where.businessId === "business-a")).toBe(
+    expect(harness.calls).toHaveLength(14);
+    expect(harness.calls.slice(0, 7).every((call) => call.where.businessId === "business-a")).toBe(
       true,
     );
-    expect(harness.calls.slice(6).every((call) => call.where.businessId === "business-b")).toBe(
+    expect(harness.calls.slice(7).every((call) => call.where.businessId === "business-b")).toBe(
       true,
     );
     expect(harness.peakActiveReads).toBe(1);

@@ -8,6 +8,7 @@ type WeeklyReviewCountClient = Pick<
   | "reconciliation"
   | "quarterlyTaxEstimate"
   | "payrollRun"
+  | "externalTransaction"
 >;
 
 export async function loadWeeklyReviewAttention(
@@ -47,6 +48,9 @@ export async function loadWeeklyReviewAttention(
   const payroll = await client.payrollRun.count({
     where: { businessId, status: { in: ["DRAFT", "PENDING_APPROVAL"] } },
   });
+  const importedActivity = await client.externalTransaction.count({
+    where: { businessId, status: { in: ["NEEDS_REVIEW", "SUGGESTED", "POSSIBLE_DUPLICATE"] } },
+  });
 
   return {
     transactions,
@@ -55,6 +59,7 @@ export async function loadWeeklyReviewAttention(
     reconciliations,
     tax,
     payroll,
-    total: transactions + documents + matches + reconciliations + tax + payroll,
+    importedActivity,
+    total: transactions + documents + matches + reconciliations + tax + payroll + importedActivity,
   };
 }

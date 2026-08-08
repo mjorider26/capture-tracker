@@ -44,7 +44,7 @@ export const navigationItems: readonly NavigationItem[] = [
     icon: "reconciliation",
     path: "/money/reconciliations",
   },
-  ...destinations.slice(6),
+  ...destinations.slice(7),
 ];
 
 export const mobilePrimaryDestinationSlugs = [

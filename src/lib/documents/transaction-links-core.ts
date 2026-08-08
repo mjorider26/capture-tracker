@@ -22,15 +22,21 @@ export async function linkDocumentToTransactionInTransaction(client: LinkClient,
 }
 
 export async function linkDocumentToTransactionCore(client: Client, actor: TransactionDocumentActor, transactionId: string, documentId: string): Promise<TransactionDocumentLinkOutcome> {
-  try {
-    return await client.$transaction(async (tx) => linkDocumentToTransactionInTransaction(tx, actor, transactionId, documentId));
-  } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+  // A concurrent unique conflict can arrive before the winning transaction is
+  // visible to this client. Retry the canonical read/transaction briefly so
+  // duplicate clicks remain idempotent instead of surfacing a false failure.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await client.$transaction(async (tx) => linkDocumentToTransactionInTransaction(tx, actor, transactionId, documentId));
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+      if (code !== "P2002" && code !== "P2034") return { ok: false, code: "INVALID" };
       const canonical = await client.transactionDocument.findFirst({ where: { businessId: actor.businessId, transactionId, documentId, unlinkedAt: null }, select: { id: true } });
       if (canonical) return { ok: true, state: "ALREADY_LINKED", linkId: canonical.id };
+      if (attempt < 2) await new Promise<void>((resolve) => setTimeout(resolve, 5));
     }
-    return { ok: false, code: "INVALID" };
   }
+  return { ok: false, code: "INVALID" };
 }
 
 export async function unlinkDocumentFromTransactionCore(client: Client, actor: TransactionDocumentActor, linkId: string, reason?: string): Promise<TransactionDocumentLinkOutcome> {

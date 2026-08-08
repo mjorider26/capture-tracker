@@ -16,6 +16,7 @@ type TaskClient = Pick<
   | "reconciliationItem"
   | "statementActivity"
   | "quarterlyTaxEstimate"
+  | "externalTransaction"
 >;
 
 export async function loadWeeklyReviewTasks(
@@ -29,6 +30,7 @@ export async function loadWeeklyReviewTasks(
     reconciliationItems,
     statementActivities,
     taxEstimates,
+    externalTransactions,
   ] = await Promise.all([
     client.transaction.findMany({
       where: { businessId, OR: [{ status: "PENDING_REVIEW" }, { intent: "MIXED" }] },
@@ -58,9 +60,13 @@ export async function loadWeeklyReviewTasks(
       where: { businessId, status: { in: ["DRAFT", "READY_FOR_REVIEW"] } },
       select: { id: true, status: true, taxYear: true, quarter: true, jurisdictionCode: true, dueDate: true, recommendedPayment: true, payments: { select: { amount: true, status: true } } },
     }),
+    client.externalTransaction.findMany({
+      where: { businessId, status: { in: ["NEEDS_REVIEW", "SUGGESTED", "POSSIBLE_DUPLICATE"] } },
+      select: { id: true, description: true, transactionDate: true, amount: true, status: true, financialAccount: { select: { name: true } } },
+    }),
   ]);
 
-  return buildWeeklyReviewTasks({ transactions, documents, matchSuggestions, reconciliationItems, statementActivities, taxEstimates });
+  return buildWeeklyReviewTasks({ transactions, documents, matchSuggestions, reconciliationItems, statementActivities, taxEstimates, externalTransactions });
 }
 
 export async function loadWeeklyReviewTaskCount(client: TaskClient, businessId: string) {

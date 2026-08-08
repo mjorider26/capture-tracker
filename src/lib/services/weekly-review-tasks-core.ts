@@ -70,6 +70,15 @@ type TaxEstimate = {
   payments: Array<{ amount: { toFixed: (digits: number) => string }; status: string }>;
 };
 
+type ExternalTransaction = {
+  id: string;
+  description: string;
+  transactionDate: Date;
+  amount: { toFixed: (digits: number) => string };
+  status: string;
+  financialAccount: { name: string };
+};
+
 export type WeeklyReviewTaskRecords = {
   transactions: Transaction[];
   documents: Document[];
@@ -77,6 +86,7 @@ export type WeeklyReviewTaskRecords = {
   reconciliationItems: ReconciliationItem[];
   statementActivities: StatementActivity[];
   taxEstimates: TaxEstimate[];
+  externalTransactions?: ExternalTransaction[];
 };
 
 const formatDate = (value: Date) =>
@@ -152,6 +162,18 @@ export function buildWeeklyReviewTasks(
         state: "UNRESOLVED",
       });
     }
+  }
+
+  for (const transaction of records.externalTransactions ?? []) {
+    add(tasks, {
+      id: `imported-activity:${transaction.id}`,
+      category: "Transactions",
+      title: `${transaction.status === "POSSIBLE_DUPLICATE" ? "Resolve possible duplicate" : "Classify imported activity"}: ${transaction.description}`,
+      explanation: transaction.status === "POSSIBLE_DUPLICATE" ? "This activity resembles prior imported activity and cannot reach the books until you decide it." : "Choose the accounting category before this imported activity reaches the books.",
+      detail: `${formatDate(transaction.transactionDate)} Â· ${money(transaction.amount)} Â· ${transaction.financialAccount.name}`,
+      href: "/money/import",
+      state: "UNRESOLVED",
+    });
   }
 
   for (const document of records.documents) {

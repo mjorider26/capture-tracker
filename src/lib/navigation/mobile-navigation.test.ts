@@ -13,12 +13,11 @@ describe("mobile shell navigation", () => {
     expect([...mobilePrimaryDestinationSlugs, "more"]).toEqual(["today", "money", "documents", "reports", "more"]);
   });
 
-  it("keeps Taxes, Review, Reconciliation, Ask AI, Activity, and Settings reachable through More", () => {
+  it("keeps Taxes, Review, Reconciliation, Activity, and Settings reachable through More", () => {
     expect(splitNavigation(navigationItems).secondary.map((item) => item.slug)).toEqual([
       "taxes",
       "review",
       "reconciliation",
-      "ask-ai",
       "activity",
       "settings",
     ]);

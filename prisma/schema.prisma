@@ -300,6 +300,34 @@ enum PostingRuleSourceType {
   TAX_PAYMENT
 }
 
+enum TransactionImportStatus {
+  UPLOADED
+  MAPPING_REQUIRED
+  PREVIEW_READY
+  CONFIRMED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ExternalTransactionStatus {
+  IMPORTED
+  NORMALIZED
+  NEEDS_REVIEW
+  SUGGESTED
+  READY_TO_POST
+  POSTED
+  IGNORED
+  DUPLICATE
+  POSSIBLE_DUPLICATE
+  INVALID
+}
+
+enum MerchantCategoryRuleMode {
+  SUGGEST_ONLY
+  AUTO_CLASSIFY
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
@@ -370,6 +398,10 @@ model Business {
   statementActivities        StatementActivity[]
   statementActivityDecisions StatementActivityCandidateDecision[]
   postingRules               PostingRule[]
+  transactionImports         TransactionImport[]
+  transactionImportProfiles  TransactionImportProfile[]
+  externalTransactions       ExternalTransaction[]
+  merchantCategoryRules      MerchantCategoryRule[]
 
   @@index([legalName])
 }
@@ -446,6 +478,10 @@ model FinancialAccount {
   distributionSourceAccounts OwnerDistribution[]  @relation("DistributionSourceAccount")
   ledgerAccount              LedgerAccount?       @relation("FinancialAccountLedgerAccount")
   reconciliations            Reconciliation[]
+  transactionImports         TransactionImport[]
+  transactionImportProfiles  TransactionImportProfile[]
+  externalTransactions       ExternalTransaction[]
+  merchantCategoryRules      MerchantCategoryRule[]
 
   @@unique([businessId, id])
   @@index([businessId, isActive])
@@ -493,6 +529,7 @@ model Transaction {
   correctionOf          Transaction?             @relation("TransactionCorrections", fields: [businessId, correctionOfId], references: [businessId, id], onDelete: Restrict)
   corrections           Transaction[]            @relation("TransactionCorrections")
   correctionReversalJournal JournalEntry?        @relation("TransactionCorrectionReversal", fields: [businessId, correctionReversalJournalId], references: [businessId, id], onDelete: Restrict)
+  externalTransaction       ExternalTransaction? @relation("ExternalTransactionPostedTransaction")
 
   @@unique([businessId, id])
   @@unique([accountId, sourceReference])
@@ -504,6 +541,127 @@ model Transaction {
   @@index([businessId, status])
   @@index([businessId, intent])
   @@index([businessId, accountId, postedAt])
+}
+
+/// A persisted import contains safe mapping and outcome evidence, never the source CSV itself.
+model TransactionImport {
+  id                 String                  @id @default(cuid())
+  businessId         String
+  financialAccountId String
+  createdByUserId    String
+  profileId          String?
+  sourceFilename     String
+  sourceSha256       String
+  mappingJson        Json
+  rowCount           Int                     @default(0)
+  newCount           Int                     @default(0)
+  duplicateCount     Int                     @default(0)
+  possibleDuplicateCount Int                 @default(0)
+  invalidCount       Int                     @default(0)
+  status             TransactionImportStatus @default(UPLOADED)
+  confirmedAt        DateTime?
+  completedAt        DateTime?
+  failureReason      String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  version            Int                     @default(1)
+
+  business         Business                  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount          @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  profile          TransactionImportProfile? @relation(fields: [businessId, profileId], references: [businessId, id], onDelete: Restrict)
+  externalTransactions ExternalTransaction[]
+
+  @@unique([businessId, id])
+  @@index([businessId, status, createdAt])
+  @@index([businessId, financialAccountId, createdAt])
+}
+
+model TransactionImportProfile {
+  id                 String   @id @default(cuid())
+  businessId         String
+  financialAccountId String
+  name               String
+  sourceSignature    String
+  mappingJson        Json
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  version            Int      @default(1)
+
+  business         Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  imports          TransactionImport[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, financialAccountId, sourceSignature])
+  @@index([businessId, financialAccountId, isActive])
+}
+
+model ExternalTransaction {
+  id                    String                    @id @default(cuid())
+  businessId            String
+  transactionImportId   String
+  financialAccountId    String
+  rowNumber             Int
+  transactionDate       DateTime
+  postedDate            DateTime?
+  description           String
+  normalizedMerchant    String?
+  amount                Decimal                   @db.Decimal(18, 2)
+  direction             TransactionDirection
+  externalTransactionId String?
+  sourceReference       String?
+  fingerprint           String
+  bankCategory          String?
+  status                ExternalTransactionStatus @default(IMPORTED)
+  suggestionReason      String?
+  suggestedLedgerAccountId String?
+  reviewLedgerAccountId String?
+  reviewedAt            DateTime?
+  reviewedByUserId      String?
+  postedTransactionId   String?
+  duplicateOfId         String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  version               Int                       @default(1)
+
+  business              Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  transactionImport     TransactionImport    @relation(fields: [businessId, transactionImportId], references: [businessId, id], onDelete: Restrict)
+  financialAccount      FinancialAccount     @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  suggestedLedgerAccount LedgerAccount?      @relation("ExternalTransactionSuggestedAccount", fields: [businessId, suggestedLedgerAccountId], references: [businessId, id], onDelete: Restrict)
+  reviewLedgerAccount   LedgerAccount?       @relation("ExternalTransactionReviewAccount", fields: [businessId, reviewLedgerAccountId], references: [businessId, id], onDelete: Restrict)
+  postedTransaction     Transaction?         @relation("ExternalTransactionPostedTransaction", fields: [businessId, postedTransactionId], references: [businessId, id], onDelete: Restrict)
+  duplicateOf           ExternalTransaction? @relation("ExternalTransactionDuplicates", fields: [businessId, duplicateOfId], references: [businessId, id], onDelete: Restrict)
+  duplicates            ExternalTransaction[] @relation("ExternalTransactionDuplicates")
+
+  @@unique([businessId, id])
+  @@unique([businessId, transactionImportId, rowNumber])
+  @@unique([businessId, postedTransactionId])
+  @@index([businessId, financialAccountId, externalTransactionId])
+  @@index([businessId, financialAccountId, fingerprint])
+  @@index([businessId, status, transactionDate])
+}
+
+model MerchantCategoryRule {
+  id                    String                   @id @default(cuid())
+  businessId            String
+  financialAccountId    String?
+  normalizedMerchant    String
+  direction             TransactionDirection?
+  ledgerAccountId       String
+  mode                  MerchantCategoryRuleMode @default(SUGGEST_ONLY)
+  isActive              Boolean                  @default(true)
+  applicationCount      Int                      @default(0)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  version               Int                      @default(1)
+
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount? @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  ledgerAccount    LedgerAccount     @relation(fields: [businessId, ledgerAccountId], references: [businessId, id], onDelete: Restrict)
+
+  @@unique([businessId, financialAccountId, normalizedMerchant, direction])
+  @@index([businessId, isActive, normalizedMerchant])
 }
 
 model TransactionSplit {
@@ -1493,6 +1651,9 @@ model LedgerAccount {
   journalLines       JournalLine[]
   debitPostingRules  PostingRule[]     @relation("PostingRuleDebitAccount")
   creditPostingRules PostingRule[]     @relation("PostingRuleCreditAccount")
+  suggestedExternalTransactions ExternalTransaction[] @relation("ExternalTransactionSuggestedAccount")
+  reviewedExternalTransactions ExternalTransaction[] @relation("ExternalTransactionReviewAccount")
+  merchantCategoryRules MerchantCategoryRule[]
 
   @@unique([businessId, id])
   @@unique([businessId, code])

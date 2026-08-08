@@ -71,17 +71,17 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 - Current provider pricing is usage-based under the existing Workers Paid plan; no separate scanner subscription is used. Conservative incremental estimate with a 15-minute warm window is about $0.03 for 25 scans/month, $1.32 for 100, and $9.53 for 500. Actual per-container usage analytics are provider-side and must be checked before billing decisions.
 - The accepted mobile production path confirms automatic scan-status refresh from pending to terminal state without manual page refresh. Continue to measure and record real warm-path timings through sanitized operational telemetry; do not present an estimate as a measured timing.
 
-## Product navigation and Ask AI
+## Product navigation
 
-The primary mobile navigation is: Today, Money, Documents, Reports, and More. More contains Taxes, Weekly Review, Reconciliation, Ask AI, Activity, and Settings.
+The primary mobile navigation is: Today, Money, Documents, Reports, and More. More contains Taxes, Weekly Review, Reconciliation, Activity, and Settings.
 
 - **Today:** daily financial briefing.
-- **Money:** transactions and financial activity.
+- **Money:** transactions and financial activity. **Import transactions** uses bank or card CSV exports to prepare activity for review; imported evidence never posts automatically.
 - **Documents:** receipts and supporting evidence.
 - **Reports:** financial statements and exports.
 - **More:** secondary operational workflows.
 
-Ask AI is read-only, uses bounded structured evidence, refuses mutation requests, and retains private-document protections. In production or when real-data approval is enabled, its local fictional adapter responds fail-closed until a separately approved production provider is configured. It cannot mutate financial data.
+Ask AI has been removed from product navigation and direct product surfaces. Capture Tracker has no external AI provider or AI cost.
 
 ## Release process
 

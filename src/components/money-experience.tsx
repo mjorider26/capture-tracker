@@ -35,7 +35,7 @@ export function MoneyExperience({
         eyebrow="Money workspace"
         title="Transaction review"
         description="Review current activity and evidence before any accounting decision. Posted records remain protected."
-        action={<div className="flex flex-wrap items-center gap-3"><StatusBadge tone="warning">{dashboard.summary.awaitingReviewCount} awaiting review</StatusBadge><ButtonLink href={`${basePath}/money/new`}>Add transaction</ButtonLink></div>}
+        action={<div className="flex flex-wrap items-center gap-3"><StatusBadge tone="warning">{dashboard.summary.awaitingReviewCount} awaiting review</StatusBadge><ButtonLink href={`${basePath}/money/import`} tone="secondary">Import transactions</ButtonLink><ButtonLink href={`${basePath}/money/new`}>Add transaction</ButtonLink></div>}
       />
 
       <section
