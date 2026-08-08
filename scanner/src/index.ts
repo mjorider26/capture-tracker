@@ -24,6 +24,7 @@ function delay(milliseconds: number) {
 }
 
 async function waitForScannerReady(scanner: ScannerStub) {
+  const startedAt = Date.now();
   const deadline = Date.now() + scanTimeoutMs;
   let lastReason = "UNAVAILABLE";
   let lastTrace = "";
@@ -31,7 +32,7 @@ async function waitForScannerReady(scanner: ScannerStub) {
     try {
       const response = await scanner.fetch(new Request("https://document-scanner.internal/health", { signal: AbortSignal.timeout(10_000) }));
       const health = await response.json() as { ready?: unknown; reason?: unknown; trace?: unknown };
-      if (health?.ready === true) return;
+      if (health?.ready === true) return Date.now() - startedAt;
       if (typeof health?.reason === "string" && /^[A-Z0-9_]{1,48}$/.test(health.reason)) lastReason = health.reason;
       const trace = health?.trace && typeof health.trace === "object"
         ? Object.entries(health.trace as Record<string, unknown>)
@@ -84,26 +85,46 @@ async function applyResult(env: Env, job: ScanJob, category: "CLEAN" | "INFECTED
 
 async function processMessage(env: Env, message: QueueMessage) {
   const job = parseJob(message.body);
-  if (!job) { message.ack(); return; }
+  if (!job) {
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage: "job_contract", outcome: "INVALID", attempt: message.attempts }));
+    message.ack();
+    return;
+  }
   let stage = "private_content";
+  const startedAt = Date.now();
+  console.warn(JSON.stringify({ event: "document_scan_stage", stage: "consumer_delivery", outcome: "STARTED", attempt: message.attempts }));
   try {
+    const contentStartedAt = Date.now();
     const content = await internalRequest(env, "/api/internal/document-scans/content", JSON.stringify(job));
-     if (content.status === 204) { message.ack(); return; } // stale job, wrong version, or no longer quarantined
+    if (content.status === 204) {
+      console.warn(JSON.stringify({ event: "document_scan_stage", stage: "private_content", outcome: "UNAVAILABLE", attempt: message.attempts, durationMs: Date.now() - contentStartedAt }));
+      message.ack();
+      return;
+    } // stale job, wrong version, or no longer quarantined
     if (!content.ok) throw new ScanStageError(stage, content.status);
     const bytes = await content.arrayBuffer();
     if (bytes.byteLength === 0 || bytes.byteLength > 10 * 1024 * 1024) throw new ScanStageError("private_content_boundary");
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage: "private_content", outcome: "PASS", attempt: message.attempts, durationMs: Date.now() - contentStartedAt }));
     const scanner = env.CAPTURE_TRACKER_DOCUMENT_SCANNER.getByName("singleton");
     stage = "scanner_readiness";
-    await waitForScannerReady(scanner);
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "STARTED", attempt: message.attempts }));
+    const readinessMs = await waitForScannerReady(scanner);
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "PASS", attempt: message.attempts, durationMs: readinessMs }));
     stage = "scanner_scan";
+    const scanStartedAt = Date.now();
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "STARTED", attempt: message.attempts }));
     const response = await scanner.fetch(new Request("https://document-scanner.internal/scan", { method: "POST", headers: { "content-type": content.headers.get("content-type") ?? "application/octet-stream" }, body: bytes, signal: AbortSignal.timeout(45_000) }));
     if (!response.ok) throw new ScanStageError(stage, response.status);
     const result = await response.json() as { outcome?: unknown; scannerVersion?: unknown; signaturesReady?: unknown };
     const scannerVersion = typeof result.scannerVersion === "string" ? result.scannerVersion.slice(0, 80) : undefined;
     if (result.signaturesReady !== true || (result.outcome !== "CLEAN" && result.outcome !== "INFECTED")) throw new ScanStageError("scanner_result_contract");
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "PASS", attempt: message.attempts, durationMs: Date.now() - scanStartedAt }));
     stage = "apply_result";
+    const applyStartedAt = Date.now();
     await applyResult(env, job, result.outcome, scannerVersion);
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage, outcome: "PASS", attempt: message.attempts, durationMs: Date.now() - applyStartedAt }));
     message.ack();
+    console.warn(JSON.stringify({ event: "document_scan_stage", stage: "consumer_delivery", outcome: "ACKED", attempt: message.attempts, durationMs: Date.now() - startedAt }));
   } catch (error) {
     // Queue observability intentionally records only delivery state. Document
     // identifiers, object keys, file bytes, signatures, and scanner output
