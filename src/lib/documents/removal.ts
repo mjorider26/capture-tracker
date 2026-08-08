@@ -14,9 +14,10 @@ export type DocumentRemovalResult =
   | { ok: false; code: "NOT_FOUND" | "CONFLICT" | "STORAGE" };
 
 function safeErrorCategory(error: unknown) {
-  const candidate = error as { code?: unknown; name?: unknown; meta?: { code?: unknown } } | null;
+  const candidate = error as { code?: unknown; name?: unknown; meta?: { code?: unknown; driverAdapterError?: { cause?: { originalCode?: unknown } } } } | null;
   const prismaCode = typeof candidate?.code === "string" && /^[A-Z]\d{4}$/.test(candidate.code) ? candidate.code : undefined;
-  const databaseCode = typeof candidate?.meta?.code === "string" && /^\d{5}$/.test(candidate.meta.code) ? candidate.meta.code : undefined;
+  const rawDatabaseCode = candidate?.meta?.code ?? candidate?.meta?.driverAdapterError?.cause?.originalCode;
+  const databaseCode = typeof rawDatabaseCode === "string" && /^\d{5}$/.test(rawDatabaseCode) ? rawDatabaseCode : undefined;
   if (prismaCode && databaseCode) return `${prismaCode}_${databaseCode}`;
   if (prismaCode) return prismaCode;
   if (typeof candidate?.name === "string" && /^[A-Za-z]{1,48}$/.test(candidate.name)) return candidate.name;
