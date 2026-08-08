@@ -65,11 +65,14 @@ export function FinancialReports({
         <button className="ui-button ui-button-secondary min-h-10 rounded border border-border-subtle px-3 text-sm font-bold">
           Apply period
         </button>
-        {basePath === "/app" && (
+        {basePath === "/app" && <>
           <a className="ui-button ui-button-secondary min-h-10 rounded border border-border-subtle px-3 py-2 text-sm font-bold" href={`/api/reports/csv?${query}`}>
             Export CSV
           </a>
-        )}
+          <a className="ui-button ui-button-secondary min-h-10 rounded border border-border-subtle px-3 py-2 text-sm font-bold" href={`/api/cpa-package?period=${reports.range.period}&start=${reports.range.start.slice(0, 10)}&end=${reports.range.end.slice(0, 10)}`}>
+            Download CPA package
+          </a>
+        </>}
       </form>
       {(focus === "overview" || focus === "profit-and-loss") && (
         <ReportTable title="Profit and Loss" report="profit-and-loss" rows={[...reports.profitAndLoss.income, ...reports.profitAndLoss.expenses]} basePath={basePath} range={reports.range} totals={["Total income", reports.profitAndLoss.totalIncome, "Total expenses", reports.profitAndLoss.totalExpenses, "Net income", reports.profitAndLoss.netIncome]} />

@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client";
 import { payrollEntrySchema, payrollMatchStatus, payrollPreview } from "./payroll-core";
+import { ensureWorkspaceAccountingFoundation } from "@/lib/accounting/workspace-bootstrap";
 
 type Actor = { businessId: string; actorUserId: string; role: "OWNER" | "ADVISOR"; executionMode: string };
 type Client = Pick<PrismaClient, "$transaction">;
@@ -13,6 +14,7 @@ export async function recordPayrollRun(client: Client, actor: Actor, input: unkn
   const data = parsed.data;
   const preview = payrollPreview(data);
   if (!preview.netPayCheck || !preview.balanced) return { ok: false, message: "Payroll amounts do not balance. Gross wages must equal net pay plus employee withholding, employee payroll taxes, and deductions." };
+  await ensureWorkspaceAccountingFoundation(actor.businessId);
   try {
     return await client.$transaction(async (tx) => {
       const [cashAccount, period, document, payrollExpense, payrollTaxExpense, payrollTaxPayable, feeExpense] = await Promise.all([

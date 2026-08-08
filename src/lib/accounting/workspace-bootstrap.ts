@@ -15,7 +15,14 @@ export async function ensureWorkspaceAccountingFoundation(businessId: string, no
     ["3100", "Owner Distributions", "EQUITY", "OWNER_DISTRIBUTION", "DEBIT", null],
     ["4000", "Business Income", "INCOME", "COMMISSION_INCOME", "CREDIT", null],
     ["5100", "Office Supplies Expense", "EXPENSE", "OFFICE_SUPPLIES_EXPENSE", "DEBIT", null],
+    ["5200", "Payroll Expense", "EXPENSE", "PAYROLL_EXPENSE", "DEBIT", null],
+    ["5210", "Employer Payroll Tax Expense", "EXPENSE", "PAYROLL_TAX_EXPENSE", "DEBIT", null],
+    ["5300", "Professional Fees Expense", "EXPENSE", "PROFESSIONAL_FEES_EXPENSE", "DEBIT", null],
     ["5900", "Other Business Expense", "EXPENSE", "OTHER_EXPENSE", "DEBIT", null],
+    ["2100", "Payroll Tax Payable", "LIABILITY", "PAYROLL_TAX_PAYABLE", "CREDIT", null],
+    ["2200", "Reimbursement Payable", "LIABILITY", "REIMBURSEMENT_PAYABLE", "CREDIT", null],
+    ["2500", "Shareholder Loan Payable", "LIABILITY", "LONG_TERM_LIABILITY", "CREDIT", null],
+    ["1500", "Fixed Assets", "ASSET", "FIXED_ASSET", "DEBIT", null],
   ] as const;
   const periodStart = startOfYear(now);
   await prisma.$transaction([

@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client";
 import { classificationMatchesDirection, ownerTransferSchema } from "./owner-transfer-core";
 import type { ReimbursementActor } from "./reimbursement-core";
+import { ensureWorkspaceAccountingFoundation } from "@/lib/accounting/workspace-bootstrap";
 type Client = Pick<PrismaClient, "$transaction"> & { externalTransaction: PrismaClient["externalTransaction"]; ownerMoneyTransfer: PrismaClient["ownerMoneyTransfer"]; };
 export async function classifyOwnerTransfer(client: Client, actor: ReimbursementActor, input: unknown): Promise<{ ok: true; transferId: string } | { ok: false; message: string }> {
   if (actor.role !== "OWNER") return { ok: false, message: "Only the business owner can classify owner transfers." };
@@ -8,7 +9,7 @@ export async function classifyOwnerTransfer(client: Client, actor: Reimbursement
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Transfer classification is invalid." };
   const data = parsed.data;
   if (!classificationMatchesDirection(data.direction, data.classification)) return { ok: false, message: "That treatment does not match the selected transfer direction." };
-  try { return await client.$transaction(async (tx) => {
+  try { await ensureWorkspaceAccountingFoundation(actor.businessId); return await client.$transaction(async (tx) => {
     const external = await tx.externalTransaction.findFirst({ where: { id: data.externalTransactionId, businessId: actor.businessId, postedTransactionId: null, status: { notIn: ["DUPLICATE", "INVALID", "IGNORED"] } }, select: { id: true } });
     if (!external) return { ok: false as const, message: "That imported bank record is unavailable for owner-transfer review." };
     const status = data.classification === "UNRESOLVED" || data.classification === "OTHER" ? "PENDING_REVIEW" : "CLASSIFIED";
@@ -25,7 +26,7 @@ export async function postClassifiedOwnerTransfer(client: Client, actor: Reimbur
   if (!parsed.success) return { ok: false, message: "The transfer posting request is invalid." };
   const data = parsed.data;
   if (["UNRESOLVED", "OTHER", "PAYROLL_NET_SALARY", "REIMBURSEMENT"].includes(data.classification)) return { ok: false, message: "This treatment requires a linked payroll or reimbursement workflow, or must remain under review." };
-  try { return await client.$transaction(async (tx) => {
+  try { await ensureWorkspaceAccountingFoundation(actor.businessId); return await client.$transaction(async (tx) => {
     const external = await tx.externalTransaction.findFirst({ where: { id: data.externalTransactionId, businessId: actor.businessId, postedTransactionId: null, status: { in: ["NEEDS_REVIEW", "SUGGESTED", "READY_TO_POST"] } }, include: { financialAccount: { include: { ledgerAccount: true } } } });
     if (!external?.financialAccount.ledgerAccount) return { ok: false as const, message: "That bank evidence is unavailable for owner-transfer posting." };
     const expectedDirection = data.direction === "COMPANY_TO_OWNER" ? "OUTFLOW" : "INFLOW";
