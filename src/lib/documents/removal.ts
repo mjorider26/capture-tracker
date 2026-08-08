@@ -44,7 +44,7 @@ export async function removePrivateDocument(actor: Actor, documentId: string): P
       RETURNING "id"
     ), audit AS (
       INSERT INTO "AuditEvent" ("id", "actorType", "actorMembershipId", "businessId", "action", "entityType", "entityId", "metadataJson")
-      SELECT ${crypto.randomUUID()}, 'USER', ${actor.actorUserId}, ${actor.businessId}, ${linked ? "UPDATE" : "DELETE"}, 'Document', "id", ${JSON.stringify({ documentRemoval: removal })}::jsonb
+      SELECT ${crypto.randomUUID()}, ${"USER"}, ${actor.actorUserId}, ${actor.businessId}, ${linked ? "UPDATE" : "DELETE"}, ${"Document"}, "id", ${JSON.stringify({ documentRemoval: removal })}::jsonb
       FROM updated
     )
     SELECT "id" FROM updated
