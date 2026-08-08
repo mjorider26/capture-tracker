@@ -2,9 +2,9 @@
 
 **SPENDING TRACKED. BUSINESS GROWN.**
 
-Private-pilot client guide · Published 2026-08-06 · Documented source: `f2f00e9b4828180ad1a5d109243e7be3a0f430cb`
+Private-pilot client guide · V1.0.0 · Documented source: `78dbb0c37991b1dbf23706bc906687eb6b24b574`
 
-> **Private-pilot boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, invoice, manage inventory, or offer public self-service onboarding. Upload only trusted files: malware scanning and quarantine are not currently performed.
+> **Private-pilot boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, invoice, manage inventory, or offer public self-service onboarding. Uploaded PDF, JPEG, and PNG files stay private and are security-scanned before they become available in Capture Tracker.
 
 ## Start here
 
@@ -32,9 +32,11 @@ Use the transaction list to filter by review status, intent, or account and to o
 
 ## Documents — supporting evidence
 
-Documents holds private, business-scoped evidence. Upload **PDF, JPEG, or PNG** files only, up to **10 MiB**. Mobile browsers can offer **Take photo** with the rear camera. Review the preview, then upload; duplicate detection is based on the file content. The workspace shows validation, extraction, match, and link states. Suggestions and extracted values require review and never alter accounting automatically. Open a document to review its protected metadata, extraction candidates, transaction links, and available actions.
+Documents holds private, business-scoped evidence. Upload **PDF, JPEG, or PNG** files only, up to **10 MiB**. Mobile browsers can offer **Take photo** with the rear camera. Camera photos are normalized on your device before upload to keep a readable receipt smaller; PDF files are unchanged. Review the preview, then upload; duplicate detection is based on file content.
 
-> **Trusted files only.** Capture Tracker does not currently perform malware scanning or quarantine. Do not upload untrusted files.
+> **Security scan.** After upload, the document remains private and unavailable while it is queued and scanned. The status refreshes automatically. Only a **Ready** document that passed the security scan can be opened, used for extraction/matching, or treated as document evidence. A scan failure leaves it unavailable; a rejected file cannot be used. Do not retry an identical rejected file under another name.
+
+Once a document is Ready, the workspace shows validation, extraction, match, and link states. Suggestions and extracted values require review and never alter accounting automatically. Open a document to review protected metadata, extraction candidates, transaction links, and available actions. Remove is available only where the document has no protected accounting relationship; removal revokes access immediately.
 
 ![Local fictional demo — Documents desktop](images/local-demo-documents-desktop.png)
 
@@ -75,7 +77,7 @@ Settings currently supports default report period, Weekly Review day (0–6), an
 
 **Business income:** Money → Add income → save → Reports.
 
-**Receipt photo:** Documents → Take photo → permit the camera → review preview → upload → link to the transaction.
+**Receipt photo:** Documents → Take photo → permit the camera → review preview → upload → wait for **Security scan pending** to refresh to **Ready** → Open or link to the transaction.
 
 **Fix or reverse a transaction:** Open the transaction → choose the supported correction or reversal → confirm the explanatory history and replacement record where applicable.
 
@@ -92,7 +94,8 @@ Open the production URL supplied by the owner in Safari or Chrome. On iPhone Saf
 | Cannot sign in / session expired | Re-enter the supplied URL and credentials; contact the workspace owner if it persists. |
 | Create account is absent | The private workspace is initialized; request owner-managed access. |
 | Validation or duplicate submission | Correct highlighted values; wait for the first save to finish and refresh before retrying. |
-| File rejected or duplicate | Use PDF/JPEG/PNG under 10 MiB; do not re-upload an identical file. |
+| Security scan pending | Keep the page open briefly; status refreshes automatically. If it remains pending unusually long, contact the workspace owner rather than treating the file as usable. |
+| File rejected, scan could not complete, or duplicate | Use PDF/JPEG/PNG under 10 MiB; do not re-upload an identical rejected or duplicate file. A failed scan remains private and unavailable. |
 | Camera does not open | Allow browser camera permission, use HTTPS, or select an existing trusted file. |
 | Document will not open | Confirm you are signed in and the document is active; contact support if protected access still fails. |
 | Review task remains | Fix the linked record; completing Weekly Review alone does not clear it. |
@@ -103,10 +106,10 @@ Open the production URL supplied by the owner in Safari or Chrome. On iPhone Saf
 
 ## Security, privacy, and glossary
 
-The workspace is private and authenticated. Passwords are not displayed in the product. Data and documents are scoped to the business, document access is protected, and accounting history uses corrections/reversals instead of destructive editing. Operational backups are encrypted; use normal sign-out practice on shared devices.
+The workspace is private and authenticated. Passwords are not displayed in the product. Data and documents are scoped to the business. New documents are quarantined and ClamAV-scanned privately before ACTIVE + CLEAN-only protected access; signed document access rechecks the current state. Accounting history uses corrections/reversals instead of destructive editing. Operational backups are encrypted; use normal sign-out practice on shared devices.
 
 **Available Business Cash** is approved business cash, excluding personal accounts and credit cards. **Income** is business money received; a **Business Expense** is a business cost. An **Owner Contribution** adds owner equity; an **Owner Distribution** removes owner equity. A **Mixed Transaction** contains deliberate business/personal treatment. A **Category** classifies activity. A **Posted Transaction** has a balanced **Journal Entry**, where **Debit** and **Credit** totals match. A **Correction**, **Reversal**, or **Replacement Transaction** preserves history while fixing a mistake. A **Document** is evidence; a **Document Match** is a reviewed suggested relationship. **Weekly Review** is the grouped attention checklist. **Reconciliation** compares book and **Statement Activity**. A **Tax Estimate** is planning information. **Salary** and **Distribution** are distinct factual records. **Profit and Loss**, **Balance Sheet**, **Trial Balance**, and **Cash Activity** are the reports above. **Ask AI Evidence** links an answer to records. **Activity History** is the immutable record of material workspace events.
 
 ## Screenshot provenance
 
-All `local-demo-*` images are captured from the repository’s built-in local fictional demo at source `f2f00e9`; no production or staging session, credential, client data, object key, or internal identifier was used. `public-production-*` images are unauthenticated public pages only.
+All `local-demo-*` images are captured from the repository’s built-in local fictional demo; no production or staging session, credential, client data, object key, or internal identifier was used. `public-production-*` images are unauthenticated public pages only.

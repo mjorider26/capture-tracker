@@ -1,8 +1,8 @@
 # Capture Tracker Production Operations
 
-**Status:** CURRENT AUTHORITATIVE OPERATIONS RUNBOOK  
+**Status:** CAPTURE TRACKER V1.0.0 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
 **Last updated:** 2026-08-08
-**Source commit:** `683b1e7b2974c0147586e50fa12ebec9cddfb6a0`
+**Accepted V1 application release:** `78dbb0c37991b1dbf23706bc906687eb6b24b574` (`v1.0.0`)
 
 This runbook is for the operators of the current private production pilot. It is the source of truth for live Capture Tracker operations. Older planning, staging, and phase documents may accurately preserve their original context but can describe superseded states; do not use them as current production instructions.
 
@@ -20,7 +20,7 @@ Do not place credentials, passphrases, connection strings, object keys, or finan
 
 Production is an authenticated private workspace with server-derived tenant/business scope. Financial and document reads are authorized server-side; accounting writes are controlled; journals are immutable; and corrections or reversals preserve history rather than rewriting it.
 
-The initial owner used the production first-owner bootstrap. That bootstrap is available only while no user and no business exist, then closes automatically after workspace initialization. The active production workspace is initialized. Create account is no longer normal public onboarding, existing users sign in normally, and unrestricted public signup is not approved. Future multi-client self-service onboarding requires a separate product and security approval.
+The initial owner used the production first-owner bootstrap. That bootstrap is available only while no user and no business exist, then closes automatically after workspace initialization. The active production workspace is initialized. Create account is no longer normal public onboarding, existing users sign in normally, and unrestricted public signup is not approved. **V1.0.0 has no supported operator or self-service path to create an additional production client/business.** Do not manually insert users, memberships, or businesses; future multi-client onboarding requires a separately approved product and security change.
 
 The earlier invitation-based first-owner production flow is superseded. Legacy or staging invitation-related implementation details do not mean that production currently requires an invitation.
 
@@ -61,7 +61,7 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 ### Scanner and document-removal operations
 
 - Production uses the private Queue `capture-tracker-production-document-scan`, its isolated DLQ `capture-tracker-production-document-scan-dlq`, and a private ClamAV Container on `standard-1`, `max_instances=1`. No document bytes appear in Queue messages or public URLs.
-- The app Worker is `cd6465ea-8ca7-4474-ac48-a991f8ff0831`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
+- The app Worker is `6d84da45-2d3a-41b7-9838-3a1a81dcb509`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
 - The scanner has a 15-minute warm window. A measured cold run spent about 93.77 seconds on FreshClam/ClamAV readiness; Queue wait was about 1.63 seconds, private R2 fetch about 1.24 seconds, and scan time about 215 ms. Recheck a scan still pending beyond 60 seconds with sanitized Worker and Queue logs; do not weaken quarantine.
 - Queue deliveries are idempotent and version-aware. Scanner unavailable, timeout, malformed response, or exhausted retries leaves the document quarantined and unreadable. Consumer retries are bounded at three with a 30-second delay, then route to the isolated DLQ.
 - Promotion is database-authoritative: validate the current document version and CLEAN result, commit ACTIVE plus private-read eligibility, then clean up the quarantine object. A stale delivery cannot promote a deleted or replaced document.
@@ -69,7 +69,7 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 - Sanitized observability covers Worker failures, queue retries/DLQ, scanner readiness and latency, scan finalization/promotion recovery, and R2 cleanup/removal failures. Never log bytes, object keys, credentials, or raw antivirus output.
 - The encrypted logical-backup and disposable-restore drill was revalidated with all 18 migrations: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, and a disposable restore with matching sanitized counts. Plaintext archives remain temporary only.
 - Current provider pricing is usage-based under the existing Workers Paid plan; no separate scanner subscription is used. Conservative incremental estimate with a 15-minute warm window is about $0.03 for 25 scans/month, $1.32 for 100, and $9.53 for 500. Actual per-container usage analytics are provider-side and must be checked before billing decisions.
-- A genuine warm production scan measurement remains an authenticated owner acceptance item; no estimate should be presented as a measured warm result.
+- The accepted mobile production path confirms automatic scan-status refresh from pending to terminal state without manual page refresh. Continue to measure and record real warm-path timings through sanitized operational telemetry; do not present an estimate as a measured timing.
 
 ## Product navigation and Ask AI
 
@@ -95,6 +95,10 @@ Ask AI is read-only, uses bounded structured evidence, refuses mutation requests
 8. Verify liveness and readiness without reading private financial data.
 
 Windows OpenNext output is not the trusted native release artifact. Never print secrets while building, deploying, or collecting release evidence.
+
+## V1 change freeze and emergency hotfixes
+
+`v1.0.0` is feature frozen. Put visual polish, convenience features, optional automation, analytics, new AI capability, and non-critical workflow enhancements in the V1.1 backlog. A production hotfix is limited to a proven security, data-integrity, accounting, authentication, availability, or serious client-blocking UX defect. Start from the accepted release or current approved hotfix baseline, preserve the exact-SHA CI and native-release gates, and record the deployed Worker version. Do not move the `v1.0.0` tag.
 
 ## Health and incident response
 
