@@ -66,6 +66,21 @@ export async function recordInvoicePayment(client: Db, actor: InvoiceActor, raw:
   });
 }
 
+/** Returns evidence candidates only; matching never posts or records revenue without owner confirmation. */
+export async function suggestInvoicePayments(client: Db, businessId: string, invoiceId: string) {
+  const invoice = await client.invoice.findFirst({ where: { id: invoiceId, businessId }, include: { customer: { select: { businessName: true } }, payments: { select: { amount: true } } } });
+  if (!invoice) return [];
+  const remaining = invoice.total.minus(invoice.payments.reduce((sum, item) => sum.add(item.amount), new Prisma.Decimal(0)));
+  return client.externalTransaction.findMany({ where: { businessId, direction: "INFLOW", status: { in: ["NEEDS_REVIEW", "SUGGESTED", "READY_TO_POST"] }, amount: { lte: remaining }, transactionDate: { gte: new Date(invoice.issueDate?.getTime() ?? 0) } }, select: { id: true, amount: true, transactionDate: true, description: true, sourceReference: true }, orderBy: { transactionDate: "asc" }, take: 20 }).then((items) => items.map((item) => ({ ...item, confidence: item.amount.equals(remaining) && new RegExp(invoice.invoiceNumber, "i").test(`${item.description} ${item.sourceReference ?? ""}`) ? "STRONG" : "POSSIBLE" })));
+}
+
+export async function matchInvoicePaymentEvidence(client: Db, actor: InvoiceActor, invoicePaymentId: string, externalTransactionId: string) {
+  if (actor.role !== "OWNER") return { ok: false as const, message: "Only the business owner can confirm payment evidence." };
+  return client.$transaction(async (tx) => { const payment = await tx.invoicePayment.findFirst({ where: { id: invoicePaymentId, businessId: actor.businessId, externalTransactionId: null }, select: { id: true, amount: true } }); const external = await tx.externalTransaction.findFirst({ where: { id: externalTransactionId, businessId: actor.businessId, direction: "INFLOW" }, select: { id: true, amount: true } }); if (!payment || !external || !payment.amount.equals(external.amount)) return { ok: false as const, message: "Choose matching payment evidence with the same amount." };
+    try { await tx.invoicePayment.update({ where: { id: payment.id }, data: { externalTransactionId: external.id } }); } catch { return { ok: false as const, message: "This bank activity is already linked to another payment." }; }
+    await tx.auditEvent.create({ data: audit(actor, "InvoicePayment", payment.id, "UPDATE", { externalTransactionId: external.id, evidenceMatched: true }) }); return { ok: true as const }; });
+}
+
 export async function voidInvoice(client: Db, actor: InvoiceActor, invoiceId: string, reason: string) {
   if (actor.role !== "OWNER") return { ok: false as const, message: "Only the business owner can void invoices." };
   const trimmed = reason.trim(); if (!trimmed || trimmed.length > 1000) return { ok: false as const, message: "Provide a concise void reason." };
