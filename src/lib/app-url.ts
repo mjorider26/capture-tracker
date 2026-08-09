@@ -2,7 +2,7 @@ import "server-only";
 
 /** One public origin for generated customer-facing URLs. A future branded
  * application domain is configured here, never copied through product code. */
-type UrlEnvironment = { APP_BASE_URL?: string; BETTER_AUTH_URL?: string };
+type UrlEnvironment = { [key: string]: string | undefined };
 export function canonicalAppBaseUrl(environment: UrlEnvironment = process.env): string {
   const raw = environment.APP_BASE_URL ?? environment.BETTER_AUTH_URL;
   if (!raw) throw new Error("Application base URL is not configured.");
