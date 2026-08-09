@@ -1,10 +1,10 @@
 # Capture Tracker Product Manual
 
-> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal.
+> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal. **Taxes → Fixed assets** records possible assets and owner-confirmed in-service facts; depreciation and tax treatment remain CPA review items.
 
 **SPENDING TRACKED. BUSINESS GROWN.**
 
-Private-pilot client guide · V1.0.0 · Documented source: `78dbb0c37991b1dbf23706bc906687eb6b24b574`
+Private-pilot client guide · V2.0.0 · Documented source: `6883719f82796a919e53f080d2dcf15f2fc13b0a` (`v2.0.0`)
 
 > **Private-pilot boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, invoice, manage inventory, or offer public self-service onboarding. Uploaded PDF, JPEG, and PNG files stay private and are security-scanned before they become available in Capture Tracker.
 
@@ -14,7 +14,7 @@ Use the private workspace URL supplied by your owner. Sign in with your existing
 
 ## Navigation
 
-Desktop navigation lists **Today, Money, Documents, Reports, Taxes, Weekly Review, Reconciliation, Activity, Settings**. On phones, the primary bar is **Today, Money, Documents, Reports, More**; More contains **Taxes, Weekly Review, Reconciliation, Activity, Settings**.
+Desktop navigation lists **Today, Money, Documents, Reports, Taxes, Weekly Review, Reconciliation, Activity, Settings**. On phones, the primary bar is **Today, Money, Documents, Reports, More**; More contains **Taxes, Weekly Review, Reconciliation, Activity, Settings**. Taxes also contains **Fixed assets** and **Year-end**.
 
 ## Today — the decision briefing
 
@@ -64,6 +64,12 @@ Taxes presents the current tax year and quarter, ledger business income, salary 
 Weekly Review groups unresolved work into Transactions, Documents, Reconciliation, and Taxes. Start the week, work each linked record, then complete the review with an optional note. Completion records acknowledgement and history; it does not hide unresolved problems.
 
 Reconciliation compares a financial account’s statement-ending balance with the cleared book balance. Review statement activity and candidate matches, approve or reject only a safe match, leave uncertain items unresolved, save the selection, and finalize only at an exact $0.00 difference. Matching does not create another transaction or journal effect. A completed reconciliation is preserved as evidence.
+
+## Fixed assets, close, and CPA handoff
+
+Use **Taxes → Fixed assets** to record a possible business asset and its supporting facts. An owner can confirm the placed-in-service fact after review. That does not choose depreciation, capitalization, useful life, or tax treatment, and it does not create a depreciation journal; take those unresolved items to a CPA.
+
+Month-end and year-end readiness identify incomplete reconciliation, review, and accounting work before handoff. Do not force a close when a check is unresolved. For CPA handoff, finish or clearly label unresolved work, review Reports and Taxes, then use the owner-only CPA package for tenant-scoped schedules and a PDF index. The package excludes receipt bytes and storage links.
 
 ## Activity and Settings
 
