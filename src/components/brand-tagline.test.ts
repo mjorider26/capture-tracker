@@ -14,7 +14,9 @@ describe("Capture Tracker brand tagline", () => {
       encoding: "utf8",
     })
       .split(/\r?\n/)
-      .filter(Boolean);
+      // Repository-local Codex skills quote the retired tagline solely to prohibit it.
+      // Brand enforcement applies to product and operational source, not agent instructions.
+      .filter((file) => Boolean(file) && !file.startsWith(".agents/"));
 
     const trackedText = files
       .map((file) => {
