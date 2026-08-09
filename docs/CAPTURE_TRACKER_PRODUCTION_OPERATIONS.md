@@ -1,10 +1,10 @@
 # Capture Tracker Production Operations
 
-> **Current V2 release note (2026-08-08):** operator-controlled one-time invitations, atomic sole-owner provisioning, balanced opening-balance cutover, and actionable reconciliation account cards are deployed from `16909236550987b101650c71c8e86fad93effa70`; exact-SHA CI [31291899019](https://github.com/mjorider26/capture-tracker/actions/runs/31291899019) passed and the application Worker is `19bad3aa-5511-4282-b500-5e17c30c5c15`. The additive operator-invitation/cutover migration is applied. The scanner was not redeployed.
+> **Current V2.2 release note (2026-08-09):** the V2.2 operational-independence source `da40d2d97fa6f106aad647f5a18d1cebb6015dc3` is deployed after exact-SHA CI [31337501235](https://github.com/mjorider26/capture-tracker/actions/runs/31337501235) passed. All 28 migrations are applied, the application Worker is `50bfa04c-47c5-4907-a653-ef74a9878e8f`, fresh encrypted pre-migration and exact-source post-release backups completed, and the scanner was not redeployed.
 
-**Status:** CAPTURE TRACKER V2.0.0 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
-**Last updated:** 2026-08-08
-**Accepted V2 application release:** `16909236550987b101650c71c8e86fad93effa70` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
+**Status:** CAPTURE TRACKER V2.2 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
+**Last updated:** 2026-08-09
+**Accepted V2 application release:** `da40d2d97fa6f106aad647f5a18d1cebb6015dc3` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
 
 This runbook is for the operators of the current private production pilot. It is the source of truth for live Capture Tracker operations. Older planning, staging, and phase documents may accurately preserve their original context but can describe superseded states; do not use them as current production instructions.
 
@@ -34,9 +34,9 @@ The earlier invitation-based first-owner production flow is superseded. Legacy o
 - Do not copy staging, demo, or local PostgreSQL data into production.
 - The required migration inventory is derived from the exact clean source checkout; it is release evidence, not a substitute for `prisma migrate status`. A release may take an explicitly requested `PRE_MIGRATION_RELEASE` backup only when production is proven to be a completed, non-divergent ordered predecessor of that source. After migration, `POST_RELEASE` backups require exact production/source inventory alignment.
 
-### V2.1 S-Corp workpaper release boundary
+### V2.1 S-Corp workpaper production boundary
 
-The additive `20260810110000_add_s_corp_intelligence_workpapers` migration adds factual S-Corp workpapers, versioned accounting policies, historical policy applications, and distribution-readiness snapshots. Deploy it only with `npx prisma migrate deploy`. It does not backfill opening basis, debt basis, an accountable-plan policy, compensation conclusions, or shareholder-benefit treatment. Existing businesses therefore begin with explicit incomplete/review states until documented facts are entered and reviewed where appropriate.
+The additive `20260810110000_add_s_corp_intelligence_workpapers` migration is applied. It adds factual S-Corp workpapers, versioned accounting policies, historical policy applications, and distribution-readiness snapshots. It does not backfill opening basis, debt basis, an accountable-plan policy, compensation conclusions, or shareholder-benefit treatment. Existing businesses therefore retain explicit incomplete/review states until documented facts are entered and reviewed where appropriate.
 
 These workpapers organize evidence and professional-review items. They do not prepare a tax return, determine a tax-free distribution, issue IRS approval, file a W-2, or provide tax or legal advice.
 
@@ -75,7 +75,7 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 - Promotion is database-authoritative: validate the current document version and CLEAN result, commit ACTIVE plus private-read eligibility, then clean up the quarantine object. A stale delivery cannot promote a deleted or replaced document.
 - Removal is database-authoritative: tenant and relationship checks, DELETED tombstone plus private-read revocation plus version increment, commit, then exact-object R2 cleanup. A cleanup failure never resurrects bytes or grants; stale Queue work acknowledges the tombstone safely.
 - Sanitized observability covers Worker failures, queue retries/DLQ, scanner readiness and latency, scan finalization/promotion recovery, and R2 cleanup/removal failures. Never log bytes, object keys, credentials, or raw antivirus output.
-- The encrypted logical-backup and disposable-restore drill was revalidated with all 23 migrations: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, and a disposable restore with matching sanitized counts. Plaintext archives remain temporary only.
+- The encrypted logical-backup process completed a V2.2 pre-migration 25-migration predecessor backup and a post-release exact-source 28-migration backup: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, and sanitized version-3 manifests. Plaintext archives remain temporary only.
 - Current provider pricing is usage-based under the existing Workers Paid plan; no separate scanner subscription is used. Conservative incremental estimate with a 15-minute warm window is about $0.03 for 25 scans/month, $1.32 for 100, and $9.53 for 500. Actual per-container usage analytics are provider-side and must be checked before billing decisions.
 - The accepted mobile production path confirms automatic scan-status refresh from pending to terminal state without manual page refresh. Continue to measure and record real warm-path timings through sanitized operational telemetry; do not present an estimate as a measured timing.
 
