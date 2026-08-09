@@ -1,0 +1,13 @@
+"use server";
+import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
+import { requireBusinessContext } from "@/lib/security/business-context";
+import { prisma } from "@/lib/prisma";
+import { createCpaInvitation, revokeCpaAccess, revokeCpaInvitation, setCpaDocumentAccess } from "@/lib/services/cpa-access";
+type State = { message: string | null; link?: string; error?: boolean };
+const actor = (c: Awaited<ReturnType<typeof requireBusinessContext>>) => ({ businessId: c.business.id, userId: c.user.id, membershipId: c.membership.id, role: c.membership.role });
+const origin = async () => { const h = await headers(); return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"}`; };
+export async function inviteCpaAction(_: State, form: FormData): Promise<State> { try { const c = await requireBusinessContext(); const result = await createCpaInvitation(prisma, actor(c), form.get("email"), await origin()); if (!result.ok) return { message: result.message, error: true }; revalidatePath("/app/settings/cpa"); return { message: "EMAIL DELIVERY NOT CONFIGURED — copy this secure invitation link.", link: result.invitationUrl }; } catch { return { message: "CPA invitation could not be created safely.", error: true }; } }
+export async function revokeCpaInvitationAction(_: State, form: FormData): Promise<State> { try { const c = await requireBusinessContext(); const ok = await revokeCpaInvitation(prisma, actor(c), String(form.get("invitationId") ?? "")); revalidatePath("/app/settings/cpa"); return { message: ok ? "CPA invitation revoked." : "CPA invitation is unavailable.", error: !ok }; } catch { return { message: "CPA invitation could not be revoked safely.", error: true }; } }
+export async function setCpaDocumentAccessAction(_: State, form: FormData): Promise<State> { try { const c = await requireBusinessContext(); const ok = await setCpaDocumentAccess(prisma, actor(c), form.get("enabled") === "true"); revalidatePath("/app/settings/cpa"); return { message: ok ? "CPA document-access policy updated." : "Only the owner can update CPA document access.", error: !ok }; } catch { return { message: "CPA document access could not be updated safely.", error: true }; } }
+export async function revokeCpaAccessAction(_: State, form: FormData): Promise<State> { try { const c = await requireBusinessContext(); const ok = await revokeCpaAccess(prisma, actor(c), String(form.get("membershipId") ?? "")); revalidatePath("/app/settings/cpa"); return { message: ok ? "CPA access revoked." : "CPA access is unavailable.", error: !ok }; } catch { return { message: "CPA access could not be revoked safely.", error: true }; } }

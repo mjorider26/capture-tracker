@@ -401,6 +401,7 @@ model Business {
   currency             String   @default("USD")
   /// Presentation-only designation. It is never used for authorization or accounting.
   customerExperience   String   @default("STANDARD") @db.VarChar(32)
+  cpaDocumentAccess    Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   version              Int      @default(1)
