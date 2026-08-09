@@ -16,6 +16,7 @@ import { MobileNavigation } from "./mobile-navigation";
 import { NavigationIcon } from "./navigation-icons";
 import { SignOutButton } from "./sign-out-button";
 import { AppPullToRefresh } from "./app-pull-to-refresh";
+import { FirstUseGuidance } from "./first-use-guidance";
 
 export { destinations, isDestination, type Destination };
 
@@ -93,6 +94,7 @@ export function AppShell({
           </div>
         </div>
         <div className="mx-auto max-w-[88rem] px-4 pt-7 sm:px-6 lg:px-10 lg:pt-9">
+          {mode === "app" && <FirstUseGuidance />}
           {children}
         </div>
       </main>
