@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { approveBill, createBill, createVendor, recordBillPayment } from "@/lib/services/bills";
 
 export type BillActionState = { status: "idle" | "success" | "error"; message: string | null };

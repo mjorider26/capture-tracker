@@ -10,7 +10,7 @@ import {
   linkDocumentToTransaction,
   unlinkDocumentFromTransaction,
 } from "@/lib/documents/transaction-links";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext } from "@/lib/security/business-context";
 import { correctPostedTransaction } from "@/lib/services/transaction-correction";
 import { prisma } from "@/lib/prisma";
 import type { TransactionCorrectionActionState } from "@/components/transaction-correction-form";
@@ -50,7 +50,7 @@ export async function linkAuthenticatedDocument(
   if (!idPattern.test(transactionId) || !idPattern.test(documentId))
     return { ok: false, message: "The document link request is invalid." };
   try {
-    const context = await requireBusinessContext();
+    const context = await requireBusinessMutationContext();
     const result = await linkDocumentToTransaction(
       { businessId: context.business.id, actorUserId: context.user.id },
       transactionId,
@@ -77,7 +77,7 @@ export async function unlinkAuthenticatedDocument(
   if (![linkId, transactionId, documentId].every((id) => idPattern.test(id)))
     return { ok: false, message: "The document unlink request is invalid." };
   try {
-    const context = await requireBusinessContext();
+    const context = await requireBusinessMutationContext();
     const result = await unlinkDocumentFromTransaction(
       { businessId: context.business.id, actorUserId: context.user.id },
       linkId,
@@ -98,7 +98,7 @@ export async function reviewAuthenticatedTransaction(
   formData: FormData,
 ): Promise<ReviewActionState> {
   try {
-    const context = await requireBusinessContext();
+    const context = await requireBusinessMutationContext();
     const result = await reviewFromForm(
       {
         businessId: context.business.id,
@@ -124,7 +124,7 @@ export async function correctAuthenticatedTransaction(
   formData: FormData,
 ): Promise<TransactionCorrectionActionState> {
   try {
-    const context = await requireBusinessContext();
+    const context = await requireBusinessMutationContext();
     const result = await correctPostedTransaction(prisma, {
       businessId: context.business.id,
       actorUserId: context.user.id,

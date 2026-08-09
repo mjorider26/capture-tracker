@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { prisma } from "@/lib/prisma";
 import { createMileagePolicy, createMileageReimbursement, recordMileageTrip } from "@/lib/services/mileage";
 export type MileageActionState = { status: "idle" | "success" | "error"; message: string | null };

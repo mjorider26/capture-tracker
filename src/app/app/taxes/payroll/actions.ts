@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { recordPayrollRun } from "@/lib/services/payroll";
 import { matchPayrollEvidence } from "@/lib/services/payroll";
 import { reversePayrollRun } from "@/lib/services/payroll";

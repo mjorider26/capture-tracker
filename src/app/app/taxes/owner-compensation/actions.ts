@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 export type CompensationActionState = { status: "idle" | "success" | "error"; message: string | null };
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/); const money = z.string().regex(/^\d{1,12}(?:\.\d{1,2})?$/);
 const schema = z.object({ effectiveStart: date, effectiveEnd: date.optional().or(z.literal("")), targetLow: money.optional().or(z.literal("")), targetHigh: money.optional().or(z.literal("")), supportingNotes: z.string().trim().min(8).max(2000), reviewDate: date.optional().or(z.literal("")), documentId: z.string().regex(/^[A-Za-z0-9_-]{1,191}$/).optional().or(z.literal("")) }).superRefine((value, context) => { if (value.effectiveEnd && value.effectiveEnd < value.effectiveStart) context.addIssue({ code: "custom", path: ["effectiveEnd"], message: "End date cannot precede the effective date." }); if (value.targetLow && value.targetHigh && Number(value.targetLow) > Number(value.targetHigh)) context.addIssue({ code: "custom", path: ["targetHigh"], message: "The range high value cannot be below its low value." }); });

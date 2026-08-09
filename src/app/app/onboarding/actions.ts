@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { saveClientCutover } from "@/lib/services/client-cutover";
 
 export async function saveOnboardingAction(_: { ok: boolean; message: string }, form: FormData) {

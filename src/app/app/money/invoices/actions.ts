@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { createCustomer, createInvoice, issueInvoice, recordInvoicePayment } from "@/lib/services/invoicing";
 export type InvoiceActionState = { status: "idle" | "success" | "error"; message: string | null };
 const actor = (context: Awaited<ReturnType<typeof requireBusinessContext>>) => ({ businessId: context.business.id, actorUserId: context.user.id, actorMembershipId: context.membership.id, role: context.membership.role, executionMode: "authenticated" as const });

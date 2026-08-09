@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import type { OwnerMoneyActionState } from "@/components/owner-money-experience";
 import { prisma } from "@/lib/prisma";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { createPersonallyPaidReimbursement } from "@/lib/services/reimbursement";
 import { approveReimbursementClaim, matchReimbursementPayment } from "@/lib/services/reimbursement-settlement";
 import { classifyOwnerTransfer } from "@/lib/services/owner-transfer";

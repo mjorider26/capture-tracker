@@ -1,7 +1,7 @@
 "use server";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { prisma } from "@/lib/prisma";
 import { createCpaInvitation, revokeCpaAccess, revokeCpaInvitation, setCpaDocumentAccess } from "@/lib/services/cpa-access";
 type State = { message: string | null; link?: string; error?: boolean };

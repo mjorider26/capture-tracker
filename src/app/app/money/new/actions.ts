@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { ManualTransactionActionState } from "@/components/manual-transaction-form";
 import { createManualTransaction } from "@/lib/services/manual-transaction";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { prisma } from "@/lib/prisma";
 
 export async function createAuthenticatedManualTransaction(

@@ -92,3 +92,16 @@ export async function requireBusinessContext() {
     throw error;
   }
 }
+
+/** Server-action boundary for consequential workspace writes. */
+export async function requireBusinessMutationContext() {
+  const context = await requireBusinessContext();
+  if (context.membership.role === "CPA_READ_ONLY") {
+    throw new AccessControlError(
+      403,
+      "BUSINESS_ACCESS_DENIED",
+      "CPA read-only access cannot change business records.",
+    );
+  }
+  return context;
+}

@@ -16,6 +16,6 @@
 
 Money records financial activity; imported bank activity remains separate from posted accounting entries until you approve a category. Documents stores evidence; Reports summarizes complete accounting results. Taxes is planning only.
 
-> Uploaded files remain private and are security-scanned before they can be opened or used as evidence. A pending, failed, or rejected scan is not usable. Capture Tracker is not a CPA and does not file taxes, submit payments, run payroll, invoice, or provide public signup.
+> Uploaded files remain private and are security-scanned before they can be opened or used as evidence. A pending, failed, or rejected scan is not usable. Capture Tracker is not a CPA and does not file taxes, submit payments, run payroll, or provide public signup. It can prepare professional service invoices and record payment evidence; it never initiates payment processing.
 
 For access problems, contact the workspace owner. In a completed private workspace, Create account will not appear and there is no self-service password reset.

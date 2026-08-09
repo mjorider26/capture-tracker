@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { mapConnectedFinancialAccount } from "@/lib/services/bank-sync";
 
 export type BankConnectionActionState = { ok: boolean; message?: string };

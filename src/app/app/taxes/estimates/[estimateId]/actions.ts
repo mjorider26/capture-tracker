@@ -6,7 +6,7 @@ import type { TaxActionState } from "@/components/tax-payment-form";
 import { prisma } from "@/lib/prisma";
 import {
   isAccessControlError,
-  requireBusinessContext,
+  requireBusinessMutationContext as requireBusinessContext,
 } from "@/lib/security/business-context";
 import { recordTaxPayment } from "@/lib/services/tax-payment";
 

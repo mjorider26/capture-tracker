@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { startReconciliation } from "@/lib/services/reconciliation";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 
 export async function startAuthenticatedReconciliation(form: FormData) {
   const context = await requireBusinessContext();

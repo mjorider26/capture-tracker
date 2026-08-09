@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { confirmTransactionImport, createImportPreview, ignoreExternalTransaction, postExternalTransaction } from "@/lib/services/financial-ingestion";
 
 type Preview = Extract<Awaited<ReturnType<typeof createImportPreview>>, { ok: true }>["preview"];

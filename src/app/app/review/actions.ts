@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { completeWeeklyReview, reopenWeeklyReview, startWeeklyReview } from "@/lib/services/weekly-review";
 export type WeeklyReviewActionState = { ok: boolean; message?: string };
 const valid = (value: string) => /^[A-Za-z0-9_-]{1,191}$/.test(value);

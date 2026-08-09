@@ -1,12 +1,12 @@
 # Capture Tracker Product Manual
 
-> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal. **Taxes → Fixed assets** records possible assets and owner-confirmed in-service facts; depreciation and tax treatment remain CPA review items.
+> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. Bank Connections is provider-ready and accurately displays **LIVE BANK PROVIDER NOT CONFIGURED** until separately authorized provider activation. **Money → Invoices** and **Bills** record owner-confirmed receivables and payables; public invoices are read-only professional documents. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal. **Taxes → Fixed assets** records possible assets and owner-confirmed in-service facts; depreciation and tax treatment remain CPA review items.
 
 **SPENDING TRACKED. BUSINESS GROWN.**
 
 Private-pilot client guide · V2.0.0 · Documented source: `6883719f82796a919e53f080d2dcf15f2fc13b0a` (`v2.0.0`)
 
-> **Private-pilot boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, invoice, manage inventory, or offer public self-service onboarding. Uploaded PDF, JPEG, and PNG files stay private and are security-scanned before they become available in Capture Tracker.
+> **Private-pilot boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, manage inventory, or offer public self-service onboarding. It can prepare service invoices and record payment evidence, but never initiates a customer or vendor payment. Uploaded PDF, JPEG, and PNG files stay private and are security-scanned before they become available in Capture Tracker.
 
 ## Start here
 

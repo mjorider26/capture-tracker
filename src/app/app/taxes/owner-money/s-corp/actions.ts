@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { SCorpActionState } from "@/components/s-corp-center";
 import { prisma } from "@/lib/prisma";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { createBasisAdjustment, createDebtInstrument, saveAccountingPolicy, saveBasisOpening, saveHealthInsuranceWorkpaper } from "@/lib/services/s-corp-intelligence";
 
 const refresh = () => { revalidatePath("/app/taxes/owner-money"); revalidatePath("/app/taxes/owner-money/s-corp"); revalidatePath("/app/taxes/year-end"); revalidatePath("/app/today"); };

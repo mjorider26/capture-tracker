@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { appBuildId } from "@/lib/app-version";
 import { prisma } from "@/lib/prisma";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 
 type State = { ok: boolean; message?: string };
 const categories = new Set(["IMPORT", "ONBOARDING", "DOCUMENT", "ACCOUNTING", "OTHER"]);

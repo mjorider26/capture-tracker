@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const removePrivateDocument = vi.hoisted(() => vi.fn());
 const traceDocumentRemoval = vi.hoisted(() => vi.fn());
-const requireBusinessContext = vi.hoisted(() => vi.fn());
+const requireBusinessMutationContext = vi.hoisted(() => vi.fn());
 const revalidatePath = vi.hoisted(() => vi.fn());
 const redirect = vi.hoisted(() => vi.fn());
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect, RedirectType: { replace: "replace" } }));
 vi.mock("@/lib/documents/removal", () => ({ removePrivateDocument, traceDocumentRemoval }));
-vi.mock("@/lib/security/business-context", () => ({ requireBusinessContext }));
+vi.mock("@/lib/security/business-context", () => ({ requireBusinessMutationContext }));
 vi.mock("@/lib/documents/secure-upload", () => ({ uploadPrivateDocument: vi.fn() }));
 vi.mock("@/lib/documents/upload-selection", () => ({ selectedDocumentUpload: vi.fn() }));
 vi.mock("@/lib/documents/extraction", () => ({ extractDocument: vi.fn(), reviewDocumentExtraction: vi.fn() }));
@@ -19,11 +19,11 @@ describe("authenticated document removal navigation", () => {
   beforeEach(() => {
     removePrivateDocument.mockReset();
     traceDocumentRemoval.mockReset();
-    requireBusinessContext.mockReset();
+    requireBusinessMutationContext.mockReset();
     revalidatePath.mockReset();
     redirect.mockReset();
     traceDocumentRemoval.mockResolvedValue(undefined);
-    requireBusinessContext.mockResolvedValue({ business: { id: "business" }, user: { id: "user" } });
+    requireBusinessMutationContext.mockResolvedValue({ business: { id: "business" }, user: { id: "user" } });
   });
 
   it("replaces the deleted detail route without any auth-cookie mutation", async () => {

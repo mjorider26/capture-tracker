@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { requireBusinessContext } from "@/lib/security/business-context";
+import { requireBusinessMutationContext as requireBusinessContext } from "@/lib/security/business-context";
 import { saveSettings } from "@/lib/services/pilot-readiness";
 export async function saveSettingsAction(_: { ok: boolean; message?: string }, form: FormData) {
   try {
