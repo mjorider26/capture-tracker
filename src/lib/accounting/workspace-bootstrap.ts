@@ -18,6 +18,7 @@ export function workspaceAccountingFoundationOperations(client: Database, busine
   const checkingId = id(businessId, "checking");
   const entries = [
     ["1000", "Business Checking", "ASSET", "BANK", "DEBIT", checkingId],
+    ["1100", "Accounts Receivable", "ASSET", "ACCOUNTS_RECEIVABLE", "DEBIT", null],
     ["3000", "Owner Contributions", "EQUITY", "OWNER_CONTRIBUTION", "CREDIT", null],
     ["3100", "Owner Distributions", "EQUITY", "OWNER_DISTRIBUTION", "DEBIT", null],
     ["4000", "Business Income", "INCOME", "COMMISSION_INCOME", "CREDIT", null],
@@ -27,6 +28,7 @@ export function workspaceAccountingFoundationOperations(client: Database, busine
     ["5300", "Professional Fees Expense", "EXPENSE", "PROFESSIONAL_FEES_EXPENSE", "DEBIT", null],
     ["5900", "Other Business Expense", "EXPENSE", "OTHER_EXPENSE", "DEBIT", null],
     ["2100", "Payroll Tax Payable", "LIABILITY", "PAYROLL_TAX_PAYABLE", "CREDIT", null],
+    ["2000", "Accounts Payable", "LIABILITY", "ACCOUNTS_PAYABLE", "CREDIT", null],
     ["2200", "Reimbursement Payable", "LIABILITY", "REIMBURSEMENT_PAYABLE", "CREDIT", null],
     ["2500", "Shareholder Loan Payable", "LIABILITY", "LONG_TERM_LIABILITY", "CREDIT", null],
     ["3200", "Retained Earnings", "EQUITY", "RETAINED_EARNINGS", "CREDIT", null],
