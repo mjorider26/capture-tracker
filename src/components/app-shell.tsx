@@ -15,6 +15,7 @@ import { BrandIcon } from "./brand";
 import { MobileNavigation } from "./mobile-navigation";
 import { NavigationIcon } from "./navigation-icons";
 import { SignOutButton } from "./sign-out-button";
+import { AppPullToRefresh } from "./app-pull-to-refresh";
 
 export { destinations, isDestination, type Destination };
 
@@ -35,7 +36,7 @@ export function AppShell({
   const current = destinations.find((item) => item.slug === destination);
   const activeNavigation = navigationDestination ?? destination;
   return (
-    <div className="app-shell min-h-screen overflow-x-clip bg-page text-text-primary">
+    <AppPullToRefresh><div className="app-shell min-h-screen overflow-x-clip bg-page text-text-primary">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-white/10 bg-brand-navy px-4 py-5 text-white min-[1180px]:flex">
         <Brand />
         <div className="app-business-identity mt-7 px-3 py-3">
@@ -100,7 +101,7 @@ export function AppShell({
         destination={activeNavigation}
         items={navigationItems}
       />
-    </div>
+    </div></AppPullToRefresh>
   );
 }
 

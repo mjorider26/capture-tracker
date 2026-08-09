@@ -82,6 +82,14 @@ body {
   letter-spacing: -0.01em;
 }
 
+.app-pull-root { min-height: 100%; overscroll-behavior-y: contain; }
+.app-pull-indicator { position: fixed; top: 0; left: 50%; z-index: 60; display: flex; align-items: center; gap: 0.45rem; min-height: 2.25rem; border: 1px solid rgb(140 230 225 / 0.2); border-radius: 999px; background: rgb(6 25 42 / 0.92); box-shadow: 0 8px 24px rgb(0 7 18 / 0.25); padding: 0.35rem 0.75rem; color: var(--text); font-size: 0.75rem; font-weight: 750; pointer-events: none; transition: transform 140ms var(--ease-ui), opacity 140ms var(--ease-ui); }
+.app-pull-indicator[aria-hidden="true"] { opacity: 0; }
+.app-pull-mark { color: var(--brand-teal); font-size: 1rem; }
+.app-pull-indicator.is-refreshing .app-pull-mark { animation: app-pull-spin 700ms linear infinite; }
+@keyframes app-pull-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .app-pull-indicator, .app-pull-indicator.is-refreshing .app-pull-mark { animation: none; transition: none; } }
+
 ::selection {
   background: var(--brand-teal-soft);
   color: var(--brand-navy);
