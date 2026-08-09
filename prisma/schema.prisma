@@ -1367,6 +1367,8 @@ model FixedAsset {
   dispositionDate             DateTime?
   dispositionProceeds         Decimal?         @db.Decimal(18, 2)
   status                      FixedAssetStatus @default(POSSIBLE_REVIEW)
+  approvedAt                  DateTime?
+  approvedByMembershipId      String?
   sourceExternalTransactionId String?
   sourceTransactionId         String?
   documentId                  String?
@@ -1383,6 +1385,7 @@ model FixedAsset {
 
   @@unique([businessId, id])
   @@index([businessId, status])
+  @@index([businessId, approvedAt])
   @@index([businessId, acquisitionDate])
 }
 
