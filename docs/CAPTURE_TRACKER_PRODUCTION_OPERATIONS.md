@@ -1,10 +1,10 @@
 # Capture Tracker Production Operations
 
-> **Current V2 release note (2026-08-08):** the accepted application release is `6883719f82796a919e53f080d2dcf15f2fc13b0a` (`v2.0.0`); exact-SHA CI `31289437348` passed and the application Worker is `02c67662-2968-47d6-bd44-403f48bfae5b`. The additive fixed-asset approval migration is applied. The scanner was not redeployed.
+> **Current V2 release note (2026-08-08):** operator-controlled one-time invitations, atomic sole-owner provisioning, balanced opening-balance cutover, and actionable reconciliation account cards are deployed from `16909236550987b101650c71c8e86fad93effa70`; exact-SHA CI [31291899019](https://github.com/mjorider26/capture-tracker/actions/runs/31291899019) passed and the application Worker is `19bad3aa-5511-4282-b500-5e17c30c5c15`. The additive operator-invitation/cutover migration is applied. The scanner was not redeployed.
 
 **Status:** CAPTURE TRACKER V2.0.0 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
 **Last updated:** 2026-08-08
-**Accepted V2 application release:** `6883719f82796a919e53f080d2dcf15f2fc13b0a` (`v2.0.0`)
+**Accepted V2 application release:** `16909236550987b101650c71c8e86fad93effa70` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
 
 This runbook is for the operators of the current private production pilot. It is the source of truth for live Capture Tracker operations. Older planning, staging, and phase documents may accurately preserve their original context but can describe superseded states; do not use them as current production instructions.
 
