@@ -7,6 +7,7 @@ export const ownerTransferSchema = z.object({
   direction: z.enum(["COMPANY_TO_OWNER", "OWNER_TO_COMPANY"]),
   classification: z.enum(["UNRESOLVED", "PAYROLL_NET_SALARY", "SHAREHOLDER_DISTRIBUTION", "REIMBURSEMENT", "SHAREHOLDER_LOAN_REPAYMENT", "OWNER_CONTRIBUTION", "SHAREHOLDER_LOAN", "OTHER"]),
   notes: text.optional().transform((value) => value || null),
+  acknowledgeDistributionReadiness: z.literal("on").optional(),
 });
 export function classificationMatchesDirection(direction: "COMPANY_TO_OWNER" | "OWNER_TO_COMPANY", classification: string) {
   if (classification === "UNRESOLVED" || classification === "OTHER") return true;

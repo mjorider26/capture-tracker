@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from "../../generated/prisma/client";
 import { classificationMatchesDirection, ownerTransferSchema } from "./owner-transfer-core";
 import type { ReimbursementActor } from "./reimbursement-core";
 import { ensureWorkspaceAccountingFoundation } from "@/lib/accounting/workspace-bootstrap";
+import { captureDistributionReadinessSnapshot } from "./s-corp-intelligence";
 type Client = Pick<PrismaClient, "$transaction"> & { externalTransaction: PrismaClient["externalTransaction"]; ownerMoneyTransfer: PrismaClient["ownerMoneyTransfer"]; };
 export async function classifyOwnerTransfer(client: Client, actor: ReimbursementActor, input: unknown): Promise<{ ok: true; transferId: string } | { ok: false; message: string }> {
   if (actor.role !== "OWNER") return { ok: false, message: "Only the business owner can classify owner transfers." };
@@ -53,6 +54,10 @@ export async function postClassifiedOwnerTransfer(client: Client, actor: Reimbur
     const claimed = await tx.externalTransaction.updateMany({ where: { id: external.id, businessId: actor.businessId, postedTransactionId: null }, data: { status: "POSTED", postedTransactionId: transaction.id, reviewedAt: new Date(), reviewedByUserId: actor.actorUserId, version: { increment: 1 } } });
     if (claimed.count !== 1) throw new Error("Concurrent owner transfer posting");
     await tx.ownerMoneyTransfer.update({ where: { id: transfer.id }, data: { status: "MATCHED", version: { increment: 1 } } });
+    if (distribution) {
+      const snapshot = await captureDistributionReadinessSnapshot(tx, actor, distribution.id, external.transactionDate.getUTCFullYear(), data.acknowledgeDistributionReadiness === "on");
+      if (!snapshot.ok) throw new Error("Distribution readiness snapshot unavailable");
+    }
     await tx.auditEvent.create({ data: { actorType: "USER", businessId: actor.businessId, actorMembershipId: actor.actorUserId, action: "APPROVE", entityType: "OwnerMoneyTransfer", entityId: transfer.id, afterJson: { classification: data.classification, direction: data.direction, transactionId: transaction.id, journalEntryId: journal.id }, metadataJson: { executionMode: actor.executionMode, accountingEffect: "posted" } } });
     return { ok: true as const, journalEntryId: journal.id };
   }); } catch (error) { if (error instanceof Prisma.PrismaClientKnownRequestError) return { ok: false, message: "The owner transfer could not be posted safely. Refresh and try again." }; return { ok: false, message: "The owner transfer could not be posted safely. Refresh and try again." }; }

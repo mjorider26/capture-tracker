@@ -18,6 +18,7 @@ const dashboard: TodayDashboard = {
     unreviewedTransactions: 1,
     documentAttention: 2,
   },
+  booksCurrent: { date: "Aug 7, 2026", blocker: { label: "Imported activity", count: 1, date: "Aug 8, 2026" }, accountCoverage: [{ accountName: "Checking", reconciledThrough: "Aug 7, 2026" }] },
   isEmptyAccount: false,
   taxReserve: {
     value: "Not configured",

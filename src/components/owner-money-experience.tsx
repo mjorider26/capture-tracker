@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { Card, InlineAlert, PageHeader, StatusBadge } from "./ui";
 
 export type OwnerMoneyActionState = { status: "idle" | "success" | "error"; message: string | null };
 const initialState: OwnerMoneyActionState = { status: "idle", message: null };
 type Data = { year: number; totals: { salary: string; distributions: string; reimbursementsDue: string; contributions: string; longTermLiabilities: string }; claims: Array<{ id: string; status: string; totalAmount: string; createdAt: string; paid: boolean; expense: { purpose: string; merchant: string | null; hasDocument: boolean; incurredAt: string } | null }>; distributions: Array<{ id: string; amount: string; status: string; date: string; memo: string | null }>; documents: Array<{ id: string; originalFilename: string }>; transferCandidates: Array<{ id: string; description: string; amount: string; direction: string; date: string }>; paymentCandidates: Array<{ id: string; description: string; amount: string; date: string }>; unresolvedTransfers: Array<{ id: string; direction: string; classification: string; description: string; amount: string }> };
 
-export function OwnerMoneyExperience({ data, action, transferAction, approveAction, paymentAction }: { data: Data; action: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState>; transferAction: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState>; approveAction: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState>; paymentAction: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState> }) {
+export function OwnerMoneyExperience({ data, action, transferAction, approveAction, paymentAction, sCorpHref = "/app/taxes/owner-money/s-corp" }: { data: Data; action: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState>; transferAction: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState>; approveAction: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState>; paymentAction: (state: OwnerMoneyActionState, formData: FormData) => Promise<OwnerMoneyActionState>; sCorpHref?: string }) {
   const [state, submit, pending] = useActionState(action, initialState);
   const [transferState, transferSubmit, transferPending] = useActionState(transferAction, initialState);
   const [approvalState, approvalSubmit, approvalPending] = useActionState(approveAction, initialState);
@@ -15,7 +16,7 @@ export function OwnerMoneyExperience({ data, action, transferAction, approveActi
   const [showForm, setShowForm] = useState(false);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   return <>
-    <PageHeader eyebrow="Owner money" title="Owner money center" description="Keep salary, distributions, reimbursements, contributions, and shareholder loans separate. Totals are derived from recorded books; this workspace does not execute payments." action={<button className="ui-button ui-button-primary min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-4 text-sm font-bold text-white" onClick={() => setShowForm(!showForm)}>{showForm ? "Hide reimbursement form" : "Record personally paid expense"}</button>} />
+    <PageHeader eyebrow="Owner money" title="Owner money center" description="Keep salary, distributions, reimbursements, contributions, and shareholder loans separate. Totals are derived from recorded books; this workspace does not execute payments." action={<div className="flex gap-2"><Link className="ui-button ui-button-secondary min-h-11 px-4" href={sCorpHref}>S-Corp workpapers</Link><button className="ui-button ui-button-primary min-h-11 rounded-[var(--radius-sm)] bg-brand-navy px-4 text-sm font-bold text-white" onClick={() => setShowForm(!showForm)}>{showForm ? "Hide reimbursement form" : "Record personally paid expense"}</button></div>} />
     <InlineAlert title="Classify transfers deliberately" tone="warning">Company-to-owner and owner-to-company transfers are not automatically guessed. Review payroll, distributions, reimbursements, contributions, and loans as distinct accounting treatments.</InlineAlert>
     <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Metric label={`Net salary ${data.year}`} value={data.totals.salary} /><Metric label="Distributions" value={data.totals.distributions} /><Metric label="Reimbursements due" value={data.totals.reimbursementsDue} /><Metric label="Owner contributions" value={data.totals.contributions} /><Metric label="Long-term liabilities" value={data.totals.longTermLiabilities} /></section>
     <p className="mt-3 text-sm text-text-muted">Long-term liabilities are shown separately until the business explicitly identifies a liability as a shareholder loan. This workspace does not infer loan treatment from a transfer description.</p>

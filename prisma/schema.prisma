@@ -418,8 +418,181 @@ model Business {
   transactionImportProfiles  TransactionImportProfile[]
   externalTransactions       ExternalTransaction[]
   merchantCategoryRules      MerchantCategoryRule[]
+  shareholderBasisWorkpapers ShareholderBasisWorkpaper[]
+  shareholderBasisAdjustments ShareholderBasisAdjustment[]
+  shareholderDebtInstruments ShareholderDebtInstrument[]
+  distributionReadinessSnapshots DistributionReadinessSnapshot[]
+  accountingPolicies         AccountingPolicy[]
+  accountingPolicyVersions   AccountingPolicyVersion[]
+  accountingPolicyApplications AccountingPolicyApplication[]
+  shareholderBenefitWorkpapers ShareholderBenefitWorkpaper[]
 
   @@index([legalName])
+}
+
+/// Tax workpaper facts only. A missing opening basis deliberately remains null, never zero.
+model ShareholderBasisWorkpaper {
+  id                   String   @id @default(cuid())
+  businessId           String
+  taxYear              Int
+  openingStockBasis    Decimal? @db.Decimal(18, 2)
+  openingDebtBasis     Decimal? @db.Decimal(18, 2)
+  effectiveDate        DateTime?
+  sourceReference      String?  @db.VarChar(500)
+  notes                String?
+  enteredByUserId      String?
+  reviewedByUserId     String?
+  reviewedAt           DateTime?
+  ownerConfirmedByUserId String?
+  ownerConfirmedAt     DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  version              Int      @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  adjustments ShareholderBasisAdjustment[]
+
+  @@unique([businessId, taxYear])
+  @@index([businessId, taxYear])
+}
+
+/// Explicit owner/CPA-entered Form 7203-support lines; this is not a tax-return calculator.
+model ShareholderBasisAdjustment {
+  id          String   @id @default(cuid())
+  businessId  String
+  workpaperId String
+  taxYear     Int
+  category    String   @db.VarChar(64)
+  amount      Decimal  @db.Decimal(18, 2)
+  source      String   @db.VarChar(500)
+  documentReference String? @db.VarChar(500)
+  confirmedByUserId String?
+  confirmedAt DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  version     Int      @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  workpaper ShareholderBasisWorkpaper @relation(fields: [workpaperId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, taxYear])
+  @@index([workpaperId, createdAt])
+}
+
+/// A distinct shareholder note/open-account fact. It is not inferred from generic liabilities.
+model ShareholderDebtInstrument {
+  id                 String   @id @default(cuid())
+  businessId         String
+  loanDate           DateTime
+  label              String   @db.VarChar(180)
+  originalPrincipal  Decimal  @db.Decimal(18, 2)
+  outstandingPrincipal Decimal @db.Decimal(18, 2)
+  taxBasisAmount     Decimal? @db.Decimal(18, 2)
+  writtenNoteReference String? @db.VarChar(500)
+  accountingReference String? @db.VarChar(500)
+  cpaNotes           String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  version            Int      @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, loanDate])
+}
+
+/// Immutable factual/workpaper warning snapshot captured when a distribution is reviewed.
+model DistributionReadinessSnapshot {
+  id                   String   @id @default(cuid())
+  businessId           String
+  ownerDistributionId  String?
+  status               String   @db.VarChar(48)
+  snapshotJson         Json
+  acknowledgedAt       DateTime?
+  createdAt            DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  ownerDistribution OwnerDistribution? @relation(fields: [businessId, ownerDistributionId], references: [businessId, id], onDelete: Restrict)
+
+  @@index([businessId, createdAt])
+  @@unique([businessId, ownerDistributionId])
+}
+
+model AccountingPolicy {
+  id           String   @id @default(cuid())
+  businessId   String
+  policyType   String   @db.VarChar(64)
+  title        String   @db.VarChar(180)
+  currentVersionId String? @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  version      Int      @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  versions AccountingPolicyVersion[] @relation("PolicyVersions")
+  currentVersion AccountingPolicyVersion? @relation("PolicyCurrentVersion", fields: [currentVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, policyType])
+}
+
+model AccountingPolicyVersion {
+  id          String   @id @default(cuid())
+  businessId  String
+  policyId    String
+  effectiveDate DateTime
+  content     String
+  reason      String?
+  changedByUserId String?
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  policy AccountingPolicy @relation("PolicyVersions", fields: [policyId], references: [id], onDelete: Restrict)
+  currentFor AccountingPolicy? @relation("PolicyCurrentVersion")
+  applications AccountingPolicyApplication[]
+
+  @@index([businessId, effectiveDate])
+  @@index([policyId, effectiveDate])
+}
+
+/// Historical reference from a consequential workflow to the policy version in force when it was performed.
+model AccountingPolicyApplication {
+  id              String   @id @default(cuid())
+  businessId      String
+  policyVersionId String
+  entityType      String   @db.VarChar(64)
+  entityId        String
+  appliedAt       DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  policyVersion AccountingPolicyVersion @relation(fields: [policyVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, policyVersionId, entityType, entityId])
+  @@index([businessId, entityType, entityId])
+}
+
+/// Factual greater-than-2% shareholder health-insurance workpaper; no deduction conclusion is stored.
+model ShareholderBenefitWorkpaper {
+  id                 String   @id @default(cuid())
+  businessId         String
+  taxYear            Int
+  benefitType        String   @db.VarChar(64)
+  provider           String?  @db.VarChar(180)
+  coverageStart      DateTime?
+  coverageEnd        DateTime?
+  premiumAmount      Decimal? @db.Decimal(18, 2)
+  paymentMethod      String?  @db.VarChar(64)
+  payrollInclusionStatus String @default("INCOMPLETE") @db.VarChar(48)
+  w2WorkpaperStatus  String   @default("INCOMPLETE") @db.VarChar(48)
+  documentReference  String?  @db.VarChar(500)
+  cpaReviewStatus    String   @default("CPA_REVIEW") @db.VarChar(48)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  version            Int      @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, taxYear])
 }
 
 /// A private, operator-created invitation. Only the one-way token hash is persisted.
@@ -1467,6 +1640,7 @@ model OwnerDistribution {
   transaction   Transaction?       @relation("DistributionTransaction", fields: [businessId, transactionId], references: [businessId, id], onDelete: Restrict)
   approvals     ApprovalDecision[] @relation("DistributionApprovals")
   journalEntry  JournalEntry?      @relation("OwnerDistributionJournalEntry")
+  readinessSnapshot DistributionReadinessSnapshot?
 
   @@unique([businessId, id])
   @@index([businessId, distributionDate])

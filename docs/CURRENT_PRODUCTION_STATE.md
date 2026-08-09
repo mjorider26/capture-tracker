@@ -13,3 +13,7 @@
 - August 2026 is not ready to lock: one business-account reconciliation remains unresolved. Use the normal reconciliation workflow; do not bypass, backdate, or force a close.
 
 `quoteready-api` is unrelated infrastructure and is never a Capture Tracker deployment target.
+
+## Pending V2.1 S-Corp workpaper release
+
+The source checkout contains an additive V2.1 workpaper migration and Owner Money workpaper center. Until an approved release applies that migration, production remains on its documented V2.0 schema. The V2.1 release must leave historical production tax facts unfilled: basis defaults to **BASIS WORKPAPER INCOMPLETE**, reimbursement policy to **REIMBURSEMENT POLICY NEEDS REVIEW**, and shareholder benefits to **WORKPAPER NOT CONFIGURED** until documented facts are entered.

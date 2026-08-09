@@ -34,6 +34,12 @@ The earlier invitation-based first-owner production flow is superseded. Legacy o
 - Do not copy staging, demo, or local PostgreSQL data into production.
 - The required migration inventory is derived from the source checkout. Production has all 23 source migrations applied, including `20260809180000_add_operator_invitations_and_cutover`; the count is release evidence, not a substitute for `prisma migrate status`.
 
+### V2.1 S-Corp workpaper release boundary
+
+The additive `20260810110000_add_s_corp_intelligence_workpapers` migration adds factual S-Corp workpapers, versioned accounting policies, historical policy applications, and distribution-readiness snapshots. Deploy it only with `npx prisma migrate deploy`. It does not backfill opening basis, debt basis, an accountable-plan policy, compensation conclusions, or shareholder-benefit treatment. Existing businesses therefore begin with explicit incomplete/review states until documented facts are entered and reviewed where appropriate.
+
+These workpapers organize evidence and professional-review items. They do not prepare a tax return, determine a tax-free distribution, issue IRS approval, file a W-2, or provide tax or legal advice.
+
 ## Backup and recovery
 
 Production uses encrypted logical backups and isolated restore verification. The backup command creates a PostgreSQL `pg_dump` custom-format archive, encrypts it with AES-256-GCM and a scrypt-derived key, calculates a SHA-256 checksum, uploads only the encrypted archive and sanitized manifest to the private backup bucket, then verifies the uploaded checksum.

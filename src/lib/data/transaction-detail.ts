@@ -1,6 +1,7 @@
 import "server-only";
 
 import { unstable_noStore as noStore } from "next/cache";
+import { Prisma } from "../../generated/prisma/client";
 
 import { prisma } from "../prisma";
 import { serializeMoneyAmount } from "./money-dashboard-core";
@@ -38,6 +39,14 @@ export type TransactionDetail = {
   correctionEligible: boolean;
   editable: boolean;
   lockExplanation: string | null;
+  explanation: {
+    source: { account: string; imported: boolean; importedDate: string | null; description: string; amount: string; sourceReference: string | null };
+    documents: Array<{ name: string; linkedAt: string }>;
+    classification: { category: string | null; suggestionReason: string | null; merchantRule: boolean; policyReference: string | null };
+    approval: { status: string; decidedAt: string | null };
+    accounting: { entryNumber: string | null; postingDate: string | null; debits: string; credits: string };
+    audit: Array<{ action: string; occurredAt: string }>;
+  };
 };
 
 export async function getTransactionDetailForBusiness(
@@ -55,6 +64,7 @@ export async function getTransactionDetailForBusiness(
       merchantName: true,
       sourceReference: true,
       notes: true,
+      approvedAt: true,
       correctionReason: true,
       correctionOf: { select: { id: true, description: true } },
       corrections: { select: { id: true, description: true } },
@@ -69,16 +79,18 @@ export async function getTransactionDetailForBusiness(
         orderBy: [{ intent: "asc" }, { id: "asc" }],
         select: { id: true, intent: true, amount: true, memo: true },
       },
-      documents: { where: { unlinkedAt: null }, select: { documentId: true } },
-      reimbursementExpenses: { select: { id: true } },
+      documents: { where: { unlinkedAt: null }, select: { documentId: true, attachedAt: true, document: { select: { originalFilename: true } } } },
+      externalTransaction: { select: { transactionDate: true, description: true, sourceReference: true, suggestionReason: true, normalizedMerchant: true, financialAccount: { select: { name: true } } } },
+      reimbursementExpenses: { select: { id: true, claimId: true } },
       reimbursementPayments: { select: { id: true } },
       journalEntry: {
         select: {
           id: true,
           entryNumber: true,
           status: true,
+          postedAt: true,
           accountingPeriod: { select: { status: true } },
-          lines: { select: { ledgerAccountId: true, ledgerAccount: { select: { name: true, type: true } } } },
+          lines: { select: { ledgerAccountId: true, debitAmount: true, creditAmount: true, ledgerAccount: { select: { name: true, type: true } } } },
           reversedByEntries: { select: { id: true, entryNumber: true } },
         },
       },
@@ -86,11 +98,13 @@ export async function getTransactionDetailForBusiness(
   });
   if (!transaction) return null;
   const events = await prisma.auditEvent.findMany({
-    where: { businessId, entityType: "Transaction", entityId: transaction.id, action: { in: ["SUPERSEDE", "CREATE"] } },
+    where: { businessId, entityType: "Transaction", entityId: transaction.id },
     select: { action: true, reason: true, occurredAt: true },
     orderBy: { occurredAt: "asc" },
     take: 20,
   });
+  const reimbursementClaimIds = [...transaction.reimbursementExpenses.map((item) => item.claimId), ...transaction.reimbursementPayments.map((item) => item.id)];
+  const policyApplication = reimbursementClaimIds.length ? await prisma.accountingPolicyApplication.findFirst({ where: { businessId, entityType: "ReimbursementClaim", entityId: { in: reimbursementClaimIds } }, include: { policyVersion: { include: { policy: { select: { title: true } } } } }, orderBy: { appliedAt: "desc" } }) : null;
   const lockedByJournal =
     transaction.journalEntry?.status === "POSTED" ||
     transaction.journalEntry?.status === "REVERSED" ||
@@ -141,5 +155,13 @@ export async function getTransactionDetailForBusiness(
       : false,
     editable,
     lockExplanation,
+    explanation: {
+      source: { account: transaction.externalTransaction?.financialAccount.name ?? transaction.account.name, imported: Boolean(transaction.externalTransaction), importedDate: transaction.externalTransaction?.transactionDate.toISOString() ?? null, description: transaction.externalTransaction?.description ?? transaction.description, amount: transaction.amount.toFixed(2), sourceReference: transaction.externalTransaction?.sourceReference ?? transaction.sourceReference },
+      documents: transaction.documents.map((item) => ({ name: item.document.originalFilename, linkedAt: item.attachedAt.toISOString() })),
+      classification: { category: transaction.journalEntry?.lines.find((line) => line.ledgerAccount.type === "INCOME" || line.ledgerAccount.type === "EXPENSE")?.ledgerAccount.name ?? null, suggestionReason: transaction.externalTransaction?.suggestionReason ?? null, merchantRule: Boolean(transaction.externalTransaction?.normalizedMerchant && transaction.externalTransaction.suggestionReason), policyReference: policyApplication ? `${policyApplication.policyVersion.policy.title} effective ${policyApplication.policyVersion.effectiveDate.toISOString().slice(0, 10)}` : null },
+      approval: { status: transaction.status, decidedAt: transaction.approvedAt?.toISOString() ?? null },
+      accounting: { entryNumber: transaction.journalEntry?.entryNumber ?? null, postingDate: transaction.journalEntry?.postedAt?.toISOString() ?? null, debits: transaction.journalEntry?.lines.reduce((total, line) => total.plus(line.debitAmount), new Prisma.Decimal(0)).toFixed(2) ?? "0.00", credits: transaction.journalEntry?.lines.reduce((total, line) => total.plus(line.creditAmount), new Prisma.Decimal(0)).toFixed(2) ?? "0.00" },
+      audit: events.map((event) => ({ action: event.action, occurredAt: event.occurredAt.toISOString() })),
+    },
   };
 }

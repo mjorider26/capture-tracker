@@ -40,7 +40,7 @@ export async function scopedTableOrder(db: Db) {
   // These optional references form intentional application-level cycles. They
   // are nulled inside the cleanup transaction before the scoped delete order
   // is evaluated, so they must not make the dependency graph look unsafe.
-  const brokenCycles = new Set(["AskAiMessage:AskAiRun", "Transaction:JournalEntry"]);
+  const brokenCycles = new Set(["AskAiMessage:AskAiRun", "Transaction:JournalEntry", "AccountingPolicy:AccountingPolicyVersion"]);
   for (const { child, parent } of edges) {
     if (names.has(child) && names.has(parent) && child !== parent && !brokenCycles.has(`${child}:${parent}`)) parents.get(child)!.add(parent);
   }
@@ -90,6 +90,7 @@ export async function deleteTenant(db: Db, businessId: string, userId: string) {
     // constrained by the exact business id and happens in one transaction.
     await tx.$executeRawUnsafe('UPDATE "AskAiMessage" SET "runId" = NULL WHERE "businessId" = $1', businessId);
     await tx.$executeRawUnsafe('UPDATE "Transaction" SET "correctionReversalJournalId" = NULL WHERE "businessId" = $1', businessId);
+    await tx.$executeRawUnsafe('UPDATE "AccountingPolicy" SET "currentVersionId" = NULL WHERE "businessId" = $1', businessId);
     // A deferred split trigger intentionally rejects a mixed transaction
     // without its full split set. Make each target transaction non-mixed
     // before removing its scoped splits, then flush that invariant while the

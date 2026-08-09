@@ -109,6 +109,14 @@ Open the production URL supplied by the owner in Safari or Chrome. On iPhone Saf
 | Report has no activity / CSV is refused | Check the period; large exports may be refused safely. |
 | Settings conflict or phone layout issue | Refresh, then retry; update the browser or use its normal zoom. |
 
+## Owner Money S-Corp workpapers
+
+Open **Taxes → Owner money → S-Corp workpapers** to organize factual evidence for opening stock and debt basis, categorized workpaper adjustments, distinct shareholder debt instruments, readiness snapshots, reimbursement/accountable-plan policy versions, and greater-than-2% shareholder health-insurance workpaper facts. Stock basis, tax debt basis, book equity, and book loan balances remain separate.
+
+Unknown opening amounts show **BASIS WORKPAPER INCOMPLETE**; Capture Tracker never replaces them with $0. Distribution readiness is an operational state—**Ready for owner review**, **Review recommended**, **Blocked by bookkeeping**, or **CPA review recommended**—not a tax-free amount, IRS approval, or safe-distribution conclusion. Health-insurance entries record factual coverage and payroll/W-2 workpaper state without filing or changing payroll-provider records.
+
+Open a posted transaction to use **Explain this transaction**. Its deterministic evidence chain shows source activity, linked documents, classification/rule/policy evidence where available, approval timing, journal debits and credits, corrections or reversals, and audit events. It is not an AI explanation.
+
 ## Security, privacy, and glossary
 
 The workspace is private and authenticated. Passwords are not displayed in the product. Data and documents are scoped to the business. New documents are quarantined and ClamAV-scanned privately before ACTIVE + CLEAN-only protected access; signed document access rechecks the current state. Accounting history uses corrections/reversals instead of destructive editing. Operational backups are encrypted; use normal sign-out practice on shared devices.
