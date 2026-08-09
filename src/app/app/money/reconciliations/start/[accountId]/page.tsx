@@ -1,0 +1,12 @@
+import { notFound } from "next/navigation";
+
+import { AccountingNav } from "@/components/accounting-nav";
+import { AppShell } from "@/components/app-shell";
+import { PageHeader } from "@/components/ui";
+import { prisma } from "@/lib/prisma";
+import { isAccessControlError, requireBusinessContext } from "@/lib/security/business-context";
+
+import { startAuthenticatedReconciliation } from "./actions";
+
+export const dynamic = "force-dynamic";
+export default async function StartReconciliation({ params }: { params: Promise<{ accountId: string }> }) { let context; try { context = await requireBusinessContext(); } catch (error) { if (isAccessControlError(error)) notFound(); throw error; } const account = await prisma.financialAccount.findFirst({ where: { id: (await params).accountId, businessId: context.business.id, isActive: true, ownership: "BUSINESS", type: { in: ["CHECKING", "SAVINGS", "CREDIT_CARD"] } }, select: { id: true, name: true, institutionName: true, lastFour: true, type: true } }); if (!account) notFound(); const detail = [account.institutionName, account.lastFour ? `•••• ${account.lastFour}` : null, account.type.replaceAll("_", " ").toLowerCase()].filter(Boolean).join(" · "); return <AppShell mode="app" destination="money" navigationDestination="reconciliation" businessName={context.business.displayName}><AccountingNav basePath="/app" active="reconciliations"/><PageHeader eyebrow="Reconciliation" title={`Start ${account.name}`} description={detail || "Enter statement facts from the financial institution."}/><form action={startAuthenticatedReconciliation} className="ui-card mt-5 grid max-w-xl gap-4 p-5"><input type="hidden" name="accountId" value={account.id}/><p className="text-sm text-text-muted">Use the statement ending date and balance. Capture Tracker will not create an automatic balancing entry.</p><label className="text-sm font-bold">Statement start date<input required className="ui-input mt-1" type="date" name="statementStartDate"/></label><label className="text-sm font-bold">Statement end date<input required className="ui-input mt-1" type="date" name="statementEndDate"/></label><label className="text-sm font-bold">Statement ending balance<input required className="ui-input mt-1" inputMode="decimal" name="statementEndingBalance" placeholder="0.00"/></label><button className="ui-button ui-button-primary min-h-11 px-4">Start reconciliation</button></form></AppShell>; }

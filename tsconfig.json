@@ -34,6 +34,7 @@
     "node_modules",
     "infra/aws",
     "infra/aws/.test-dist",
-    "infra/aws/cdk.out"
+    "infra/aws/cdk.out",
+    "capture-tracker"
   ]
 }

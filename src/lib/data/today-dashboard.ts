@@ -25,6 +25,7 @@ export type TodayDashboard = {
     status: "positive" | "neutral";
   };
   currentActivity: { income: string; expenses: string; unreviewedTransactions: number; documentAttention: number };
+  setup?: { incomplete: boolean; booksCurrentThrough: string | null };
   isEmptyAccount: boolean;
   taxReserve: {
     value: string;
@@ -143,7 +144,7 @@ export async function getTodayDashboard(
   noStore();
 
   const [business, cashAccounts, estimates, payments, review, entries, tasks] = await Promise.all([
-    prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { displayName: true } }),
+    prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { displayName: true, onboarding: { select: { status: true, booksCurrentThrough: true } } } }),
     prisma.financialAccount.findMany({
       where: { businessId, ownership: "BUSINESS", type: { in: ["CHECKING", "SAVINGS"] }, isActive: true },
       select: { id: true, openingBalance: true, isTaxReserve: true, ledgerAccount: { select: { id: true } } },
@@ -257,6 +258,7 @@ export async function getTodayDashboard(
       status: cash.greaterThan(0) ? "positive" : "neutral",
     },
     currentActivity: { income: formatUsd(income), expenses: formatUsd(expenses), unreviewedTransactions, documentAttention },
+    setup: { incomplete: business.onboarding?.status === "IN_PROGRESS", booksCurrentThrough: business.onboarding?.booksCurrentThrough ? formatDate(business.onboarding.booksCurrentThrough) : null },
     isEmptyAccount: cashAccounts.length === 0 && entries.length === 0,
     taxReserve:
       reserve === null

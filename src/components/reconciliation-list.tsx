@@ -1,0 +1,11 @@
+import Link from "next/link";
+
+import { StatusBadge } from "./ui";
+
+type Item = { id: string | null; accountId: string; accountName: string; institutionName: string | null; lastFour: string | null; accountType: string; statementEndDate: string | null; difference: string | null; status: string; needsReconciliation: boolean };
+const label = (item: Item) => [item.institutionName, item.lastFour ? `•••• ${item.lastFour}` : null, item.accountType.replaceAll("_", " ").toLowerCase()].filter(Boolean).join(" · ");
+
+export function ReconciliationList({ items, basePath = "/app" }: { items: Item[]; basePath?: "/app" | "/demo" }) {
+  if (!items.length) return <section className="ui-card mt-5 p-5"><h2 className="font-bold">No business financial accounts</h2><p className="mt-2 text-sm text-text-muted">Add a business checking, savings, or credit-card account during setup before reconciling.</p></section>;
+  return <section className="mt-5 space-y-3">{items.map((item) => <article key={item.accountId} className="ui-card block p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold">{item.accountName}</h2><p className="mt-1 text-sm text-text-muted">{label(item) || "Business financial account"}</p><p className="mt-2 text-sm text-text-muted">{item.statementEndDate ? `Latest statement ending ${new Date(item.statementEndDate).toLocaleDateString()}` : "No reconciliation has been started for this account."}</p></div><StatusBadge tone={item.needsReconciliation ? "warning" : "success"}>{item.needsReconciliation ? "NEEDS RECONCILIATION" : "COMPLETED"}</StatusBadge></div>{item.id && <p className="money-value mt-4 text-sm font-bold">Difference: ${item.difference}</p>}<div className="mt-4"><Link className="ui-button ui-button-primary min-h-11 px-4" href={item.id && item.needsReconciliation ? `${basePath}/money/reconciliations/${item.id}` : `${basePath}/money/reconciliations/start/${item.accountId}`}>{item.id && item.needsReconciliation ? "Continue reconciliation" : item.needsReconciliation ? "Start reconciliation" : "Start next reconciliation"}</Link></div></article>)}</section>;
+}

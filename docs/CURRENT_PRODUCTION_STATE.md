@@ -9,7 +9,7 @@
 - A fresh encrypted logical backup completed before release lock: AES-256-GCM+scrypt, private-backup upload, checksum verification, and sanitized manifest receipt. Isolated restore verification remains the only approved restore-drill target.
 - Production health liveness and readiness pass. Production remains a private owner pilot with a separate Neon database, private documents bucket, and private backups bucket.
 - V2 supports review-first bookkeeping for CSV evidence, owner activity, reimbursements, payroll evidence and immutable reversals, possible fixed assets and owner-confirmed in-service facts, month/year-end readiness, reconciliation, and a protected CPA package. It does not infer tax, depreciation, legal, payroll, or CPA conclusions.
-- The first-owner bootstrap is closed. There is no supported additional-client/business onboarding flow. Do not create users, businesses, or memberships through database or operator workarounds.
+- The first-owner bootstrap is closed. Additional clients use only the private operator-controlled, email-bound one-time invitation workflow. The operator is allowlisted by secret, never receives tenant membership, and no public signup or database workaround is allowed.
 - August 2026 is not ready to lock: one business-account reconciliation remains unresolved. Use the normal reconciliation workflow; do not bypass, backdate, or force a close.
 
 `quoteready-api` is unrelated infrastructure and is never a Capture Tracker deployment target.

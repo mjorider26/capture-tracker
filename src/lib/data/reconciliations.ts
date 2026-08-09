@@ -1,17 +1,36 @@
 import "server-only";
-import { Prisma } from "../../generated/prisma/client";
+
+import { Prisma } from "@/generated/prisma/client";
 import { unstable_noStore as noStore } from "next/cache";
-import { prisma } from "../prisma";
-import { calculateReconciliationBalances } from "../services/reconciliation-core";
-import { buildStatementActivityCandidates } from "../services/statement-activity-matching-core";
+
+import { prisma } from "@/lib/prisma";
+import { calculateReconciliationBalances } from "@/lib/services/reconciliation-core";
+import { buildStatementActivityCandidates } from "@/lib/services/statement-activity-matching-core";
 
 const validId = (value: string) => /^[A-Za-z0-9_-]{1,191}$/.test(value);
 const money = (value: Pick<Prisma.Decimal, "toFixed">) => value.toFixed(2);
-export type ReconciliationListItem = { id: string; accountName: string; statementStartDate: string; statementEndDate: string; statementEndingBalance: string; calculatedBalance: string; difference: string; status: string; clearedItemCount: number; version: number; completedAt: string | null };
+export type ReconciliationListItem = { id: string | null; accountId: string; accountName: string; institutionName: string | null; lastFour: string | null; accountType: string; statementStartDate: string | null; statementEndDate: string | null; statementEndingBalance: string | null; calculatedBalance: string | null; difference: string | null; status: string; clearedItemCount: number; version: number | null; completedAt: string | null; needsReconciliation: boolean };
 
+/** Every eligible active account gets a card, even before its first reconciliation. */
 export async function getReconciliations(businessId: string): Promise<ReconciliationListItem[]> {
-  noStore(); const records = await prisma.reconciliation.findMany({ where: { businessId }, include: { financialAccount: { select: { name: true } }, items: { where: { status: "CLEARED" }, include: { transaction: { select: { amount: true, direction: true } } } } }, orderBy: [{ statementEndDate: "desc" }, { id: "asc" }] });
-  return records.map((record) => { const balance = calculateReconciliationBalances(record.statementOpeningBalance, record.statementEndingBalance, record.items.map((item) => item.transaction)); return { id: record.id, accountName: record.financialAccount.name, statementStartDate: record.statementStartDate.toISOString(), statementEndDate: record.statementEndDate.toISOString(), statementEndingBalance: money(record.statementEndingBalance), calculatedBalance: money(balance.calculatedBalance), difference: money(balance.difference), status: record.status, clearedItemCount: record.items.length, version: record.version, completedAt: record.completedAt?.toISOString() ?? null }; });
+  noStore();
+  const accounts = await prisma.financialAccount.findMany({
+    where: { businessId, isActive: true, ownership: "BUSINESS", type: { in: ["CHECKING", "SAVINGS", "CREDIT_CARD"] } },
+    include: {
+      reconciliations: {
+        include: { items: { where: { status: "CLEARED" }, include: { transaction: { select: { amount: true, direction: true } } } } },
+        orderBy: [{ statementEndDate: "desc" }, { id: "asc" }],
+        take: 1,
+      },
+    },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+  });
+  return accounts.map((account) => {
+    const record = account.reconciliations[0];
+    if (!record) return { id: null, accountId: account.id, accountName: account.name, institutionName: account.institutionName, lastFour: account.lastFour, accountType: account.type, statementStartDate: null, statementEndDate: null, statementEndingBalance: null, calculatedBalance: null, difference: null, status: "NEEDS_RECONCILIATION", clearedItemCount: 0, version: null, completedAt: null, needsReconciliation: true };
+    const balance = calculateReconciliationBalances(record.statementOpeningBalance, record.statementEndingBalance, record.items.map((item) => item.transaction));
+    return { id: record.id, accountId: account.id, accountName: account.name, institutionName: account.institutionName, lastFour: account.lastFour, accountType: account.type, statementStartDate: record.statementStartDate.toISOString(), statementEndDate: record.statementEndDate.toISOString(), statementEndingBalance: money(record.statementEndingBalance), calculatedBalance: money(balance.calculatedBalance), difference: money(balance.difference), status: record.status, clearedItemCount: record.items.length, version: record.version, completedAt: record.completedAt?.toISOString() ?? null, needsReconciliation: record.status !== "COMPLETED" };
+  });
 }
 
 export async function getReconciliationDetail(businessId: string, reconciliationId: string) {

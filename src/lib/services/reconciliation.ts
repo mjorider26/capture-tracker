@@ -75,6 +75,13 @@ export async function finalizeReconciliation(client: Client, actor: Reconciliati
     const gate = await tx.reconciliation.updateMany({ where: { id: record.id, businessId: actor.businessId, status: { in: editable }, version: parsed.data.expectedVersion }, data: { status: "COMPLETED", completedAt: new Date(), completedByMembershipId: actor.actorUserId, version: { increment: 1 } } });
     if (gate.count !== 1) return { ok: false, code: "CONFLICT", message: "This reconciliation changed. Refresh and try again." };
     await audit(tx, actor, record, "UPDATE", { status: record.status, version: record.version }, { status: "COMPLETED", version: record.version + 1 }, { finalization: true, calculatedBalance: balances.calculatedBalance.toFixed(2), difference: balances.difference.toFixed(2), selectedItemCount: record.items.length });
+    // A first reconciliation can advance an invited client's setup gate, but
+    // only after the same $0.00 finalization boundary used for every tenant.
+    const onboarding = await tx.businessOnboarding.findUnique({ where: { businessId: actor.businessId } });
+    if (onboarding?.cutoverDate && !onboarding.initialReconciliationComplete) {
+      const complete = onboarding.openingBalancesPosted && onboarding.ownerMoneyInitialized && onboarding.payrollYtdEstablished && onboarding.fixedAssetsReviewed;
+      await tx.businessOnboarding.update({ where: { businessId: actor.businessId }, data: { initialReconciliationComplete: true, status: complete ? "COMPLETED" : "IN_PROGRESS", completedAt: complete ? new Date() : null, booksCurrentThrough: complete ? record.statementEndDate : null } });
+    }
     return { ok: true, reconciliationId: record.id, nextVersion: record.version + 1, calculatedBalance: balances.calculatedBalance.toFixed(2), difference: balances.difference.toFixed(2), status: "COMPLETED" };
   }); } catch { return { ok: false, code: "INVALID", message: "The reconciliation could not be finalized safely." }; }
 }

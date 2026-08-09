@@ -1,1 +1,15 @@
-"use server"; import { revalidatePath } from "next/cache"; import { requireBusinessContext } from "@/lib/security/business-context"; import { saveOnboarding } from "@/lib/services/pilot-readiness"; export async function saveOnboardingAction(_: {ok:boolean;message?:string}, form: FormData) { try { const c=await requireBusinessContext(); const ok=await saveOnboarding({businessId:c.business.id,actorUserId:c.user.id},form); if(ok) revalidatePath("/app/onboarding"); return {ok,message:ok?"Fictional setup saved.":"Check the required setup values."}; } catch { return {ok:false,message:"Setup could not be authorized."}; } }
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { requireBusinessContext } from "@/lib/security/business-context";
+import { saveClientCutover } from "@/lib/services/client-cutover";
+
+export async function saveOnboardingAction(_: { ok: boolean; message: string }, form: FormData) {
+  try {
+    const context = await requireBusinessContext();
+    const result = await saveClientCutover({ businessId: context.business.id, actorUserId: context.user.id, membershipId: context.membership.id }, form);
+    if (result.ok) { revalidatePath("/app/onboarding"); revalidatePath("/app/today"); revalidatePath("/app/money/reconciliations"); }
+    return result;
+  } catch { return { ok: false, message: "Setup could not be authorized." }; }
+}

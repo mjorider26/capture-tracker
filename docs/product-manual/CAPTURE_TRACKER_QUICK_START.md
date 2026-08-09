@@ -3,6 +3,7 @@
 **SPENDING TRACKED. BUSINESS GROWN.** · Private pilot · V2.0.0
 
 1. Open the private workspace URL supplied by the owner and sign in.
+   - If you are a new client owner, use the one-time invitation link sent manually by the platform operator. It is email-bound and expires after 72 hours.
 2. Read **Today** for available business cash, review items, documents, and tax-planning signals.
 3. In **Money**, use **Import transactions** to upload your bank or card CSV, review the detected columns, and confirm the prepared activity. Then classify only the exceptions before posting them.
 4. In **Documents**, take a receipt photo or upload a PDF/JPEG/PNG (10 MiB maximum). Wait for the private security scan to refresh to **Ready**, then review and link it.

@@ -30,6 +30,8 @@ export function TodayExperience({
 
       <FinancialBriefing dashboard={dashboard} basePath={basePath} />
 
+      {dashboard.setup?.incomplete ? <section className="ui-card mt-5 border border-status-warning p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-bold">Books setup incomplete</p><p className="mt-1 text-sm text-text-muted">Opening balances, cutover facts, and an initial exact-zero reconciliation must be completed before books are current.</p></div><ButtonLink href={`${basePath}/onboarding`} tone="secondary">Continue setup</ButtonLink></div></section> : null}
+
       {dashboard.isEmptyAccount ? (
         <FirstTransaction basePath={basePath} />
       ) : null}

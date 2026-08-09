@@ -24,6 +24,14 @@ enum BusinessRole {
   ADVISOR
 }
 
+/// Platform onboarding authority is intentionally separate from BusinessRole.
+enum OperatorInvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
 enum AccountType {
   CHECKING
   SAVINGS
@@ -389,6 +397,7 @@ model Business {
   askAiFeedback              AskAiFeedback[]
   askAiEvents                AskAiEvent[]
   onboarding                 BusinessOnboarding?
+  cutover                    BusinessCutover?
   settings                   BusinessSettings?
   settingsHistory            BusinessSettingsHistory[]
   exportAudits               ExportAudit[]
@@ -409,6 +418,28 @@ model Business {
   merchantCategoryRules      MerchantCategoryRule[]
 
   @@index([legalName])
+}
+
+/// A private, operator-created invitation. Only the one-way token hash is persisted.
+model OperatorInvitation {
+  id                  String                   @id @default(cuid())
+  invitedEmail        String                   @db.VarChar(320)
+  ownerDisplayName    String                   @db.VarChar(120)
+  businessLegalName   String                   @db.VarChar(160)
+  businessDisplayName String                   @db.VarChar(160)
+  tokenHash           String                   @unique @db.VarChar(64)
+  createdByUserId     String
+  acceptedByUserId    String?
+  provisionedBusinessId String?                @unique
+  status              OperatorInvitationStatus @default(PENDING)
+  createdAt           DateTime                 @default(now())
+  expiresAt           DateTime
+  acceptedAt          DateTime?
+  revokedAt           DateTime?
+  version             Int                      @default(1)
+
+  @@index([invitedEmail, status, expiresAt])
+  @@index([createdByUserId, status, createdAt])
 }
 
 model ProductionBootstrap {
@@ -1677,6 +1708,13 @@ model BusinessOnboarding {
   description           String?          @db.VarChar(500)
   fictionalAcknowledged Boolean          @default(false)
   chartConfirmed        Boolean          @default(false)
+  cutoverDate           DateTime?
+  openingBalancesPosted Boolean          @default(false)
+  ownerMoneyInitialized Boolean          @default(false)
+  payrollYtdEstablished Boolean          @default(false)
+  fixedAssetsReviewed   Boolean          @default(false)
+  initialReconciliationComplete Boolean  @default(false)
+  booksCurrentThrough   DateTime?
   status                OnboardingStatus @default(IN_PROGRESS)
   completedAt           DateTime?
   createdAt             DateTime         @default(now())
@@ -1686,6 +1724,20 @@ model BusinessOnboarding {
   actor    BusinessMember @relation("BusinessOnboardingActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
 
   @@unique([businessId, id])
+}
+
+/// Cutover facts are bookkeeping inputs, not a QuickBooks replica or tax conclusion.
+model BusinessCutover {
+  id              String   @id @default(cuid())
+  businessId      String   @unique
+  startDate       DateTime
+  sourceReference String?  @db.VarChar(300)
+  openingJournalId String? @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  version         Int      @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
 }
 
 model BusinessSettings {

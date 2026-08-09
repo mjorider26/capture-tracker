@@ -2,9 +2,9 @@
 
 ## Decision and release baseline
 
-**Do not cut over a new client in V2.0.0.** The application release is locked at `v2.0.0` → `6883719f82796a919e53f080d2dcf15f2fc13b0a`; exact-SHA CI `31289437348` passed, the production application Worker is `02c67662-2968-47d6-bd44-403f48bfae5b`, and production has 22 migrations applied. The decisive blocker is the absence of an approved additional-client tenant-creation and invitation workflow.
+**Do not cut over a new client until the named invitation is explicitly authorized.** V2 now uses a private operator-controlled, email-bound one-time invitation; it does not provide public signup, a tenant admin console, or manual database provisioning. The operator copies the invitation URL for manual delivery. The invitation expires after 72 hours, can be revoked, stores only a token hash, and creates the client business only after authenticated, email-matched acceptance.
 
-This document is a preparation checklist, not authority to enter client data. Use it only after a separately approved onboarding capability and explicit written authorization for the named client.
+This document is a preparation checklist, not authority to enter client data. Use it only after explicit written authorization for the named client.
 
 ## Recommended QuickBooks migration approach
 
@@ -30,9 +30,9 @@ Use a controlled opening-balance cutover with current-year detail when the clien
 
 ## Cutover checklist
 
-- [ ] Approved onboarding capability exists and owner authorizes the named-client cutover.
+- [ ] Authorized platform operator creates the email-bound one-time invitation and owner authorizes the named-client cutover.
 - [ ] Production health/readiness, V2 tag, CI, migrations, and fresh encrypted backup receipt are verified.
-- [ ] Tenant created only through the approved workflow; first login and tenant isolation verified.
+- [ ] Tenant created only through invitation acceptance; first login and tenant isolation verified. The platform operator is not a business member.
 - [ ] Business configuration and accounting foundation reviewed with the client/CPA.
 - [ ] Source reports archived outside the application with appropriate access controls.
 - [ ] Opening balances and authorized in-scope details entered, reviewed, and reconciled.

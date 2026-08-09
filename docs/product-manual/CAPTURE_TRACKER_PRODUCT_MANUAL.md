@@ -10,7 +10,7 @@ Private-pilot client guide · V2.0.0 · Documented source: `6883719f82796a919e53
 
 ## Start here
 
-Use the private workspace URL supplied by your owner. Sign in with your existing email and password. In an initialized production workspace, **Create account** is intentionally unavailable; ask the workspace owner to arrange access. The one-time first-owner setup closes automatically after the workspace is initialized. There is no self-service password-reset flow today—contact the workspace owner if you cannot sign in. Sign out from the workspace when you finish on a shared device.
+Use the private workspace URL supplied by your owner. Sign in with your existing email and password. New client owners receive a one-time, email-bound invitation link from the platform operator; the operator sends that link manually and it expires after 72 hours. There is no public signup. The original first-owner setup closes automatically after the workspace is initialized. There is no self-service password-reset flow today—contact the workspace owner if you cannot sign in. Sign out from the workspace when you finish on a shared device.
 
 ## Navigation
 
