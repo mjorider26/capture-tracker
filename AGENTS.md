@@ -6,6 +6,17 @@ Capture Tracker is a mobile-first bookkeeping, S-corporation tax-planning, and w
 
 The application uses Next.js App Router, TypeScript, PostgreSQL, Prisma 7 with `@prisma/adapter-pg`, Zod, Vitest, and Better Auth. Prisma and authentication access are server-only. Business scope is derived on the server and must never be trusted from browser input.
 
+## Capture Tracker skill routing
+
+Use the repository-local skills in `.agents/skills` for the applicable work. Use multiple skills when work crosses domains.
+
+- `$capture-tracker-engineering` — application architecture, accounting implementation, database work, financial workflows, services, and testing.
+- `$capture-tracker-security` — authentication, authorization, tenant isolation, documents, secrets, public/tokenized routes, and consequential financial actions.
+- `$capture-tracker-product-ui` — authenticated application UX, responsive/mobile behavior, product design, financial information presentation, and accessibility.
+- `$capture-tracker-release` — CI, migrations, backups, Cloudflare production releases, production acceptance, and rollback/recovery.
+
+Examples: CPA document-access workflow: engineering + security + product-ui; production financial migration: engineering + security + release; new authenticated Owner Money workflow: engineering + security + product-ui.
+
 This Next.js version has breaking changes. Read the relevant guide in `node_modules/next/dist/docs/` before writing or changing Next.js-specific code, and heed deprecation notices.
 
 ## Security and data rules
