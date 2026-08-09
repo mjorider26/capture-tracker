@@ -50,6 +50,7 @@ export function FinancialReports({
             {label}
           </Link>
         ))}
+        {basePath === "/app" && <Link className="min-h-10 shrink-0 rounded bg-surface-secondary px-3 py-2 text-sm font-bold text-text-muted" href="/app/reports/operations">Operations</Link>}
       </nav>
       <form className="workspace-filter mt-4 flex flex-wrap gap-2 rounded-[var(--radius-md)] p-3" method="get">
         <select className="ui-input w-auto" name="period" defaultValue={reports.range.period}>
