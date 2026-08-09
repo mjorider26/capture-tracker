@@ -75,3 +75,23 @@ export async function matchPayrollEvidence(client: Client, actor: Actor, input: 
     return { ok: true as const, status };
   }); } catch { return { ok: false, message: "The payroll evidence could not be matched safely." }; }
 }
+
+/** Creates an immutable reversing journal; the original payroll result is retained for audit. */
+export async function reversePayrollRun(client: Client, actor: Actor, input: { payrollRunId?: string; reversalDate?: string; confirmation?: string }): Promise<{ ok: true; journalEntryId: string } | { ok: false; message: string }> {
+  if (actor.role !== "OWNER" || input.confirmation !== "on" || !input.payrollRunId || !/^\d{4}-\d{2}-\d{2}$/.test(input.reversalDate ?? "")) return { ok: false, message: "Owner confirmation and a valid reversal date are required." };
+  const reversalDate = dateAtNoon(input.reversalDate!);
+  try { return await client.$transaction(async (tx) => {
+    const run = await tx.payrollRun.findFirst({ where: { id: input.payrollRunId, businessId: actor.businessId, status: "PROCESSED" }, include: { journalEntry: { include: { lines: { orderBy: { lineNumber: "asc" } }, reversedByEntries: { select: { id: true } } } } } });
+    if (!run?.journalEntry) return { ok: false as const, message: "That processed payroll result is unavailable for reversal." };
+    if (run.journalEntry.reversedByEntries.length || run.journalEntry.reversedAt) return { ok: false as const, message: "This payroll result was already reversed." };
+    const period = await tx.accountingPeriod.findFirst({ where: { businessId: actor.businessId, status: "OPEN", startsAt: { lte: reversalDate }, endsAt: { gte: reversalDate } }, select: { id: true } });
+    if (!period) return { ok: false as const, message: "The reversal date belongs to a closed accounting period." };
+    const reversal = await tx.journalEntry.create({ data: { businessId: actor.businessId, accountingPeriodId: period.id, entryNumber: `PAY-REV-${run.id}`, entryDate: reversalDate, description: `Reversal of payroll result ${run.payDate.toISOString().slice(0, 10)}`, status: "DRAFT", sourceType: "REVERSING_ENTRY", sourceEntityId: run.id, reversalOfEntryId: run.journalEntry.id, approvedByMembershipId: actor.actorUserId } });
+    await tx.journalLine.createMany({ data: run.journalEntry.lines.map((line, index) => ({ businessId: actor.businessId, journalEntryId: reversal.id, ledgerAccountId: line.ledgerAccountId, lineNumber: index + 1, debitAmount: line.creditAmount, creditAmount: line.debitAmount, memo: "Payroll reversal" })) });
+    await tx.journalEntry.update({ where: { id: reversal.id }, data: { status: "POSTED", postedAt: new Date() } });
+    await tx.journalEntry.update({ where: { id: run.journalEntry.id }, data: { reversedAt: new Date(), version: { increment: 1 } } });
+    await tx.payrollRun.update({ where: { id: run.id }, data: { status: "VOIDED", version: { increment: 1 } } });
+    await tx.auditEvent.create({ data: { actorType: "USER", businessId: actor.businessId, actorMembershipId: actor.actorUserId, action: "VOID", entityType: "PayrollRun", entityId: run.id, afterJson: { status: "VOIDED", reversalJournalEntryId: reversal.id, originalJournalEntryId: run.journalEntry.id }, metadataJson: { executionMode: actor.executionMode, accountingEffect: "immutable-reversal" } } });
+    return { ok: true as const, journalEntryId: reversal.id };
+  }); } catch (error) { if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return { ok: false, message: "This payroll result was already reversed." }; return { ok: false, message: "The payroll reversal could not be recorded safely. Refresh and try again." }; }
+}
