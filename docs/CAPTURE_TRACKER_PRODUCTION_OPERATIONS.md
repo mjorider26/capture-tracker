@@ -32,7 +32,7 @@ The earlier invitation-based first-owner production flow is superseded. Legacy o
 - Never run `prisma migrate dev`, `prisma db push`, reset, or seed against production.
 - Use a direct, unpooled connection only in approved migration or backup operator workflows; the Worker uses its approved runtime database path.
 - Do not copy staging, demo, or local PostgreSQL data into production.
-- The required migration inventory is derived from the source checkout. Production has all 22 source migrations applied, including `20260809013000_add_fixed_asset_approval`; the count is release evidence, not a substitute for `prisma migrate status`.
+- The required migration inventory is derived from the source checkout. Production has all 23 source migrations applied, including `20260809180000_add_operator_invitations_and_cutover`; the count is release evidence, not a substitute for `prisma migrate status`.
 
 ## Backup and recovery
 
@@ -63,13 +63,13 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 ### Scanner and document-removal operations
 
 - Production uses the private Queue `capture-tracker-production-document-scan`, its isolated DLQ `capture-tracker-production-document-scan-dlq`, and a private ClamAV Container on `standard-1`, `max_instances=1`. No document bytes appear in Queue messages or public URLs.
-- The app Worker is `02c67662-2968-47d6-bd44-403f48bfae5b`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
+- The app Worker is `19bad3aa-5511-4282-b500-5e17c30c5c15`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
 - The scanner has a 15-minute warm window. A measured cold run spent about 93.77 seconds on FreshClam/ClamAV readiness; Queue wait was about 1.63 seconds, private R2 fetch about 1.24 seconds, and scan time about 215 ms. Recheck a scan still pending beyond 60 seconds with sanitized Worker and Queue logs; do not weaken quarantine.
 - Queue deliveries are idempotent and version-aware. Scanner unavailable, timeout, malformed response, or exhausted retries leaves the document quarantined and unreadable. Consumer retries are bounded at three with a 30-second delay, then route to the isolated DLQ.
 - Promotion is database-authoritative: validate the current document version and CLEAN result, commit ACTIVE plus private-read eligibility, then clean up the quarantine object. A stale delivery cannot promote a deleted or replaced document.
 - Removal is database-authoritative: tenant and relationship checks, DELETED tombstone plus private-read revocation plus version increment, commit, then exact-object R2 cleanup. A cleanup failure never resurrects bytes or grants; stale Queue work acknowledges the tombstone safely.
 - Sanitized observability covers Worker failures, queue retries/DLQ, scanner readiness and latency, scan finalization/promotion recovery, and R2 cleanup/removal failures. Never log bytes, object keys, credentials, or raw antivirus output.
-- The encrypted logical-backup and disposable-restore drill was revalidated with all 22 migrations: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, and a disposable restore with matching sanitized counts. Plaintext archives remain temporary only.
+- The encrypted logical-backup and disposable-restore drill was revalidated with all 23 migrations: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, and a disposable restore with matching sanitized counts. Plaintext archives remain temporary only.
 - Current provider pricing is usage-based under the existing Workers Paid plan; no separate scanner subscription is used. Conservative incremental estimate with a 15-minute warm window is about $0.03 for 25 scans/month, $1.32 for 100, and $9.53 for 500. Actual per-container usage analytics are provider-side and must be checked before billing decisions.
 - The accepted mobile production path confirms automatic scan-status refresh from pending to terminal state without manual page refresh. Continue to measure and record real warm-path timings through sanitized operational telemetry; do not present an estimate as a measured timing.
 
