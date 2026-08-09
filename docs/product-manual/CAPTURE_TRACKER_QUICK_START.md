@@ -12,6 +12,7 @@
 7. Run **Weekly Review** each week and resolve linked work before marking the review complete.
 8. In **Taxes → Fixed assets**, record possible assets and confirm placed-in-service facts only after review. Tax and depreciation treatment remain CPA review items.
 9. On a phone, use Today/Money/Documents/Reports and **More** for Taxes, Weekly Review, Reconciliation, Activity, and Settings.
+10. To install Capture Tracker on iPhone or iPad, open `/install` in Safari, tap Share, choose **Add to Home Screen**, enable **Open as Web App** if offered, then tap **Add**. Installation is optional.
 
 Money records financial activity; imported bank activity remains separate from posted accounting entries until you approve a category. Documents stores evidence; Reports summarizes complete accounting results. Taxes is planning only.
 

@@ -6,7 +6,7 @@
 
 The original first-owner bootstrap remains closed. Additional clients are created only through `/operator/onboarding` by an authenticated account whose normalized email appears in the private `CAPTURE_TRACKER_OPERATOR_EMAILS` allowlist. Business ownership never grants operator authority, and an operator never becomes a member of the client business.
 
-The operator creates one email-bound invitation, copies its link, and sends it manually. Capture Tracker sends no email. Invitations use a cryptographically random URL token; only its SHA-256 hash is stored. An invitation expires after 72 hours, can be revoked or explicitly expired, is single-use, and is accepted only by an authenticated account with the invited email.
+The operator creates one email-bound invitation, copies its link, and sends it manually until a transactional-email provider is separately authorized and configured. Invitations use a cryptographically random URL token; only its SHA-256 hash is stored. An invitation expires after 72 hours, can be revoked or explicitly expired, is single-use, and is accepted only by an authenticated account with the invited email.
 
 ## Acceptance and provisioning
 
@@ -17,5 +17,9 @@ The new owner is sent to the ordinary cutover setup, not an empty dashboard. The
 ## Setup completion
 
 Capture Tracker shows **Books setup incomplete** until the approved opening balance, Owner Money state, applicable payroll YTD facts, fixed-asset review, and an initial normal reconciliation are complete. Financial accounts reconcile only from statement facts and finalize only at an exact `$0.00` difference. Current-year checking/card CSV files use the existing duplicate-safe review and posting workflow.
+
+## Client experience
+
+The invitation and account-creation pages welcome the owner into a guided setup rather than an empty dashboard. The setup path explains Business, Accounts, Starting Books, Owner Money, Payroll, Fixed Assets, Reconcile, and Finish. Installation is optional: iPhone and iPad owners can open `/install` in Safari, use Share, choose **Add to Home Screen**, enable **Open as Web App** when offered, and tap **Add**. After the exact-zero reconciliation gate completes, Capture Tracker presents a reusable setup-complete screen and directs the owner to Today. An operator may apply the presentation-only **Founding Customer · Customer #001** designation when creating the invitation; it has no accounting or authorization effect.
 
 Do not use database inserts, a backdoor user, transferred invitation, public signup, or tenant-context change as an onboarding workaround. Do not upload source reports, create client accounts, or issue a real invitation until separately authorized.

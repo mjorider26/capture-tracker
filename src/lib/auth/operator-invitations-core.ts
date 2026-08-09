@@ -7,6 +7,7 @@ const createSchema = z.object({
   ownerDisplayName: z.string().trim().min(1).max(120),
   businessLegalName: z.string().trim().min(1).max(160),
   businessDisplayName: z.string().trim().min(1).max(160),
+  foundingCustomer: z.boolean().optional().default(false),
 });
 
 export type CreateOperatorInvitationInput = z.infer<typeof createSchema>;

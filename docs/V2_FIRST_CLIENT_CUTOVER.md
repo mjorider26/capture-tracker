@@ -40,6 +40,7 @@ Use a controlled opening-balance cutover with current-year detail when the clien
 - [ ] One authorized receipt proves the quarantine-to-Ready document path.
 - [ ] Reports and trial balance reviewed against the agreed source cutoff.
 - [ ] Owner approves cutover completion and the first Weekly Review date.
+- [ ] Client optionally installs Capture Tracker from `/install` on iPhone/iPad, then uses Today for exceptions, Weekly Review once a week, and normal reconciliation at month-end.
 
 ## First seven days of monitoring
 

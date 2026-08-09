@@ -360,6 +360,8 @@ model Business {
   fiscalYearStartMonth Int      @default(1)
   timezone             String   @default("America/Los_Angeles")
   currency             String   @default("USD")
+  /// Presentation-only designation. It is never used for authorization or accounting.
+  customerExperience   String   @default("STANDARD") @db.VarChar(32)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   version              Int      @default(1)
@@ -427,6 +429,8 @@ model OperatorInvitation {
   ownerDisplayName    String                   @db.VarChar(120)
   businessLegalName   String                   @db.VarChar(160)
   businessDisplayName String                   @db.VarChar(160)
+  /// Carries a presentation-only designation into the new workspace.
+  customerExperience  String                   @default("STANDARD") @db.VarChar(32)
   tokenHash           String                   @unique @db.VarChar(64)
   createdByUserId     String
   acceptedByUserId    String?
@@ -436,6 +440,9 @@ model OperatorInvitation {
   expiresAt           DateTime
   acceptedAt          DateTime?
   revokedAt           DateTime?
+  emailDeliveryStatus String                   @default("MANUAL_REQUIRED") @db.VarChar(32)
+  emailDeliveryAttemptedAt DateTime?
+  emailDeliveryError  String?                  @db.VarChar(200)
   version             Int                      @default(1)
 
   @@index([invitedEmail, status, expiresAt])

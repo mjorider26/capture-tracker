@@ -20,7 +20,8 @@ export async function createOperatorInvitation(actor: InvitationActor, input: un
   if (!parsed) throw new InvitationError("INVALID");
   const token = newInvitationToken();
   const tokenHash = await invitationTokenHash(token);
-  const invitation = await client.operatorInvitation.create({ data: { ...parsed, invitedEmail: normalizeOperatorEmail(parsed.invitedEmail), tokenHash, createdByUserId: actor.userId, expiresAt: invitationExpiresAt() } });
+  const { foundingCustomer, ...details } = parsed;
+  const invitation = await client.operatorInvitation.create({ data: { ...details, customerExperience: foundingCustomer ? "FOUNDING_CUSTOMER" : "STANDARD", invitedEmail: normalizeOperatorEmail(parsed.invitedEmail), tokenHash, createdByUserId: actor.userId, expiresAt: invitationExpiresAt() } });
   return { invitation: presentInvitation(invitation), invitationUrl: `${origin}/invite/${token}` };
 }
 
@@ -67,7 +68,7 @@ export async function acceptOperatorInvitation({ token, userId, email, client = 
       const accepted = await tx.operatorInvitation.updateMany({ where: { id: invitation.id, status: "PENDING", version: invitation.version, acceptedAt: null, revokedAt: null, expiresAt: { gt: now } }, data: { status: "ACCEPTED", acceptedAt: now, acceptedByUserId: userId, provisionedBusinessId: businessId, version: { increment: 1 } } });
       if (accepted.count !== 1) throw new InvitationError("CONFLICT");
 
-      await tx.business.create({ data: { id: businessId, legalName: invitation.businessLegalName, displayName: invitation.businessDisplayName, taxElection: "S_CORP", timezone: "America/Los_Angeles", currency: "USD" } });
+      await tx.business.create({ data: { id: businessId, legalName: invitation.businessLegalName, displayName: invitation.businessDisplayName, customerExperience: invitation.customerExperience, taxElection: "S_CORP", timezone: "America/Los_Angeles", currency: "USD" } });
       await tx.businessMember.create({ data: { businessId, userId, role: "OWNER" } });
       await tx.businessOnboarding.create({ data: { businessId, actorUserId: userId, ownerDisplayName: invitation.ownerDisplayName, chartConfirmed: true, status: "IN_PROGRESS", cutoverDate: now } });
       await tx.businessSettings.create({ data: { businessId } });
@@ -82,7 +83,7 @@ export async function acceptOperatorInvitation({ token, userId, email, client = 
   }
 }
 
-function presentInvitation(record: { id: string; invitedEmail: string; businessDisplayName: string; status: string; createdAt: Date; expiresAt: Date; acceptedAt: Date | null; revokedAt: Date | null }) {
+function presentInvitation(record: { id: string; invitedEmail: string; businessDisplayName: string; status: string; createdAt: Date; expiresAt: Date; acceptedAt: Date | null; revokedAt: Date | null; emailDeliveryStatus: string; emailDeliveryAttemptedAt: Date | null; emailDeliveryError: string | null }) {
   const expired = record.status === "PENDING" && record.expiresAt <= new Date();
-  return { id: record.id, invitedEmail: record.invitedEmail, businessDisplayName: record.businessDisplayName, status: expired ? "EXPIRED" : record.status, createdAt: record.createdAt, expiresAt: record.expiresAt, acceptedAt: record.acceptedAt, revokedAt: record.revokedAt };
+  return { id: record.id, invitedEmail: record.invitedEmail, businessDisplayName: record.businessDisplayName, status: expired ? "EXPIRED" : record.status, createdAt: record.createdAt, expiresAt: record.expiresAt, acceptedAt: record.acceptedAt, revokedAt: record.revokedAt, emailDeliveryStatus: record.emailDeliveryStatus, emailDeliveryAttemptedAt: record.emailDeliveryAttemptedAt, emailDeliveryError: record.emailDeliveryError };
 }

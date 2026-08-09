@@ -13,7 +13,7 @@ const text = (v: FormDataEntryValue | null, max: number) => typeof v === "string
 
 export async function getPilotState(businessId: string) {
   const [business, onboarding, settings, exports] = await Promise.all([
-    prisma.business.findUnique({ where: { id: businessId }, select: { displayName: true, legalName: true, timezone: true, fiscalYearStartMonth: true, currency: true } }),
+    prisma.business.findUnique({ where: { id: businessId }, select: { displayName: true, legalName: true, timezone: true, fiscalYearStartMonth: true, currency: true, customerExperience: true } }),
     prisma.businessOnboarding.findUnique({ where: { businessId } }),
     prisma.businessSettings.findUnique({ where: { businessId } }),
     prisma.exportAudit.findMany({ where: { businessId }, orderBy: { createdAt: "desc" }, take: 10 }),

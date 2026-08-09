@@ -6,7 +6,7 @@ import { useActionState } from "react";
 type State = { ok: boolean; message?: string };
 type Action = (state: State, form: FormData) => Promise<State>;
 const initial: State = { ok: false };
-type PilotState = { business: { displayName: string; timezone: string; fiscalYearStartMonth: number } | null; onboarding: { ownerDisplayName: string; description: string | null; fictionalAcknowledged: boolean; chartConfirmed: boolean } | null; settings: { defaultReportPeriod: string; weeklyReviewDay: number; retentionMonths: number; updatedAt: Date } | null };
+type PilotState = { business: { displayName: string; timezone: string; fiscalYearStartMonth: number; customerExperience?: string } | null; onboarding: { ownerDisplayName: string; description: string | null; fictionalAcknowledged: boolean; chartConfirmed: boolean } | null; settings: { defaultReportPeriod: string; weeklyReviewDay: number; retentionMonths: number; updatedAt: Date } | null };
 
 export function SetupForm({ state, action }: { state: PilotState; action: Action }) {
   const [result, submit] = useActionState(action, initial); const b = state.business; const o = state.onboarding;

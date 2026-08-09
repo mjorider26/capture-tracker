@@ -15,9 +15,10 @@ export const metadata: Metadata = {
     title: "Capture Tracker",
     statusBarStyle: "default",
   },
+  manifest: "/manifest.webmanifest",
 };
 
-export const viewport: Viewport = { themeColor: "#061321" };
+export const viewport: Viewport = { themeColor: "#061321", width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({
   children,

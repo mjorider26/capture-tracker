@@ -15,9 +15,9 @@ export async function createInvitationAction(_: State, form: FormData): Promise<
     const requestHeaders = await headers();
     const origin = requestHeaders.get("origin") ?? process.env.BETTER_AUTH_URL;
     if (!origin) return { ok: false, message: "Invitation could not be created." };
-    const result = await createOperatorInvitation(actor, { invitedEmail: text(form, "invitedEmail"), ownerDisplayName: text(form, "ownerDisplayName"), businessLegalName: text(form, "businessLegalName"), businessDisplayName: text(form, "businessDisplayName") }, origin);
+    const result = await createOperatorInvitation(actor, { invitedEmail: text(form, "invitedEmail"), ownerDisplayName: text(form, "ownerDisplayName"), businessLegalName: text(form, "businessLegalName"), businessDisplayName: text(form, "businessDisplayName"), foundingCustomer: form.get("foundingCustomer") === "on" }, origin);
     revalidatePath("/operator/onboarding");
-    return { ok: true, message: "Invitation created. Copy the link now and send it manually.", invitationUrl: result.invitationUrl };
+    return { ok: true, message: "Invitation created. Transactional email is not configured, so copy the link and send it manually.", invitationUrl: result.invitationUrl };
   } catch { return { ok: false, message: "Invitation could not be created." }; }
 }
 
