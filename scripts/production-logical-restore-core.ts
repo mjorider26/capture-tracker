@@ -7,6 +7,20 @@ export type MigrationInventory = {
   digest: string;
 };
 
+export type SourceMigrationInventory = MigrationInventory & {
+  checksums: Record<string, string>;
+};
+
+export const productionBackupModes = ["PRE_MIGRATION_RELEASE", "POST_RELEASE"] as const;
+
+export type ProductionBackupMode = typeof productionBackupModes[number];
+
+export type BackupMigrationState = {
+  productionMigrationInventory: MigrationInventory;
+  pendingMigrationNames: string[];
+  databaseMigrationStateDigest: string;
+};
+
 export type SourceSchemaInventory = MigrationInventory & {
   tables: string[];
   functions: string[];
@@ -31,7 +45,7 @@ export type SanitizedDataCounts = {
   journalLines: number;
 };
 
-export type LogicalBackupManifest = {
+export type LegacyLogicalBackupManifest = {
   schemaVersion: 2;
   timestamp: string;
   database: string;
@@ -45,6 +59,26 @@ export type LogicalBackupManifest = {
   dataCounts: SanitizedDataCounts;
   archive: string;
 };
+
+export type LogicalBackupManifest = {
+  schemaVersion: 3;
+  timestamp: string;
+  database: string;
+  backupMode: ProductionBackupMode;
+  authorizedReleaseCommit: string;
+  postgresVersion: string;
+  archiveSizeBytes: number;
+  sha256: string;
+  encryption: "AES-256-GCM+scrypt";
+  sourceMigrationInventory: MigrationInventory;
+  productionMigrationInventory: MigrationInventory;
+  pendingMigrationNames: string[];
+  databaseMigrationStateDigest: string;
+  dataCounts: SanitizedDataCounts;
+  archive: string;
+};
+
+export type AnyLogicalBackupManifest = LegacyLogicalBackupManifest | LogicalBackupManifest;
 
 export type LogicalBackupReceipt = {
   archiveKey: string;
@@ -109,12 +143,31 @@ export function migrationInventoryFromNames(names: string[]): MigrationInventory
   };
 }
 
-export function deriveSourceSchemaInventory(projectRoot = process.cwd()): SourceSchemaInventory {
+export function sourceMigrationInventoryFromChecksums(migrations: Array<{ name: string; checksum: string }>): SourceMigrationInventory {
+  const names = migrations.map((migration) => migration.name);
+  const inventory = migrationInventoryFromNames(names);
+  if (names.length !== new Set(names).size || migrations.some((migration) => !migration.checksum)) {
+    throw new Error("SOURCE_MIGRATION_INVENTORY_REFUSED");
+  }
+  const checksums = Object.fromEntries(migrations.map((migration) => [migration.name, migration.checksum]));
+  if (Object.keys(checksums).length !== inventory.names.length) throw new Error("SOURCE_MIGRATION_INVENTORY_REFUSED");
+  return { ...inventory, checksums };
+}
+
+export function deriveSourceMigrationInventory(projectRoot = process.cwd()): SourceMigrationInventory {
   const migrationsRoot = join(projectRoot, "prisma", "migrations");
   const names = readdirSync(migrationsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
-  const migrationInventory = migrationInventoryFromNames(names);
+  return sourceMigrationInventoryFromChecksums(names.map((name) => ({
+    name,
+    checksum: createHash("sha256").update(readFileSync(join(migrationsRoot, name, "migration.sql"))).digest("hex"),
+  })));
+}
+
+export function deriveSourceSchemaInventory(projectRoot = process.cwd()): SourceSchemaInventory {
+  const migrationsRoot = join(projectRoot, "prisma", "migrations");
+  const migrationInventory = deriveSourceMigrationInventory(projectRoot);
   const source = migrationInventory.names.map((name) => {
     const path = join(migrationsRoot, name, "migration.sql");
     return readFileSync(path, "utf8");
@@ -156,32 +209,122 @@ export function assertCompletedMigrationState(
   return databaseMigrationStateDigest(records);
 }
 
+export function assertProductionBackupMode(value: string | undefined): ProductionBackupMode {
+  if (!productionBackupModes.includes(value as ProductionBackupMode)) throw new Error("BACKUP_MODE_REFUSED");
+  return value as ProductionBackupMode;
+}
+
+function inventoriesMatch(left: MigrationInventory, right: MigrationInventory) {
+  return left.digest === right.digest && left.names.join("\n") === right.names.join("\n");
+}
+
+function assertInventoryShape(inventory: MigrationInventory) {
+  const reconstructed = migrationInventoryFromNames(inventory.names);
+  if (!inventoriesMatch(inventory, reconstructed)) throw new Error("BACKUP_MANIFEST_REFUSED");
+}
+
+export function assertBackupMigrationState({
+  mode,
+  source,
+  records,
+  authorizedReleaseCommit,
+}: {
+  mode: ProductionBackupMode;
+  source: SourceMigrationInventory;
+  records: MigrationRecord[];
+  authorizedReleaseCommit: string;
+}): BackupMigrationState {
+  if (!/^[a-f0-9]{40}$/i.test(authorizedReleaseCommit)) throw new Error("BACKUP_SOURCE_COMMIT_REFUSED");
+  assertInventoryShape(source);
+  if (
+    Object.keys(source.checksums).length !== source.names.length ||
+    source.names.some((name) => !source.checksums[name])
+  ) throw new Error("SOURCE_MIGRATION_INVENTORY_REFUSED");
+
+  const names = records.map((record) => record.name);
+  const productionMigrationInventory = migrationInventoryFromNames(names);
+  const incomplete = records.some((record) =>
+    !record.checksum || !record.finishedAt || record.rolledBackAt || record.logs,
+  );
+  const ordered = names.every((name, index) => index === 0 || names[index - 1].localeCompare(name) < 0);
+  const isPrefix = productionMigrationInventory.names.every((name, index) => source.names[index] === name);
+  const checksumsMatch = records.every((record) => record.checksum === source.checksums[record.name]);
+  if (
+    incomplete ||
+    names.length !== new Set(names).size ||
+    !ordered ||
+    !isPrefix ||
+    !checksumsMatch ||
+    productionMigrationInventory.names.length > source.names.length ||
+    (mode === "POST_RELEASE" && !inventoriesMatch(productionMigrationInventory, source))
+  ) {
+    throw new Error("DATABASE_MIGRATION_STATE_REFUSED");
+  }
+
+  return {
+    productionMigrationInventory,
+    pendingMigrationNames: source.names.slice(productionMigrationInventory.names.length),
+    databaseMigrationStateDigest: databaseMigrationStateDigest(records),
+  };
+}
+
 export function assertLogicalBackupManifest(
   value: unknown,
   expected: MigrationInventory,
-): asserts value is LogicalBackupManifest {
+): asserts value is AnyLogicalBackupManifest {
   if (!value || typeof value !== "object") throw new Error("BACKUP_MANIFEST_REFUSED");
-  const manifest = value as Partial<LogicalBackupManifest>;
+  const manifest = value as Partial<AnyLogicalBackupManifest>;
   const counts = manifest.dataCounts;
   const countsAreValid = counts && Object.values(counts).every((count) => Number.isInteger(count) && count >= 0);
+  if (manifest.schemaVersion === 3) {
+    const source = manifest.sourceMigrationInventory;
+    const production = manifest.productionMigrationInventory;
+    const pending = manifest.pendingMigrationNames;
+    if (
+      manifest.database !== "capture_tracker_production" ||
+      !productionBackupModes.includes(manifest.backupMode as ProductionBackupMode) ||
+      !/^[a-f0-9]{40}$/i.test(manifest.authorizedReleaseCommit ?? "") ||
+      !/^[a-f0-9]{64}$/i.test(manifest.sha256 ?? "") ||
+      typeof manifest.archiveSizeBytes !== "number" ||
+      !Number.isInteger(manifest.archiveSizeBytes) ||
+      manifest.archiveSizeBytes <= 0 ||
+      manifest.encryption !== "AES-256-GCM+scrypt" ||
+      !source || !production || !Array.isArray(pending) ||
+      !/^[a-f0-9]{64}$/i.test(manifest.databaseMigrationStateDigest ?? "") ||
+      !countsAreValid
+    ) throw new Error("BACKUP_MANIFEST_REFUSED");
+    assertInventoryShape(source);
+    assertInventoryShape(production);
+    if (
+      !inventoriesMatch(source, expected) ||
+      !production.names.every((name, index) => source.names[index] === name) ||
+      pending.join("\n") !== source.names.slice(production.names.length).join("\n") ||
+      (manifest.backupMode === "POST_RELEASE" && (!inventoriesMatch(production, source) || pending.length !== 0))
+    ) throw new Error("BACKUP_MANIFEST_REFUSED");
+    return;
+  }
+  const legacy = manifest as Partial<LegacyLogicalBackupManifest>;
   if (
-    manifest.schemaVersion !== 2 ||
-    manifest.database !== "capture_tracker_production" ||
-    !/^[a-f0-9]{40}$/i.test(manifest.sourceCommit ?? "") ||
-    !/^[a-f0-9]{64}$/i.test(manifest.sha256 ?? "") ||
-    typeof manifest.archiveSizeBytes !== "number" ||
-    !Number.isInteger(manifest.archiveSizeBytes) ||
-    manifest.archiveSizeBytes <= 0 ||
-    manifest.encryption !== "AES-256-GCM+scrypt" ||
-    !manifest.migrationInventory ||
-    !Array.isArray(manifest.migrationInventory.names) ||
-    manifest.migrationInventory.digest !== expected.digest ||
-    manifest.migrationInventory.names.join("\n") !== expected.names.join("\n") ||
-    !/^[a-f0-9]{64}$/i.test(manifest.databaseMigrationStateDigest ?? "") ||
+    legacy.schemaVersion !== 2 ||
+    legacy.database !== "capture_tracker_production" ||
+    !/^[a-f0-9]{40}$/i.test(legacy.sourceCommit ?? "") ||
+    !/^[a-f0-9]{64}$/i.test(legacy.sha256 ?? "") ||
+    typeof legacy.archiveSizeBytes !== "number" ||
+    !Number.isInteger(legacy.archiveSizeBytes) ||
+    legacy.archiveSizeBytes <= 0 ||
+    legacy.encryption !== "AES-256-GCM+scrypt" ||
+    !legacy.migrationInventory ||
+    !Array.isArray(legacy.migrationInventory.names) ||
+    !inventoriesMatch(legacy.migrationInventory, expected) ||
+    !/^[a-f0-9]{64}$/i.test(legacy.databaseMigrationStateDigest ?? "") ||
     !countsAreValid
   ) {
     throw new Error("BACKUP_MANIFEST_REFUSED");
   }
+}
+
+export function isExactSourceBackup(manifest: AnyLogicalBackupManifest) {
+  return manifest.schemaVersion === 2 || manifest.backupMode === "POST_RELEASE";
 }
 
 export function assertRestoredBackupState({
@@ -191,12 +334,13 @@ export function assertRestoredBackupState({
   counts,
 }: {
   expected: MigrationInventory;
-  manifest: LogicalBackupManifest;
+  manifest: AnyLogicalBackupManifest;
   records: MigrationRecord[];
   counts: SanitizedDataCounts;
 }) {
   assertLogicalBackupManifest(manifest, expected);
-  if (assertCompletedMigrationState(expected, records) !== manifest.databaseMigrationStateDigest) {
+  const restoredInventory = manifest.schemaVersion === 3 ? manifest.productionMigrationInventory : manifest.migrationInventory;
+  if (assertCompletedMigrationState(restoredInventory, records) !== manifest.databaseMigrationStateDigest) {
     throw new Error("RESTORED_MIGRATION_STATE_REFUSED");
   }
   if (JSON.stringify(counts) !== JSON.stringify(manifest.dataCounts)) {

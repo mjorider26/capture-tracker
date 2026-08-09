@@ -13,7 +13,7 @@ import {
   deriveSourceSchemaInventory,
   migrationInventoryFromNames,
   withTemporaryRecoveryArtifacts,
-  type LogicalBackupManifest,
+  type LegacyLogicalBackupManifest,
   type MigrationRecord,
 } from "./production-logical-restore-core";
 
@@ -31,7 +31,7 @@ const records: MigrationRecord[] = expected.names.map((name, index) => ({
   logs: null,
 }));
 
-function manifest(): LogicalBackupManifest {
+function manifest(): LegacyLogicalBackupManifest {
   return {
     schemaVersion: 2,
     timestamp: "2026-08-06T00:00:00.000Z",

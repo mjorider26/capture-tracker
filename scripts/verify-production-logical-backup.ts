@@ -10,8 +10,9 @@ import {
   assertRestoredBackupState,
   assertLogicalBackupReceipt,
   deriveSourceSchemaInventory,
+  isExactSourceBackup,
   withTemporaryRecoveryArtifacts,
-  type LogicalBackupManifest,
+  type AnyLogicalBackupManifest,
   type SanitizedDataCounts,
 } from "./production-logical-restore-core";
 import { getBackupObject } from "./r2-scoped-object-storage";
@@ -42,31 +43,33 @@ async function dropRestoreDatabase(url: URL) {
   } finally { await client.end(); }
 }
 
-async function verifyCatalog(url: URL, manifest: LogicalBackupManifest) {
+async function verifyCatalog(url: URL, manifest: AnyLogicalBackupManifest) {
   const client = new Client({ connectionString: url.href });
   await client.connect();
   try {
     const expected = deriveSourceSchemaInventory();
     const migrations = await client.query('SELECT migration_name AS name, checksum, finished_at AS "finishedAt", rolled_back_at AS "rolledBackAt", logs FROM "_prisma_migrations" ORDER BY migration_name');
-    const tables = await client.query<{ name: string }>("SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
-    const functions = await client.query<{ name: string }>("SELECT routine_name AS name FROM information_schema.routines WHERE routine_schema='public'");
-    const triggers = await client.query<{ name: string }>("SELECT DISTINCT trigger_name AS name FROM information_schema.triggers WHERE trigger_schema='public'");
-    const constraints = await client.query<{ name: string }>("SELECT constraint_name AS name FROM information_schema.table_constraints WHERE constraint_schema='public'");
+    const exactSourceBackup = isExactSourceBackup(manifest);
+    const tables = exactSourceBackup ? await client.query<{ name: string }>("SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'") : undefined;
+    const functions = exactSourceBackup ? await client.query<{ name: string }>("SELECT routine_name AS name FROM information_schema.routines WHERE routine_schema='public'") : undefined;
+    const triggers = exactSourceBackup ? await client.query<{ name: string }>("SELECT DISTINCT trigger_name AS name FROM information_schema.triggers WHERE trigger_schema='public'") : undefined;
+    const constraints = exactSourceBackup ? await client.query<{ name: string }>("SELECT constraint_name AS name FROM information_schema.table_constraints WHERE constraint_schema='public'") : undefined;
     const counts = await client.query<SanitizedDataCounts>('SELECT (SELECT count(*)::int FROM "User") AS users, (SELECT count(*)::int FROM "Business") AS businesses, (SELECT count(*)::int FROM "Transaction") AS transactions, (SELECT count(*)::int FROM "Document") AS documents, (SELECT count(*)::int FROM "JournalEntry") AS "journalEntries", (SELECT count(*)::int FROM "JournalLine") AS "journalLines"');
     const integrity = await client.query('SELECT (SELECT count(*)::int FROM "BusinessMember" bm JOIN "Business" b ON b.id=bm."businessId" LEFT JOIN "User" u ON u.id=bm."userId" WHERE b.id IS NULL OR u.id IS NULL) AS orphan_memberships, (SELECT coalesce(sum("debitAmount"),0)=coalesce(sum("creditAmount"),0) FROM "JournalLine") AS ledger_balanced');
     const actual = (rows: Array<{ name: string }>) => new Set(rows.map((row) => row.name));
     const missing = (required: string[], received: Set<string>) => required.filter((name) => !received.has(name));
-    const missingStructure = [
-      ...missing(expected.tables, actual(tables.rows)),
-      ...missing(expected.functions, actual(functions.rows)),
-      ...missing(expected.triggers, actual(triggers.rows)),
-      ...missing(expected.constraints, actual(constraints.rows)),
-    ];
+    const missingStructure = exactSourceBackup ? [
+      ...missing(expected.tables, actual(tables!.rows)),
+      ...missing(expected.functions, actual(functions!.rows)),
+      ...missing(expected.triggers, actual(triggers!.rows)),
+      ...missing(expected.constraints, actual(constraints!.rows)),
+    ] : [];
     const dataCounts = counts.rows[0];
     const integrityRow = integrity.rows[0];
     if (!dataCounts || missingStructure.length || integrityRow?.orphan_memberships !== 0 || integrityRow?.ledger_balanced !== true) throw new Error("RESTORE_CATALOG_VERIFICATION_FAILED");
     assertRestoredBackupState({ expected, manifest, records: migrations.rows, counts: dataCounts });
-    return { migrations: expected.names.length, tables: expected.tables.length, functions: expected.functions.length, triggers: expected.triggers.length, constraints: expected.constraints.length, dataCounts };
+    const restoredMigrations = manifest.schemaVersion === 3 ? manifest.productionMigrationInventory.names.length : expected.names.length;
+    return { migrations: restoredMigrations, tables: exactSourceBackup ? expected.tables.length : 0, functions: exactSourceBackup ? expected.functions.length : 0, triggers: exactSourceBackup ? expected.triggers.length : 0, constraints: exactSourceBackup ? expected.constraints.length : 0, dataCounts };
   } finally { await client.end(); }
 }
 
@@ -107,7 +110,7 @@ async function main() {
   try {
     const sources = await recoverySources();
     await withTemporaryRecoveryArtifacts([temporaryArchive, ...sources.cleanup], async () => {
-      const manifest = JSON.parse(readFileSync(sources.manifest, "utf8")) as LogicalBackupManifest;
+      const manifest = JSON.parse(readFileSync(sources.manifest, "utf8")) as AnyLogicalBackupManifest;
       const encrypted = readFileSync(sources.archive);
       if (createHash("sha256").update(encrypted).digest("hex") !== manifest.sha256) throw new Error("RESTORE_CHECKSUM_REFUSED");
       restoreStage = "decrypt";

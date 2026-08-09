@@ -32,7 +32,7 @@ The earlier invitation-based first-owner production flow is superseded. Legacy o
 - Never run `prisma migrate dev`, `prisma db push`, reset, or seed against production.
 - Use a direct, unpooled connection only in approved migration or backup operator workflows; the Worker uses its approved runtime database path.
 - Do not copy staging, demo, or local PostgreSQL data into production.
-- The required migration inventory is derived from the source checkout. Production has all 23 source migrations applied, including `20260809180000_add_operator_invitations_and_cutover`; the count is release evidence, not a substitute for `prisma migrate status`.
+- The required migration inventory is derived from the exact clean source checkout; it is release evidence, not a substitute for `prisma migrate status`. A release may take an explicitly requested `PRE_MIGRATION_RELEASE` backup only when production is proven to be a completed, non-divergent ordered predecessor of that source. After migration, `POST_RELEASE` backups require exact production/source inventory alignment.
 
 ### V2.1 S-Corp workpaper release boundary
 
@@ -50,9 +50,9 @@ Approved backup prefixes and lifecycle policy are:
 - `production/pre-acceptance/` — 30 days
 - `production/restore-verification/` — 7 days
 
-Run the backup and receipt-based restore verification in the same native WSL/Linux session when required by the current tooling. Temporary plaintext and decrypted artifacts remain in `/dev/shm`, are cleaned up by the tools, and must never be worked around by exposing plaintext files or credentials.
+Run the backup and receipt-based restore verification in the same native WSL/Linux session when required by the current tooling. The caller must explicitly choose `PRE_MIGRATION_RELEASE` for the release backup or `POST_RELEASE` for ordinary/post-release backup; no implicit or bypass mode exists. A pre-migration backup is allowed only if every completed production migration is a checksum-matching ordered prefix of the exact release source and the exact pending names are recorded in the manifest. Post-release and ordinary backups require production/source inventory equality. Temporary plaintext and decrypted artifacts remain in `/dev/shm`, are cleaned up by the tools, and must never be worked around by exposing plaintext files or credentials.
 
-Restore verification accepts only an isolated local WSL PostgreSQL target, checks the encrypted checksum before decryption, uses `pg_restore`, and compares migrations, schema inventory, integrity constraints, and sanitized counts with the source-derived contract. It is not a production cutover. Passphrase loss prevents decryption, so the approved secret owner must maintain the passphrase recovery process. For a real recovery, stop writes, obtain explicit recovery authorization, restore and verify an isolated target first, then plan a separately authorized cutover. Never restore a drill directly over active production.
+Restore verification accepts only an isolated local WSL PostgreSQL target, checks the encrypted checksum before decryption, uses `pg_restore`, and compares the manifest-bound migration inventory, integrity constraints, and sanitized counts with the approved source contract. Post-release backups also verify the exact source-derived schema inventory. A pre-migration release artifact correctly restores the prior completed migration state; applying its recorded pending migrations is a separate recovery-verification action. It is not a production cutover. Passphrase loss prevents decryption, so the approved secret owner must maintain the passphrase recovery process. For a real recovery, stop writes, obtain explicit recovery authorization, restore and verify an isolated target first, then plan a separately authorized cutover. Never restore a drill directly over active production.
 
 ## Financial reports and exports
 
@@ -110,10 +110,12 @@ V2 automated acceptance uses fictional fixtures and protected application/servic
 2. Run canonical local verification.
 3. Require CI for that exact SHA; use `workflow_dispatch` if an automatic run is missing.
 4. In native WSL/Linux, use NVM 0.40.3 with Node 22.23.2 and npm 10.9.8.
-5. Run `npm ci`, Prisma generation, the OpenNext/Workerd build, artifact and secret scans, and a production Wrangler dry run.
-6. Deploy the exact verified SHA to `capture-tracker-production` only.
-7. Record both the Worker entry-shim size and the complete Wrangler upload size; they are different measurements.
-8. Verify liveness and readiness without reading private financial data.
+5. Before `prisma migrate deploy`, create and verify an encrypted `PRE_MIGRATION_RELEASE` backup from the exact clean release checkout. Stop if the completed production history is not a checksum-matching ordered source prefix or if any backup safeguard fails.
+6. Run the approved production migration, then create and verify a strict `POST_RELEASE` backup with exact production/source migration alignment.
+7. Run `npm ci`, Prisma generation, the OpenNext/Workerd build, artifact and secret scans, and a production Wrangler dry run.
+8. Deploy the exact verified SHA to `capture-tracker-production` only.
+9. Record both the Worker entry-shim size and the complete Wrangler upload size; they are different measurements.
+10. Verify liveness and readiness without reading private financial data.
 
 Windows OpenNext output is not the trusted native release artifact. Never print secrets while building, deploying, or collecting release evidence.
 

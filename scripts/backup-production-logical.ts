@@ -7,8 +7,10 @@ import { Client } from "pg";
 import { assertDirectProductionUrl, productionAcceptance } from "./production-acceptance-cleanup-core";
 import { assertBackupPrefix, encryptBackupArchive } from "./production-logical-backup-core";
 import {
-  assertCompletedMigrationState,
-  deriveSourceSchemaInventory,
+  assertBackupMigrationState,
+  assertProductionBackupMode,
+  deriveSourceMigrationInventory,
+  type ProductionBackupMode,
   type SanitizedDataCounts,
 } from "./production-logical-restore-core";
 import { getBackupObject, putBackupObject } from "./r2-scoped-object-storage";
@@ -42,21 +44,28 @@ function writeRecoveryDrillReceipt(receiptPath: string | undefined, receipt: { a
   writeFileSync(receiptPath, `${JSON.stringify(receipt)}\n`, { mode: 0o600, flag: "wx" });
 }
 
-async function sourceMetadata(url: URL) {
+async function sourceMetadata(url: URL, backupMode: ProductionBackupMode, authorizedReleaseCommit: string) {
   const client = new Client({ connectionString: url.href });
   await client.connect();
   try {
     const version = await client.query("SHOW server_version");
     const migrations = await client.query('SELECT migration_name AS name, checksum, finished_at AS "finishedAt", rolled_back_at AS "rolledBackAt", logs FROM "_prisma_migrations" ORDER BY migration_name');
     const counts = await client.query<SanitizedDataCounts>('SELECT (SELECT count(*)::int FROM "User") AS users, (SELECT count(*)::int FROM "Business") AS businesses, (SELECT count(*)::int FROM "Transaction") AS transactions, (SELECT count(*)::int FROM "Document") AS documents, (SELECT count(*)::int FROM "JournalEntry") AS "journalEntries", (SELECT count(*)::int FROM "JournalLine") AS "journalLines"');
-    const inventory = deriveSourceSchemaInventory();
-    const databaseMigrationStateDigest = assertCompletedMigrationState(inventory, migrations.rows);
+    const sourceMigrationInventory = deriveSourceMigrationInventory();
+    const migrationState = assertBackupMigrationState({
+      mode: backupMode,
+      source: sourceMigrationInventory,
+      records: migrations.rows,
+      authorizedReleaseCommit,
+    });
     const dataCounts = counts.rows[0];
     if (!dataCounts) throw new Error("BACKUP_DATA_COUNTS_REFUSED");
     return {
       postgresVersion: String(version.rows[0]?.server_version ?? "unknown"),
-      migrationInventory: { names: inventory.names, digest: inventory.digest },
-      databaseMigrationStateDigest,
+      sourceMigrationInventory: { names: sourceMigrationInventory.names, digest: sourceMigrationInventory.digest },
+      productionMigrationInventory: migrationState.productionMigrationInventory,
+      pendingMigrationNames: migrationState.pendingMigrationNames,
+      databaseMigrationStateDigest: migrationState.databaseMigrationStateDigest,
       dataCounts,
     };
   } finally { await client.end(); }
@@ -70,6 +79,8 @@ async function uploadAndVerify(objectKey: string, source: string, expectedChecks
 async function main() {
   if (process.env.CAPTURE_TRACKER_PRODUCTION_BACKUP_AUTHORIZATION !== "CAPTURE_TRACKER_LOGICAL_BACKUP_APPROVED") throw new Error("BACKUP_AUTHORIZATION_REFUSED");
   const prefix = assertBackupPrefix(process.env.CAPTURE_TRACKER_PRODUCTION_BACKUP_TYPE);
+  const backupMode = assertProductionBackupMode(process.env.CAPTURE_TRACKER_PRODUCTION_BACKUP_MODE);
+  if (backupMode === "PRE_MIGRATION_RELEASE" && process.env.CAPTURE_TRACKER_PRODUCTION_BACKUP_TYPE !== "pre-acceptance") throw new Error("PRE_MIGRATION_PREFIX_REFUSED");
   const passphrase = process.env.CAPTURE_TRACKER_PRODUCTION_BACKUP_PASSPHRASE;
   if (!passphrase) throw new Error("BACKUP_PASSPHRASE_REQUIRED");
   const direct = assertDirectProductionUrl(process.env.CAPTURE_TRACKER_PRODUCTION_DIRECT_DATABASE_URL);
@@ -80,20 +91,24 @@ async function main() {
   const temporaryEncryptedArchive = join(temporaryRoot, `capture-tracker-production-${stamp}.ctbackup`);
   const temporaryManifest = join(temporaryRoot, `capture-tracker-production-${stamp}.json`);
   try {
-    const metadata = await sourceMetadata(direct);
+    const authorizedReleaseCommit = (await run("git", ["rev-parse", "HEAD"], process.env)).trim();
+    const sourceStatus = await run("git", ["status", "--porcelain"], process.env);
+    if (!/^[a-f0-9]{40}$/i.test(authorizedReleaseCommit) || sourceStatus.trim()) throw new Error("BACKUP_SOURCE_COMMIT_REFUSED");
+    const metadata = await sourceMetadata(direct, backupMode, authorizedReleaseCommit);
     await run("pg_dump", ["--format=custom", "--no-owner", "--no-privileges", "--file", temporaryArchive], postgresEnvironment(direct));
     const plain = readFileSync(temporaryArchive);
     const encrypted = encryptBackupArchive(plain, passphrase);
     writeFileSync(temporaryEncryptedArchive, encrypted, { mode: 0o600, flag: "wx" });
     const checksum = createHash("sha256").update(encrypted).digest("hex");
-    const sourceCommit = (await run("git", ["rev-parse", "HEAD"], process.env)).trim();
-    const archiveName = `capture-tracker-production-${stamp}-${sourceCommit.slice(0, 12)}.ctbackup`;
+    const archiveName = `capture-tracker-production-${stamp}-${authorizedReleaseCommit.slice(0, 12)}.ctbackup`;
     const manifest = {
-      schemaVersion: 2 as const,
-      timestamp: new Date().toISOString(), database: productionAcceptance.database, sourceCommit,
+      schemaVersion: 3 as const,
+      timestamp: new Date().toISOString(), database: productionAcceptance.database, backupMode, authorizedReleaseCommit,
       postgresVersion: metadata.postgresVersion, archiveSizeBytes: statSync(temporaryEncryptedArchive).size,
       sha256: checksum, encryption: "AES-256-GCM+scrypt" as const,
-      migrationInventory: metadata.migrationInventory,
+      sourceMigrationInventory: metadata.sourceMigrationInventory,
+      productionMigrationInventory: metadata.productionMigrationInventory,
+      pendingMigrationNames: metadata.pendingMigrationNames,
       databaseMigrationStateDigest: metadata.databaseMigrationStateDigest,
       dataCounts: metadata.dataCounts,
       archive: archiveName,
@@ -106,7 +121,7 @@ async function main() {
       archiveKey: `${prefix}${archiveName}`,
       manifestKey: `${prefix}${archiveName}.json`,
     });
-    console.log(`LOGICAL BACKUP CREATED: database=${manifest.database} bytes=${manifest.archiveSizeBytes} migrations=${manifest.migrationInventory.names.length} sha256=${checksum.slice(0, 16)}`);
+    console.log(`LOGICAL BACKUP CREATED: database=${manifest.database} mode=${manifest.backupMode} bytes=${manifest.archiveSizeBytes} productionMigrations=${manifest.productionMigrationInventory.names.length} pendingMigrations=${manifest.pendingMigrationNames.length} sha256=${checksum.slice(0, 16)}`);
   } finally {
     rmSync(temporaryArchive, { force: true });
     rmSync(temporaryEncryptedArchive, { force: true });
