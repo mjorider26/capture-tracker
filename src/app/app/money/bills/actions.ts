@@ -1,0 +1,13 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { requireBusinessContext } from "@/lib/security/business-context";
+import { approveBill, createBill, createVendor } from "@/lib/services/bills";
+
+export type BillActionState = { status: "idle" | "success" | "error"; message: string | null };
+const actor = (context: Awaited<ReturnType<typeof requireBusinessContext>>) => ({ businessId: context.business.id, actorUserId: context.user.id, actorMembershipId: context.membership.id, role: context.membership.role, executionMode: "authenticated" as const });
+
+export async function createVendorAction(_: BillActionState, formData: FormData): Promise<BillActionState> { try { const context = await requireBusinessContext(); const result = await createVendor(prisma, actor(context), Object.fromEntries(formData)); if (!result.ok) return { status: "error", message: result.message }; revalidatePath("/app/money/bills"); return { status: "success", message: "Vendor saved." }; } catch { return { status: "error", message: "Vendor could not be saved safely." }; } }
+export async function createBillAction(_: BillActionState, formData: FormData): Promise<BillActionState> { try { const context = await requireBusinessContext(); const result = await createBill(prisma, actor(context), Object.fromEntries(formData)); if (!result.ok) return { status: "error", message: result.message }; revalidatePath("/app/money/bills"); return { status: "success", message: "Draft bill created." }; } catch { return { status: "error", message: "Bill could not be saved safely." }; } }
+export async function approveBillAction(_: BillActionState, formData: FormData): Promise<BillActionState> { try { const context = await requireBusinessContext(); const id = formData.get("billId"); const result = await approveBill(prisma, actor(context), typeof id === "string" ? id : ""); if (!result.ok) return { status: "error", message: result.message }; revalidatePath("/app/money/bills"); return { status: "success", message: result.accountingBasis === "NEEDS_REVIEW" ? "Bill approved. ACCOUNTING POLICY NEEDS REVIEW before ledger treatment." : "Bill approved." }; } catch { return { status: "error", message: "Bill could not be approved safely." }; } }

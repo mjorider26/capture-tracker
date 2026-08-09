@@ -304,6 +304,10 @@ enum JournalEntrySourceType {
   OPENING_BALANCE
   ADJUSTING_ENTRY
   REVERSING_ENTRY
+  INVOICE_ISSUE
+  INVOICE_PAYMENT
+  BILL_APPROVAL
+  BILL_PAYMENT
 }
 
 enum AccountingPeriodStatus {
@@ -2094,6 +2098,7 @@ model Invoice {
   terms             String?
   voidedAt          DateTime?
   voidReason        String?
+  issuedJournalEntryId String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   version           Int @default(1)
@@ -2102,9 +2107,11 @@ model Invoice {
   customer Customer @relation(fields: [businessId, customerId], references: [businessId, id], onDelete: Restrict)
   lines InvoiceLine[]
   payments InvoicePayment[]
+  issuedJournalEntry JournalEntry? @relation("InvoiceIssueJournal", fields: [businessId, issuedJournalEntryId], references: [businessId, id], onDelete: Restrict)
   @@unique([businessId, id])
   @@unique([businessId, invoiceNumber])
   @@index([businessId, status, dueDate])
+  @@unique([businessId, issuedJournalEntryId])
 }
 
 model InvoiceLine {
@@ -2128,10 +2135,13 @@ model InvoicePayment {
   externalTransactionId String? @unique
   reference             String? @db.VarChar(500)
   recordedByUserId      String?
+  journalEntryId        String?
   createdAt             DateTime @default(now())
   invoice Invoice @relation(fields: [businessId, invoiceId], references: [businessId, id], onDelete: Restrict)
   business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  journalEntry JournalEntry? @relation("InvoicePaymentJournal", fields: [businessId, journalEntryId], references: [businessId, id], onDelete: Restrict)
   @@index([businessId, invoiceId, receivedAt])
+  @@unique([businessId, journalEntryId])
 }
 
 /// One-way-token, email-bound invitation for a professional reviewer.
@@ -2186,6 +2196,7 @@ model Bill {
   supportingDocumentId String?
   voidedAt            DateTime?
   voidReason          String?
+  approvalJournalEntryId String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   version             Int @default(1)
@@ -2194,8 +2205,10 @@ model Bill {
   vendor Vendor @relation(fields: [businessId, vendorId], references: [businessId, id], onDelete: Restrict)
   lines BillLine[]
   payments BillPayment[]
+  approvalJournalEntry JournalEntry? @relation("BillApprovalJournal", fields: [businessId, approvalJournalEntryId], references: [businessId, id], onDelete: Restrict)
   @@unique([businessId, id])
   @@index([businessId, status, dueDate])
+  @@unique([businessId, approvalJournalEntryId])
 }
 
 model BillLine {
@@ -2218,10 +2231,13 @@ model BillPayment {
   externalTransactionId String? @unique
   reference             String? @db.VarChar(500)
   recordedByUserId      String?
+  journalEntryId        String?
   createdAt             DateTime @default(now())
   bill Bill @relation(fields: [businessId, billId], references: [businessId, id], onDelete: Restrict)
   business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  journalEntry JournalEntry? @relation("BillPaymentJournal", fields: [businessId, journalEntryId], references: [businessId, id], onDelete: Restrict)
   @@index([businessId, billId, paidAt])
+  @@unique([businessId, journalEntryId])
 }
 
 /// A dated, source-backed reimbursement rate. A missing policy deliberately remains unresolved.
@@ -2500,6 +2516,10 @@ model JournalEntry {
   reversedByEntries     JournalEntry[]      @relation("JournalEntryReversals")
   lines                 JournalLine[]
   correctionReversalFor Transaction?        @relation("TransactionCorrectionReversal")
+  invoiceIssueFor       Invoice?            @relation("InvoiceIssueJournal")
+  invoicePaymentFor     InvoicePayment?     @relation("InvoicePaymentJournal")
+  billApprovalFor       Bill?               @relation("BillApprovalJournal")
+  billPaymentFor        BillPayment?        @relation("BillPaymentJournal")
 
   @@unique([businessId, id])
   @@unique([businessId, entryNumber])
