@@ -4,6 +4,7 @@ import { AppShell, isDestination } from "@/components/app-shell";
 import { MoneyExperience } from "@/components/money-experience";
 import { TodayExperience } from "@/components/today-experience";
 import { getMoneyDashboard } from "@/lib/data/money-dashboard";
+import { getMoneyOperationsSummary } from "@/lib/data/money-operations";
 import { getTodayDashboard } from "@/lib/data/today-dashboard";
 import { workspaceFailureMetadata } from "@/lib/observability/workspace-failure";
 import {
@@ -25,6 +26,13 @@ export default async function ApplicationDestinationPage({
   const { destination } = await params;
   if (!isDestination(destination)) notFound();
   const context = await getApplicationContext();
+  const money =
+    destination === "money"
+      ? await Promise.all([
+          loadMoneyDashboard(context.business.id, await searchParams),
+          getMoneyOperationsSummary(context.business.id),
+        ])
+      : null;
   const content =
     destination === "today" ? (
       <TodayExperience
@@ -33,10 +41,9 @@ export default async function ApplicationDestinationPage({
       />
     ) : destination === "money" ? (
       <MoneyExperience
-        dashboard={await loadMoneyDashboard(
-          context.business.id,
-          await searchParams,
-        )}
+        dashboard={money![0]}
+        operations={money![1]}
+        canManageCpa={context.membership.role === "OWNER"}
         basePath="/app"
       />
     ) : notFound();

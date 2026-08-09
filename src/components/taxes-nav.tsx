@@ -10,6 +10,7 @@ export function TaxesNav({ basePath }: { basePath: "/app" | "/demo" }) {
     ["Estimates", "/estimates"],
     ["Payroll", "/payroll"],
     ["Owner money", "/owner-money"],
+    ["Mileage", "/mileage"],
     ["Owner compensation", "/owner-compensation"],
     ["Fixed assets", "/fixed-assets"],
     ["Month-end close", "/close"],

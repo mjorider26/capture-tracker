@@ -18,6 +18,12 @@ export default async function Settings() {
   return <AppShell mode="app" destination="settings" businessName={context.business.displayName}>
     <PilotSettings state={state} action={saveSettingsAction}/>
     <section className="ui-card mt-5 max-w-2xl p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">Professional review</p>
+      <h2 className="mt-1 text-lg font-bold">CPA access</h2>
+      <p className="mt-2 text-sm leading-6 text-text-muted">Invite a CPA to review the business in read-only mode. You remain in control of access, documents, and every financial action.</p>
+      <Link className="ui-button ui-button-secondary mt-4 min-h-11 border border-border-subtle px-4 pt-3 text-sm font-bold" href="/app/settings/cpa">Manage CPA access</Link>
+    </section>
+    <section className="ui-card mt-5 max-w-2xl p-5">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">Help and about</p>
       <h2 className="mt-1 text-lg font-bold">{appVersionLabel}</h2>
       <p className="mt-1 text-sm text-text-muted">Build {appBuildId()}</p>

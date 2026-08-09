@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { MoneyDashboard } from "@/lib/data/money-dashboard";
+import type { MoneyOperationsSummary } from "@/lib/data/money-operations";
 
 import { AccountingNav } from "./accounting-nav";
 import { ButtonLink, EmptyState, PageHeader, StatusBadge } from "./ui";
@@ -16,9 +17,13 @@ function date(value: string) {
 
 export function MoneyExperience({
   dashboard,
+  operations,
+  canManageCpa = false,
   basePath,
 }: {
   dashboard: MoneyDashboard;
+  operations?: MoneyOperationsSummary;
+  canManageCpa?: boolean;
   basePath: "/app" | "/demo";
 }) {
   const hasFilters = Boolean(
@@ -30,13 +35,15 @@ export function MoneyExperience({
 
   return (
     <section className="space-y-7">
-      <AccountingNav basePath={basePath} active="transactions" />
+      <AccountingNav basePath={basePath} active="overview" />
       <PageHeader
         eyebrow="Money workspace"
-        title="Transaction review"
-        description="Review current activity and evidence before any accounting decision. Posted records remain protected."
+        title="Financial operations"
+        description="See what is moving, what is owed, and where to act next. Every workflow keeps the existing protected accounting decisions in place."
         action={<div className="flex flex-wrap items-center gap-3"><StatusBadge tone="warning">{dashboard.summary.awaitingReviewCount} awaiting review</StatusBadge><ButtonLink href={`${basePath}/money/import`} tone="secondary">Import transactions</ButtonLink><ButtonLink href={`${basePath}/money/new`}>Add transaction</ButtonLink></div>}
       />
+
+      {operations ? <OperationsHub basePath={basePath} operations={operations} canManageCpa={canManageCpa} /> : null}
 
       <section
         aria-label="Money review summary"
@@ -175,6 +182,74 @@ export function MoneyExperience({
       </section>
     </section>
   );
+}
+
+function OperationsHub({
+  basePath,
+  operations,
+  canManageCpa,
+}: {
+  basePath: "/app" | "/demo";
+  operations: MoneyOperationsSummary;
+  canManageCpa: boolean;
+}) {
+  const invoiceDetail = operations.invoices.openCount
+    ? `${operations.invoices.openCount} open${operations.invoices.overdueCount ? ` · ${operations.invoices.overdueCount} overdue` : ""}`
+    : "No invoices yet";
+  const billDetail = operations.bills.dueCount
+    ? `${operations.bills.dueCount} open${operations.bills.upcomingCount ? ` · ${operations.bills.upcomingCount} upcoming` : ""}`
+    : "No bills entered";
+  const mileageDetail = operations.mileage.tripCount
+    ? `${operations.mileage.tripCount} trips${operations.mileage.unclaimedCount ? ` · ${operations.mileage.unclaimedCount} to reimburse` : ""}`
+    : "Record a substantiated business trip";
+  const bankDetail = operations.bank.connectionCount
+    ? `${operations.bank.connectionCount} connected institution${operations.bank.connectionCount === 1 ? "" : "s"}`
+    : "Live provider not configured · CSV available";
+  const cpaDetail = operations.cpa.acceptedCount
+    ? `${operations.cpa.acceptedCount} read-only reviewer${operations.cpa.pendingCount ? ` · ${operations.cpa.pendingCount} invite pending` : ""}`
+    : operations.cpa.pendingCount
+      ? `${operations.cpa.pendingCount} secure invitation pending`
+      : "No CPA currently has access";
+
+  return (
+    <section className="money-operations" aria-labelledby="money-operations-heading">
+      <div className="money-operations-heading">
+        <div>
+          <p>Money overview</p>
+          <h2 id="money-operations-heading">Run the financial work</h2>
+        </div>
+        <p>Clear paths for activity, customer payments, payables, and owner decisions.</p>
+      </div>
+      <div className="money-operations-grid">
+        <OperationGroup title="Accounts and activity" description="Bring in and review business activity.">
+          <OperationLink href={`${basePath}/money`} label="Review activity" detail={`${operations.invoices.openCount + operations.bills.dueCount} open customer or vendor item${operations.invoices.openCount + operations.bills.dueCount === 1 ? "" : "s"} alongside transactions`} />
+          <OperationLink href={`${basePath}/money/import`} label="Import CSV" detail="Available now · review before posting" />
+          <OperationLink href={`${basePath}/money/bank`} label="Bank connections" detail={bankDetail} />
+        </OperationGroup>
+        <OperationGroup title="Get paid" description="Create customer invoices and follow payment status.">
+          <OperationLink href={`${basePath}/money/invoices`} label="Invoices" amount={`$${operations.invoices.openAmount}`} detail={invoiceDetail} action={operations.invoices.openCount ? "View invoices" : "Create invoice"} />
+          <OperationLink href={`${basePath}/reports/operations?report=ar-aging`} label="Open receivables" detail="See what customers still owe" action="View AR aging" />
+        </OperationGroup>
+        <OperationGroup title="Payables" description="Track what the business owes without double-recording expenses.">
+          <OperationLink href={`${basePath}/money/bills`} label="Bills" amount={`$${operations.bills.dueAmount}`} detail={billDetail} action={operations.bills.dueCount ? "View bills" : "Add bill"} />
+          <OperationLink href={`${basePath}/reports/operations?report=ap-aging`} label="Open payables" detail="See upcoming and overdue vendor obligations" action="View AP aging" />
+        </OperationGroup>
+        <OperationGroup title="Owner and professional review" description="Keep S-Corp treatments distinct and review-ready.">
+          <OperationLink href={`${basePath}/taxes/owner-money`} label="Owner Money" detail="Salary, distributions, reimbursements, contributions, and loans stay separate" action="Open Owner Money" />
+          <OperationLink href={`${basePath}/taxes/mileage`} label="Mileage" amount={`${operations.mileage.milesThisYear} mi`} detail={mileageDetail} action={operations.mileage.tripCount ? "View mileage" : "Record trip"} />
+          {canManageCpa ? <OperationLink href={`${basePath}/settings/cpa`} label="CPA access" detail={cpaDetail} action={operations.cpa.acceptedCount || operations.cpa.pendingCount ? "Manage CPA access" : "Invite CPA"} /> : null}
+        </OperationGroup>
+      </div>
+    </section>
+  );
+}
+
+function OperationGroup({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return <section className="money-operation-group"><div><p>{title}</p><span>{description}</span></div><div>{children}</div></section>;
+}
+
+function OperationLink({ href, label, detail, amount, action }: { href: string; label: string; detail: string; amount?: string; action?: string }) {
+  return <Link href={href} className="money-operation-link"><span><strong>{label}</strong><small>{detail}</small></span><span className="money-operation-link-end">{amount ? <b className="money-value">{amount}</b> : null}<em>{action ?? "Open"} <span aria-hidden="true">→</span></em></span></Link>;
 }
 
 function Summary({ label, value, detail, emphasis = false }: { label: string; value: string; detail: string; emphasis?: boolean }) {

@@ -52,6 +52,7 @@ export function FinancialReports({
         ))}
         {basePath === "/app" && <Link className="min-h-10 shrink-0 rounded bg-surface-secondary px-3 py-2 text-sm font-bold text-text-muted" href="/app/reports/operations">Operations</Link>}
       </nav>
+      {basePath === "/app" && <OperationalReportLibrary />}
       <form className="workspace-filter mt-4 flex flex-wrap gap-2 rounded-[var(--radius-md)] p-3" method="get">
         <select className="ui-input w-auto" name="period" defaultValue={reports.range.period}>
           <option value="month">This month</option>
@@ -100,6 +101,15 @@ export function FinancialReports({
       )}
     </>
   );
+}
+
+function OperationalReportLibrary() {
+  const groups = [
+    { title: "Receivables", detail: "Customer invoices and payment follow-up", links: [["Invoice register", "invoice-register"], ["AR aging", "ar-aging"], ["Invoice payments", "invoice-payments"]] },
+    { title: "Payables", detail: "Vendor bills and payment follow-up", links: [["Bill register", "bill-register"], ["AP aging", "ap-aging"], ["Bill payments", "bill-payments"]] },
+    { title: "Owner / S-Corp", detail: "Mileage and the owner reimbursement record", links: [["Mileage log", "mileage-log"], ["Mileage reimbursements", "mileage-reimbursements"], ["Owner Money", "owner-money"]] },
+  ] as const;
+  return <section className="ui-card mt-5 overflow-hidden" aria-labelledby="operational-reports-heading"><div className="p-5"><p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">Operational reports</p><h2 id="operational-reports-heading" className="mt-1 text-xl font-bold">Receivables, payables, and owner records</h2><p className="mt-2 text-sm leading-6 text-text-muted">Use these focused registers when you need a working answer, then return to the financial statements for the ledger view.</p></div><div className="divide-y divide-border-subtle">{groups.map((group) => <section key={group.title} className="p-5"><div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="font-bold">{group.title}</h3><p className="text-xs text-text-muted">{group.detail}</p></div><div className="mt-3 flex flex-wrap gap-2">{group.links.map(([label, report]) => report === "owner-money" ? <Link key={report} className="ui-button ui-button-secondary min-h-10 border border-border-subtle px-3 pt-2 text-sm font-bold" href="/app/taxes/owner-money">{label}</Link> : <Link key={report} className="ui-button ui-button-secondary min-h-10 border border-border-subtle px-3 pt-2 text-sm font-bold" href={`/app/reports/operations?report=${report}`}>{label}</Link>)}</div></section>)}</div></section>;
 }
 
 function ReportTable({
