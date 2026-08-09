@@ -48,4 +48,29 @@ export async function issueInvoice(client: Db, actor: InvoiceActor, invoiceId: s
     const accountingBasis = await basis(tx, actor.businessId); await tx.invoice.update({ where: { id: invoice.id }, data: { status: paymentStatus("1", "0", true, invoice.dueDate), version: { increment: 1 } } }); await tx.auditEvent.create({ data: audit(actor, "Invoice", invoice.id, "APPROVE", { issued: true, accountingBasis }) }); return { ok: true as const, accountingBasis }; });
 }
 
+/** Records an owner-confirmed fact. A later bank match must reuse this payment rather than create revenue again. */
+export async function recordInvoicePayment(client: Db, actor: InvoiceActor, raw: Record<string, unknown>) {
+  if (actor.role !== "OWNER") return { ok: false as const, message: "Only the business owner can record invoice payments." };
+  const invoiceId = text(raw.invoiceId, 191), amount = money(raw.amount), receivedAt = date(raw.receivedAt);
+  if (!invoiceId || !amount || !amount.greaterThan(0) || !receivedAt) return { ok: false as const, message: "Enter a payment date and positive amount." };
+  return client.$transaction(async (tx) => {
+    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, businessId: actor.businessId, status: { in: ["ISSUED", "PARTIALLY_PAID", "OVERDUE"] } }, include: { payments: { select: { amount: true } } } });
+    if (!invoice) return { ok: false as const, message: "Choose an issued invoice that is not already paid or void." };
+    const paid = invoice.payments.reduce((sum, item) => sum.add(item.amount), new Prisma.Decimal(0));
+    if (paid.add(amount).greaterThan(invoice.total)) return { ok: false as const, message: "Payment exceeds the remaining invoice balance." };
+    const payment = await tx.invoicePayment.create({ data: { businessId: actor.businessId, invoiceId, amount, receivedAt, reference: text(raw.reference, 500), recordedByUserId: actor.actorUserId } });
+    const status = paymentStatus(invoice.total.toFixed(2), paid.add(amount).toFixed(2), true, invoice.dueDate);
+    await tx.invoice.update({ where: { id: invoice.id }, data: { status } });
+    await tx.auditEvent.create({ data: audit(actor, "InvoicePayment", payment.id, "CREATE", { invoiceId, amount: amount.toFixed(2), receivedAt: receivedAt.toISOString(), accountingBasis: await basis(tx, actor.businessId) }) });
+    return { ok: true as const, id: payment.id, status };
+  });
+}
+
+export async function voidInvoice(client: Db, actor: InvoiceActor, invoiceId: string, reason: string) {
+  if (actor.role !== "OWNER") return { ok: false as const, message: "Only the business owner can void invoices." };
+  const trimmed = reason.trim(); if (!trimmed || trimmed.length > 1000) return { ok: false as const, message: "Provide a concise void reason." };
+  return client.$transaction(async (tx) => { const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, businessId: actor.businessId, status: { in: ["DRAFT", "ISSUED", "OVERDUE"] } }, include: { payments: { select: { id: true } } } }); if (!invoice || invoice.payments.length) return { ok: false as const, message: "Only an unpaid draft or issued invoice can be voided." };
+    await tx.invoice.update({ where: { id: invoice.id }, data: { status: "VOID", voidedAt: new Date(), voidReason: trimmed } }); await tx.auditEvent.create({ data: audit(actor, "Invoice", invoice.id, "VOID", { reason: trimmed }) }); return { ok: true as const }; });
+}
+
 export async function publicInvoice(client: Db, token: string) { return client.invoice.findFirst({ where: { publicTokenHash: hash(token), status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID", "OVERDUE"] } }, select: { invoiceNumber: true, issueDate: true, dueDate: true, status: true, total: true, memo: true, terms: true, paymentInstructions: true, customer: { select: { businessName: true, contactName: true, billingAddress: true } }, business: { select: { displayName: true, legalName: true } }, lines: { select: { description: true, quantity: true, rate: true, amount: true }, orderBy: { sortOrder: "asc" } } } }); }
