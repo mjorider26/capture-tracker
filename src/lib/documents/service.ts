@@ -6,9 +6,9 @@ import { calculateDocumentRetentionUntil, canTransitionDocument, documentMetadat
 type Actor = { businessId: string; actorUserId: string };
 type Result<T> = { ok: true; value: T; duplicate?: boolean } | { ok: false; code: "INVALID" | "NOT_FOUND" | "INVALID_TRANSITION"; message: string };
 
-export async function listDocuments(businessId: string) {
+export async function listDocuments(businessId: string, options?: { cpaReadOnly?: boolean }) {
   return prisma.document.findMany({
-    where: { businessId, deletedAt: null },
+    where: { businessId, deletedAt: null, ...(options?.cpaReadOnly ? { status: "ACTIVE", malwareScanStatus: "CLEAN" } : {}) },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: {
       id: true,

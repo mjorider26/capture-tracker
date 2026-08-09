@@ -3,11 +3,16 @@ import { getDocument } from "@/lib/documents/service";
 import { getPrivateDocumentStorage } from "@/lib/documents/r2-storage";
 import { verifyDocumentReadGrant } from "@/lib/documents/read-grant";
 import { requireBusinessContext } from "@/lib/security/business-context";
+import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request, { params }: { params: Promise<{ documentId: string }> }) {
   try {
     const context = await requireBusinessContext();
     const documentId = (await params).documentId;
+    if (context.membership.role === "CPA_READ_ONLY") {
+      const business = await prisma.business.findUnique({ where: { id: context.business.id }, select: { cpaDocumentAccess: true } });
+      if (!business?.cpaDocumentAccess) return new NextResponse(null, { status: 404 });
+    }
     const grant = new URL(request.url).searchParams.get("grant");
     const permitted = await verifyDocumentReadGrant(grant, { actorUserId: context.user.id, businessId: context.business.id, documentId });
     if (!permitted) return new NextResponse(null, { status: 404 });
