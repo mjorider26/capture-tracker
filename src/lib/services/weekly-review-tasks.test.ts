@@ -23,6 +23,10 @@ function client() {
       statementActivity: { findMany: findMany("statementActivity", []) },
       quarterlyTaxEstimate: { findMany: findMany("quarterlyTaxEstimate", []) },
       externalTransaction: { findMany: findMany("externalTransaction", []) },
+      ownerMoneyTransfer: { findMany: findMany("ownerMoneyTransfer", []) },
+      payrollBankMatch: { findMany: findMany("payrollBankMatch", []) },
+      payrollRun: { findMany: findMany("payrollRun", []) },
+      fixedAsset: { findMany: findMany("fixedAsset", []) },
     },
   };
 }
@@ -33,10 +37,10 @@ describe("loadWeeklyReviewTasks", () => {
     const tasks = await loadWeeklyReviewTasks(harness.client as never, "business-a");
 
     expect(tasks.map((task) => task.id)).toEqual(["transaction-awaiting-review:tx-1"]);
-    expect(harness.calls).toHaveLength(7);
+    expect(harness.calls).toHaveLength(11);
     expect(harness.calls.every((call) => (call.where as { businessId: string }).businessId === "business-a")).toBe(true);
     await expect(loadWeeklyReviewTaskCount(harness.client as never, "business-b")).resolves.toBe(1);
-    expect(harness.calls.slice(7).every((call) => (call.where as { businessId: string }).businessId === "business-b")).toBe(true);
+    expect(harness.calls.slice(11).every((call) => (call.where as { businessId: string }).businessId === "business-b")).toBe(true);
   });
 
   it("starts each independent business-scoped reader before waiting for results", async () => {
@@ -54,6 +58,10 @@ describe("loadWeeklyReviewTasks", () => {
       statementActivity: { findMany: delayed("statement") },
       quarterlyTaxEstimate: { findMany: delayed("tax") },
       externalTransaction: { findMany: delayed("external") },
+      ownerMoneyTransfer: { findMany: delayed("ownerTransfer") },
+      payrollBankMatch: { findMany: delayed("payrollMatch") },
+      payrollRun: { findMany: delayed("payrollRun") },
+      fixedAsset: { findMany: delayed("fixedAsset") },
     };
 
     const loading = loadWeeklyReviewTasks(harness as never, "business-a");
@@ -66,6 +74,10 @@ describe("loadWeeklyReviewTasks", () => {
       "statement",
       "tax",
       "external",
+      "ownerTransfer",
+      "payrollMatch",
+      "payrollRun",
+      "fixedAsset",
     ]);
     pending.forEach((resolve) => resolve());
     await expect(loading).resolves.toEqual([]);

@@ -1,6 +1,6 @@
 # Capture Tracker Product Manual
 
-> **Current product note:** Ask AI has been removed. Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans.
+> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal.
 
 **SPENDING TRACKED. BUSINESS GROWN.**
 
@@ -51,13 +51,13 @@ Choose a reporting period, then view Profit and Loss, Balance Sheet, Trial Balan
 - **Trial Balance:** debit and credit balances; total debits and credits should match.
 - **Cash Activity:** opening cash, money in, money out, net change, and ending cash.
 
-Use **Export CSV** for the selected period when available. Exports are suitable for spreadsheets and protect against formula-like cell content. A large export may be safely refused rather than returned partially.
+Use **Export CSV** for the selected period when available. Exports are suitable for spreadsheets and protect against formula-like cell content. A large export may be safely refused rather than returned partially. The owner can also use **Download CPA package** for a ZIP of accounting schedules and a PDF index; it contains no private document bytes or storage links.
 
 ![Local fictional demo — Profit and Loss](images/local-demo-profit-and-loss-desktop.png)
 
 ## Taxes — planning facts, not filing
 
-Taxes presents the current tax year and quarter, ledger business income, salary expense, owner distributions, recorded estimated-tax payments, payroll facts, projected obligation, quarterly estimate remaining, reserve status, and missing inputs. Open estimate history to review an estimate and recorded payments made elsewhere; use Payroll summary and Owner compensation for factual review of wages, payroll taxes, and distributions. Capture Tracker does **not** file returns, submit tax payments, process payroll, determine an IRS-approved salary, or replace a CPA.
+Taxes presents the current tax year and quarter, ledger business income, salary expense, owner distributions, recorded estimated-tax payments, payroll facts, projected obligation, quarterly estimate remaining, reserve status, and missing inputs. Open estimate history to review an estimate and recorded payments made elsewhere; use Payroll summary and Owner compensation for factual review of wages, payroll taxes, and distributions. Payroll bank evidence remains unresolved when it is missing, partial, or different. To correct a processed payroll result, use the owner-confirmed reversal control; it posts an opposite linked journal and preserves the original record. Capture Tracker does **not** file returns, submit tax payments, process payroll, determine an IRS-approved salary, or replace a CPA.
 
 ## Weekly Review and Reconciliation
 
@@ -67,7 +67,7 @@ Reconciliation compares a financial account’s statement-ending balance with th
 
 ## Ask AI, Activity, and Settings
 
-Ask AI is read-only: it can retain conversations, show evidence links, and accept Helpful/Not helpful/Incorrect feedback. It cannot change financial data. In real-data production it is intentionally unavailable until a separately approved provider is configured; unavailable or unsupported questions fail safely.
+Ask AI is read-only: it can retain conversations, show evidence links, and accept Helpful/Not helpful/Incorrect feedback. It cannot change financial data. Only documents that are currently ACTIVE + CLEAN can be used as document evidence; pending, rejected, failed, deleted, or unreadable documents are excluded. Unavailable or unsupported questions fail safely.
 
 Activity is the read-only, business-scoped history of transactions, corrections and reversals, documents, reconciliation, tax-payment records, Weekly Review, settings, exports, and relevant timestamps. Use filters and record links to investigate what happened.
 
@@ -83,7 +83,7 @@ Settings currently supports default report period, Weekly Review day (0–6), an
 
 **Fix or reverse a transaction:** Open the transaction → choose the supported correction or reversal → confirm the explanatory history and replacement record where applicable.
 
-**Prepare for a CPA:** complete Weekly Review, resolve or note document attention, inspect Reports and Taxes, export needed CSV, and provide unresolved questions separately.
+**Prepare for a CPA:** complete Weekly Review, resolve or note document attention, inspect Reports and Taxes, download the CPA package or export needed CSV, and provide unresolved questions separately.
 
 ## Mobile browser access
 
@@ -103,7 +103,7 @@ Open the production URL supplied by the owner in Safari or Chrome. On iPhone Saf
 | Review task remains | Fix the linked record; completing Weekly Review alone does not clear it. |
 | Reconciliation will not finalize | Resolve selection/matches until difference is exactly $0.00. |
 | Report has no activity / CSV is refused | Check the period; large exports may be refused safely. |
-| Ask AI unavailable | This is expected in production until an approved provider exists. |
+| Ask AI has no document evidence | Confirm the document completed its security scan and is Ready; pending, rejected, failed, or removed files are intentionally excluded. |
 | Settings conflict or phone layout issue | Refresh, then retry; update the browser or use its normal zoom. |
 
 ## Security, privacy, and glossary

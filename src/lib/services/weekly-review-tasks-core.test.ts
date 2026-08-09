@@ -83,6 +83,27 @@ describe("per-record weekly review tasks", () => {
     expect(buildWeeklyReviewTasks(paid)).toEqual([]);
   });
 
+  it("surfaces each required missing payroll evidence component once and resolves it after a match", () => {
+    const zero = { isZero: () => true };
+    const nonZero = { isZero: () => false };
+    const run = { id: "pay-1", payDate: date, netPay: nonZero, employeeWithholding: nonZero, employeePayrollTax: zero, otherDeductions: zero, employerPayrollTax: zero, providerFee: nonZero, matches: [] };
+    const missing = buildWeeklyReviewTasks(records({ payrollRuns: [run] }));
+    expect(missing.map((task) => task.id)).toEqual([
+      "payroll-evidence-missing:pay-1:NET_PAY",
+      "payroll-evidence-missing:pay-1:PAYROLL_TAX",
+      "payroll-evidence-missing:pay-1:PROVIDER_FEE",
+    ]);
+    const resolved = {
+      ...run,
+      matches: [
+        { kind: "NET_PAY", status: "MATCHED" },
+        { kind: "PAYROLL_TAX", status: "MATCHED" },
+        { kind: "PROVIDER_FEE", status: "MATCHED" },
+      ],
+    };
+    expect(buildWeeklyReviewTasks(records({ payrollRuns: [resolved] }))).toEqual([]);
+  });
+
   it("does not hide unresolved tasks when a review is completed", () => {
     const tasks = buildWeeklyReviewTasks(records({ transactions: [{ id: "tx-1", description: "Office supplies", postedAt: date, amount: amount("25.00"), status: "PENDING_REVIEW", intent: "BUSINESS", splits: [] }] }));
     expect(countWeeklyReviewTasks(tasks)).toBe(1);

@@ -1,6 +1,6 @@
 # Capture Tracker Production Operations
 
-> **Wave 1 release note (2026-08-08):** V2 Wave 1 is deployed from `50d2096a8985f69624aba6590e0223de24049129`; exact-SHA CI `31280440924` passed and the application Worker is `f9eae9a0-9f6c-4497-b3a5-5ac97abba36b`. Production migration inventory includes `20260808120000_add_financial_ingestion`.
+> **Current V2 release note (2026-08-08):** payroll reversal is deployed from `6ae2eab7bd2e52277c5178b37f8aa2adb685b45c`; exact-SHA CI `31285960824` passed and the application Worker is `cb88a09b-0c44-4b35-8791-aa184cc96e06`. This application-only release did not redeploy the scanner or apply a migration.
 
 **Status:** CAPTURE TRACKER V1.0.0 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
 **Last updated:** 2026-08-08
@@ -63,7 +63,7 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 ### Scanner and document-removal operations
 
 - Production uses the private Queue `capture-tracker-production-document-scan`, its isolated DLQ `capture-tracker-production-document-scan-dlq`, and a private ClamAV Container on `standard-1`, `max_instances=1`. No document bytes appear in Queue messages or public URLs.
-- The app Worker is `6d84da45-2d3a-41b7-9838-3a1a81dcb509`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
+- The app Worker is `cb88a09b-0c44-4b35-8791-aa184cc96e06`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
 - The scanner has a 15-minute warm window. A measured cold run spent about 93.77 seconds on FreshClam/ClamAV readiness; Queue wait was about 1.63 seconds, private R2 fetch about 1.24 seconds, and scan time about 215 ms. Recheck a scan still pending beyond 60 seconds with sanitized Worker and Queue logs; do not weaken quarantine.
 - Queue deliveries are idempotent and version-aware. Scanner unavailable, timeout, malformed response, or exhausted retries leaves the document quarantined and unreadable. Consumer retries are bounded at three with a 30-second delay, then route to the isolated DLQ.
 - Promotion is database-authoritative: validate the current document version and CLEAN result, commit ACTIVE plus private-read eligibility, then clean up the quarantine object. A stale delivery cannot promote a deleted or replaced document.
@@ -83,13 +83,20 @@ The primary mobile navigation is: Today, Money, Documents, Reports, and More. Mo
 - **Reports:** financial statements and exports.
 - **More:** secondary operational workflows.
 
-Ask AI has been removed from product navigation and direct product surfaces. Capture Tracker has no external AI provider or AI cost.
+Ask AI is available only inside the authenticated tenant boundary. It may use document evidence only when the authoritative document state is ACTIVE + CLEAN; quarantined, failed, rejected, deleted, cross-tenant, and unreadable document bytes are not eligible evidence.
 
 ### CSV import and review
 
 Money imports bank or credit-card CSV exports; it does not provide a bank feed. The operator selects the financial account, reviews detected or corrected mappings, then sees total rows, new rows, duplicates, possible duplicates, and invalid rows before confirmation. Repeating the same file is duplicate-safe. Imported activity remains separate bank evidence until an authorized reviewer accepts a deterministic classification and creates the corresponding balanced accounting entry. Ambiguous transfers, owner activity, payroll withdrawals, and possible duplicates stay unresolved rather than receiving guessed treatment. Today and Weekly Review show unresolved import exceptions only.
 
-Authenticated fictional Wave 1 acceptance is not currently authorized by an approved production pilot session. Do not create test users, businesses, financial records, or cleanup records through database/operator workarounds. When a controlled test session and cleanup lifecycle are approved, follow the dedicated acceptance procedure and preserve required audit evidence.
+V2 automated acceptance uses fictional fixtures and protected application/service boundaries. Physical CSV-picker, file-picker, and CPA-download interaction is documented as **ASSUMED — AUTOMATED COVERAGE** only when route health, parser/output content, authorization, tenant scope, persistence, downstream accounting behavior, and failure handling are verified. Do not use database/operator workarounds to create or remove records.
+
+### V2 accounting operations
+
+- Payroll results are reviewed provider facts, not payroll execution. Payroll journals are balanced before posting. Required payroll components without imported bank evidence appear as explicit Weekly Review/Today tax attention; partial and differing evidence stays unresolved. Matching uses an idempotent tenant-scoped key and creates no additional journal.
+- A processed payroll correction uses the owner-confirmed reversal workflow: create and post an opposite reversing journal, link it to the original journal, mark the payroll result VOIDED, and retain the original record and audit history. Never manually delete posted payroll history.
+- A personally paid reimbursement approval posts debit expense / credit reimbursement payable exactly once. Exact company-bank payment evidence later posts debit reimbursement payable / credit company cash and marks the claim PAID. It is neither wages nor an owner distribution; ambiguous amounts are rejected rather than forced.
+- The protected CPA package endpoint returns only tenant-scoped CSV schedules and a PDF index in a ZIP. It never includes receipt bytes, R2 keys, signed grants, credentials, or raw private-document URLs. Any export requires the authenticated owner context.
 
 ## Release process
 

@@ -19,6 +19,7 @@ type TaskClient = Pick<
   | "externalTransaction"
   | "ownerMoneyTransfer"
   | "payrollBankMatch"
+  | "payrollRun"
   | "fixedAsset"
 >;
 
@@ -36,6 +37,7 @@ export async function loadWeeklyReviewTasks(
     externalTransactions,
     ownerTransfers,
     payrollMatches,
+    payrollRuns,
     fixedAssets,
   ] = await Promise.all([
     client.transaction.findMany({
@@ -72,10 +74,11 @@ export async function loadWeeklyReviewTasks(
     }),
     client.ownerMoneyTransfer?.findMany({ where: { businessId, status: "PENDING_REVIEW" }, select: { id: true, direction: true, classification: true, externalTransaction: { select: { description: true, amount: true } } } }) ?? Promise.resolve([]),
     client.payrollBankMatch?.findMany({ where: { businessId, status: { not: "MATCHED" } }, select: { id: true, kind: true, status: true, payrollRun: { select: { payDate: true } } } }) ?? Promise.resolve([]),
+    client.payrollRun?.findMany({ where: { businessId, status: "PROCESSED" }, select: { id: true, payDate: true, netPay: true, employeeWithholding: true, employeePayrollTax: true, otherDeductions: true, employerPayrollTax: true, providerFee: true, matches: { select: { kind: true, status: true } } } }) ?? Promise.resolve([]),
     client.fixedAsset?.findMany({ where: { businessId, status: "POSSIBLE_REVIEW" }, select: { id: true, name: true, acquisitionCost: true, acquisitionDate: true, status: true } }) ?? Promise.resolve([]),
   ]);
 
-  return buildWeeklyReviewTasks({ transactions, documents, matchSuggestions, reconciliationItems, statementActivities, taxEstimates, externalTransactions, ownerTransfers, payrollMatches, fixedAssets });
+  return buildWeeklyReviewTasks({ transactions, documents, matchSuggestions, reconciliationItems, statementActivities, taxEstimates, externalTransactions, ownerTransfers, payrollMatches, payrollRuns, fixedAssets });
 }
 
 export async function loadWeeklyReviewTaskCount(client: TaskClient, businessId: string) {

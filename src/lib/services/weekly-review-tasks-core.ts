@@ -80,6 +80,17 @@ type ExternalTransaction = {
 };
 type OwnerTransfer = { id: string; direction: string; classification: string; externalTransaction: { description: string; amount: { toFixed: (digits: number) => string } } };
 type PayrollMatch = { id: string; kind: string; status: string; payrollRun: { payDate: Date } };
+type PayrollRunEvidence = {
+  id: string;
+  payDate: Date;
+  netPay: { isZero: () => boolean };
+  employeeWithholding: { isZero: () => boolean };
+  employeePayrollTax: { isZero: () => boolean };
+  otherDeductions: { isZero: () => boolean };
+  employerPayrollTax: { isZero: () => boolean };
+  providerFee: { isZero: () => boolean };
+  matches: Array<{ kind: string; status: string }>;
+};
 type FixedAsset = { id: string; name: string; acquisitionCost: { toFixed: (digits: number) => string }; acquisitionDate: Date; status: string };
 
 export type WeeklyReviewTaskRecords = {
@@ -92,6 +103,7 @@ export type WeeklyReviewTaskRecords = {
   externalTransactions?: ExternalTransaction[];
   ownerTransfers?: OwnerTransfer[];
   payrollMatches?: PayrollMatch[];
+  payrollRuns?: PayrollRunEvidence[];
   fixedAssets?: FixedAsset[];
 };
 
@@ -188,6 +200,15 @@ export function buildWeeklyReviewTasks(
 
   for (const match of records.payrollMatches ?? []) {
     add(tasks, { id: `payroll-match:${match.id}`, category: "Taxes", title: `Reconcile payroll ${match.kind.replaceAll("_", " ").toLowerCase()}`, explanation: "Payroll provider facts and bank evidence do not yet agree.", detail: `${formatDate(match.payrollRun.payDate)} · ${match.status.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/payroll", state: "UNRESOLVED" });
+  }
+
+  for (const run of records.payrollRuns ?? []) {
+    const payrollTaxDue = !run.employeeWithholding.isZero() || !run.employeePayrollTax.isZero() || !run.otherDeductions.isZero() || !run.employerPayrollTax.isZero();
+    const expectedKinds = ["NET_PAY", ...(payrollTaxDue ? ["PAYROLL_TAX"] : []), ...(!run.providerFee.isZero() ? ["PROVIDER_FEE"] : [])];
+    for (const kind of expectedKinds) {
+      if (run.matches.some((match) => match.kind === kind)) continue;
+      add(tasks, { id: `payroll-evidence-missing:${run.id}:${kind}`, category: "Taxes", title: `Find payroll ${kind.replaceAll("_", " ").toLowerCase()} evidence`, explanation: "No imported bank evidence has been recorded for this required payroll component.", detail: `${formatDate(run.payDate)} · missing`, href: "/taxes/payroll", state: "UNRESOLVED" });
+    }
   }
 
   for (const asset of records.fixedAssets ?? []) {
