@@ -58,7 +58,7 @@ Supporting journal lines are database-paginated. CSV report exports remain tenan
 
 Production accepts PDF, PNG, and JPEG uploads, including mobile camera receipt capture and existing-file selection. Camera receipt images are normalized locally before upload: orientation is corrected by browser decode, the longest edge is capped near 1,920 pixels without upscaling, and JPEG encoding uses 0.82 quality so EXIF/GPS metadata is not carried into the normalized upload. PDFs are unchanged and the existing 10 MB server limit remains authoritative. The upload path performs strict byte, MIME, and extension validation, duplicate detection, tenant-scoped private R2 storage, authorized protected reads, and audit history.
 
-Capture Tracker now quarantines and malware-scans new document uploads before they become readable or trusted. New bytes remain private through QUARANTINED/PENDING → Queue → SCANNING → ACTIVE + CLEAN, or remain fail-closed as QUARANTINED + SCAN_FAILED or REJECTED + INFECTED. Normal reads, signed grants, extraction, matching, transaction evidence, and Ask AI document evidence require the current document to be ACTIVE, CLEAN, private-read eligible, and not deleted.
+Capture Tracker now quarantines and malware-scans new document uploads before they become readable or trusted. New bytes remain private through QUARANTINED/PENDING → Queue → SCANNING → ACTIVE + CLEAN, or remain fail-closed as QUARANTINED + SCAN_FAILED or REJECTED + INFECTED. Normal reads, signed grants, extraction, matching, and transaction evidence require the current document to be ACTIVE, CLEAN, private-read eligible, and not deleted.
 
 ### Scanner and document-removal operations
 
@@ -83,7 +83,6 @@ The primary mobile navigation is: Today, Money, Documents, Reports, and More. Mo
 - **Reports:** financial statements and exports.
 - **More:** secondary operational workflows.
 
-Ask AI is available only inside the authenticated tenant boundary. It may use document evidence only when the authoritative document state is ACTIVE + CLEAN; quarantined, failed, rejected, deleted, cross-tenant, and unreadable document bytes are not eligible evidence.
 
 ### CSV import and review
 

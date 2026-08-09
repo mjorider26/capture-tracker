@@ -9,7 +9,7 @@
 5. Use **Reports** to read complete totals; supporting detail can paginate without reducing totals. The owner can download a private CPA package containing schedules and a PDF index.
 6. In **Taxes**, record reviewed provider payroll facts, reconcile required bank evidence, and use the owner-confirmed reversal workflow if a processed payroll record needs correction.
 7. Run **Weekly Review** each week and resolve linked work before marking the review complete.
-8. On a phone, use Today/Money/Documents/Reports and **More** for Taxes, Weekly Review, Reconciliation, Ask AI, Activity, and Settings.
+8. On a phone, use Today/Money/Documents/Reports and **More** for Taxes, Weekly Review, Reconciliation, Activity, and Settings.
 
 Money records financial activity; imported bank activity remains separate from posted accounting entries until you approve a category. Documents stores evidence; Reports summarizes complete accounting results. Taxes is planning only.
 

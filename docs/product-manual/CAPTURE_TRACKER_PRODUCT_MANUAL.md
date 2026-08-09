@@ -14,7 +14,7 @@ Use the private workspace URL supplied by your owner. Sign in with your existing
 
 ## Navigation
 
-Desktop navigation lists **Today, Money, Documents, Reports, Taxes, Weekly Review, Reconciliation, Ask AI, Activity, Settings**. On phones, the primary bar is **Today, Money, Documents, Reports, More**; More contains **Taxes, Weekly Review, Reconciliation, Ask AI, Activity, Settings**.
+Desktop navigation lists **Today, Money, Documents, Reports, Taxes, Weekly Review, Reconciliation, Activity, Settings**. On phones, the primary bar is **Today, Money, Documents, Reports, More**; More contains **Taxes, Weekly Review, Reconciliation, Activity, Settings**.
 
 ## Today — the decision briefing
 
@@ -65,9 +65,7 @@ Weekly Review groups unresolved work into Transactions, Documents, Reconciliatio
 
 Reconciliation compares a financial account’s statement-ending balance with the cleared book balance. Review statement activity and candidate matches, approve or reject only a safe match, leave uncertain items unresolved, save the selection, and finalize only at an exact $0.00 difference. Matching does not create another transaction or journal effect. A completed reconciliation is preserved as evidence.
 
-## Ask AI, Activity, and Settings
-
-Ask AI is read-only: it can retain conversations, show evidence links, and accept Helpful/Not helpful/Incorrect feedback. It cannot change financial data. Only documents that are currently ACTIVE + CLEAN can be used as document evidence; pending, rejected, failed, deleted, or unreadable documents are excluded. Unavailable or unsupported questions fail safely.
+## Activity and Settings
 
 Activity is the read-only, business-scoped history of transactions, corrections and reversals, documents, reconciliation, tax-payment records, Weekly Review, settings, exports, and relevant timestamps. Use filters and record links to investigate what happened.
 
@@ -103,14 +101,13 @@ Open the production URL supplied by the owner in Safari or Chrome. On iPhone Saf
 | Review task remains | Fix the linked record; completing Weekly Review alone does not clear it. |
 | Reconciliation will not finalize | Resolve selection/matches until difference is exactly $0.00. |
 | Report has no activity / CSV is refused | Check the period; large exports may be refused safely. |
-| Ask AI has no document evidence | Confirm the document completed its security scan and is Ready; pending, rejected, failed, or removed files are intentionally excluded. |
 | Settings conflict or phone layout issue | Refresh, then retry; update the browser or use its normal zoom. |
 
 ## Security, privacy, and glossary
 
 The workspace is private and authenticated. Passwords are not displayed in the product. Data and documents are scoped to the business. New documents are quarantined and ClamAV-scanned privately before ACTIVE + CLEAN-only protected access; signed document access rechecks the current state. Accounting history uses corrections/reversals instead of destructive editing. Operational backups are encrypted; use normal sign-out practice on shared devices.
 
-**Available Business Cash** is approved business cash, excluding personal accounts and credit cards. **Income** is business money received; a **Business Expense** is a business cost. An **Owner Contribution** adds owner equity; an **Owner Distribution** removes owner equity. A **Mixed Transaction** contains deliberate business/personal treatment. A **Category** classifies activity. A **Posted Transaction** has a balanced **Journal Entry**, where **Debit** and **Credit** totals match. A **Correction**, **Reversal**, or **Replacement Transaction** preserves history while fixing a mistake. A **Document** is evidence; a **Document Match** is a reviewed suggested relationship. **Weekly Review** is the grouped attention checklist. **Reconciliation** compares book and **Statement Activity**. A **Tax Estimate** is planning information. **Salary** and **Distribution** are distinct factual records. **Profit and Loss**, **Balance Sheet**, **Trial Balance**, and **Cash Activity** are the reports above. **Ask AI Evidence** links an answer to records. **Activity History** is the immutable record of material workspace events.
+**Available Business Cash** is approved business cash, excluding personal accounts and credit cards. **Income** is business money received; a **Business Expense** is a business cost. An **Owner Contribution** adds owner equity; an **Owner Distribution** removes owner equity. A **Mixed Transaction** contains deliberate business/personal treatment. A **Category** classifies activity. A **Posted Transaction** has a balanced **Journal Entry**, where **Debit** and **Credit** totals match. A **Correction**, **Reversal**, or **Replacement Transaction** preserves history while fixing a mistake. A **Document** is evidence; a **Document Match** is a reviewed suggested relationship. **Weekly Review** is the grouped attention checklist. **Reconciliation** compares book and **Statement Activity**. A **Tax Estimate** is planning information. **Salary** and **Distribution** are distinct factual records. **Profit and Loss**, **Balance Sheet**, **Trial Balance**, and **Cash Activity** are the reports above. **Activity History** is the immutable record of material workspace events.
 
 ## Screenshot provenance
 

@@ -32,10 +32,9 @@ function parseUrl(value, variableName, databaseName) {
     throw new Error(`${variableName} must use PostgreSQL.`);
   if (!localHosts.has(url.hostname.toLowerCase()))
     throw new Error(`${variableName} must target a local PostgreSQL host.`);
-  if (Number(url.port || "5432") !== 5432)
-    throw new Error(
-      `${variableName} must target the discovered PostgreSQL port.`,
-    );
+  const port = Number(url.port || "5432");
+  if (!Number.isInteger(port) || port < 1024 || port > 65535)
+    throw new Error(`${variableName} must target a local non-privileged PostgreSQL port.`);
   if (actualDatabase !== databaseName)
     throw new Error(`${variableName} must target ${databaseName}.`);
   return url;
