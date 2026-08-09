@@ -1,9 +1,10 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import type { BusinessRole } from "../../generated/prisma/client";
 import { inferCsvMapping, normalizeImportRows, parseCsv, sourceHash, sourceSignature, type CsvMapping } from "./financial-ingestion-core";
 
-type Actor = { businessId: string; actorUserId: string; role: "OWNER" | "ADVISOR" };
+type Actor = { businessId: string; actorUserId: string; role: BusinessRole };
 type Preview = { importId: string; headers: string[]; mapping: CsvMapping; summary: { total: number; valid: number; invalid: number; new: number; duplicate: number; possibleDuplicate: number }; rows: Array<{ rowNumber: number; date: string; description: string; amount: string; direction: "INFLOW" | "OUTFLOW"; status: string; reason?: string }> };
 const dateAtNoon = (date: string) => new Date(`${date}T12:00:00.000Z`);
 const id = (value: unknown) => typeof value === "string" && /^[A-Za-z0-9_-]{1,191}$/.test(value);

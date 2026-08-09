@@ -1,10 +1,10 @@
-import { Prisma, type PrismaClient } from "../../generated/prisma/client";
+import { Prisma, type BusinessRole, type PrismaClient } from "../../generated/prisma/client";
 import { z } from "zod";
 
 import { basisStatus, distributionReadiness, type BasisStatus, type DistributionReadiness } from "./s-corp-intelligence-core";
 
 type Db = PrismaClient | Prisma.TransactionClient;
-export type SCorpActor = { businessId: string; actorUserId: string; actorMembershipId: string; role: "OWNER" | "ADVISOR"; executionMode: "authenticated" | "demo" };
+export type SCorpActor = { businessId: string; actorUserId: string; actorMembershipId: string; role: BusinessRole; executionMode: "authenticated" | "demo" };
 
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,191}$/);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).transform((value) => new Date(`${value}T00:00:00.000Z`));

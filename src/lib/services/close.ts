@@ -1,7 +1,7 @@
-import { Prisma, type PrismaClient } from "../../generated/prisma/client";
+import { Prisma, type BusinessRole, type PrismaClient } from "../../generated/prisma/client";
 import { balancedJournalEntry, closeReadiness, type CloseCheck } from "./close-core";
 
-type Actor = { businessId: string; actorUserId: string; role: "OWNER" | "ADVISOR"; executionMode: string };
+type Actor = { businessId: string; actorUserId: string; role: BusinessRole; executionMode: string };
 const monthBounds = (raw: string) => {
   if (!/^\d{4}-\d{2}$/.test(raw)) return null;
   const [year, month] = raw.split("-").map(Number);

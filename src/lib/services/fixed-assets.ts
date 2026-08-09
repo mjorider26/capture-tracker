@@ -1,11 +1,11 @@
-import { Prisma, type PrismaClient } from "../../generated/prisma/client";
+import { Prisma, type BusinessRole, type PrismaClient } from "../../generated/prisma/client";
 import { z } from "zod";
 
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,191}$/);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const inputSchema = z.object({ name: z.string().trim().min(2).max(180), category: z.string().trim().min(2).max(100), vendor: z.string().trim().max(180).optional(), acquisitionDate: date, acquisitionCost: z.string().trim().regex(/^\d{1,12}(?:\.\d{1,2})?$/).refine((value) => Number(value) > 0), placedInServiceDate: date.optional().or(z.literal("")), sourceExternalTransactionId: id.optional().or(z.literal("")), sourceTransactionId: id.optional().or(z.literal("")), documentId: id.optional().or(z.literal("")), workpaperNotes: z.string().trim().max(2000).optional(), cpaNotes: z.string().trim().max(2000).optional() });
 const approvalSchema = z.object({ assetId: id, version: z.coerce.number().int().positive(), placedInServiceDate: date, confirmation: z.literal("on") });
-type Actor = { businessId: string; actorUserId: string; role: "OWNER" | "ADVISOR"; executionMode: string };
+type Actor = { businessId: string; actorUserId: string; role: BusinessRole; executionMode: string };
 const noon = (value: string) => new Date(`${value}T12:00:00.000Z`);
 
 export async function recordFixedAssetReview(client: Pick<PrismaClient, "$transaction">, actor: Actor, input: unknown) {

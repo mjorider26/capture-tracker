@@ -1,8 +1,8 @@
-import { Prisma, type PrismaClient } from "../../generated/prisma/client";
+import { Prisma, type BusinessRole, type PrismaClient } from "../../generated/prisma/client";
 import { payrollEntrySchema, payrollMatchStatus, payrollPreview } from "./payroll-core";
 import { ensureWorkspaceAccountingFoundation } from "@/lib/accounting/workspace-bootstrap";
 
-type Actor = { businessId: string; actorUserId: string; role: "OWNER" | "ADVISOR"; executionMode: string };
+type Actor = { businessId: string; actorUserId: string; role: BusinessRole; executionMode: string };
 type Client = Pick<PrismaClient, "$transaction">;
 type Result = { ok: true; payrollRunId: string; journalEntryId: string } | { ok: false; message: string };
 const dateAtNoon = (date: string) => new Date(`${date}T12:00:00.000Z`);

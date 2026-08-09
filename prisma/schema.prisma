@@ -22,6 +22,41 @@ datasource db {
 enum BusinessRole {
   OWNER
   ADVISOR
+  /// A business-scoped professional review role. Mutations are denied server-side.
+  CPA_READ_ONLY
+}
+
+enum BankConnectionState {
+  CONNECTED
+  SYNCING
+  NEEDS_ATTENTION
+  RECONNECT_REQUIRED
+  DISCONNECTED
+}
+
+enum BankSyncStatus {
+  STARTED
+  COMPLETED
+  FAILED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum BillStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  DUE
+  PARTIALLY_PAID
+  PAID
+  VOID
 }
 
 /// Platform onboarding authority is intentionally separate from BusinessRole.
@@ -426,6 +461,19 @@ model Business {
   accountingPolicyVersions   AccountingPolicyVersion[]
   accountingPolicyApplications AccountingPolicyApplication[]
   shareholderBenefitWorkpapers ShareholderBenefitWorkpaper[]
+  bankConnections              BankConnection[]
+  connectedFinancialAccounts   ConnectedFinancialAccount[]
+  bankSyncRuns                 BankSyncRun[]
+  bankProviderTransactions     BankProviderTransaction[]
+  customers                    Customer[]
+  invoices                     Invoice[]
+  invoicePayments              InvoicePayment[]
+  cpaInvitations               CpaInvitation[]
+  vendors                      Vendor[]
+  bills                        Bill[]
+  billPayments                 BillPayment[]
+  mileagePolicies              MileagePolicy[]
+  mileageTrips                 MileageTrip[]
 
   @@index([legalName])
 }
@@ -698,6 +746,7 @@ model FinancialAccount {
   transactionImportProfiles  TransactionImportProfile[]
   externalTransactions       ExternalTransaction[]
   merchantCategoryRules      MerchantCategoryRule[]
+  connectedFinancialAccounts ConnectedFinancialAccount[]
 
   @@unique([businessId, id])
   @@index([businessId, isActive])
@@ -1905,6 +1954,321 @@ model BusinessOnboarding {
   actor    BusinessMember @relation("BusinessOnboardingActor", fields: [businessId, actorUserId], references: [businessId, userId], onDelete: Restrict)
 
   @@unique([businessId, id])
+}
+
+/// Provider-neutral connection metadata. Provider credentials are held only by the provider,
+/// never persisted in Capture Tracker.
+model BankConnection {
+  id                 String              @id @default(cuid())
+  businessId         String
+  providerId         String              @db.VarChar(64)
+  providerConnectionRef String            @db.VarChar(191)
+  institutionName    String?             @db.VarChar(180)
+  state              BankConnectionState @default(CONNECTED)
+  lastSuccessfulSyncAt DateTime?
+  lastAttemptedSyncAt DateTime?
+  syncCursor         String?             @db.VarChar(500)
+  errorCode          String?             @db.VarChar(100)
+  errorMessage       String?             @db.VarChar(500)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  version            Int                 @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  accounts ConnectedFinancialAccount[]
+  syncRuns BankSyncRun[]
+  providerTransactions BankProviderTransaction[]
+
+  @@unique([businessId, providerId, providerConnectionRef])
+  @@index([businessId, state])
+}
+
+/// Explicitly maps a provider account to the existing Capture Tracker financial account.
+model ConnectedFinancialAccount {
+  id                 String @id @default(cuid())
+  businessId         String
+  bankConnectionId   String
+  financialAccountId String?
+  externalAccountRef String @db.VarChar(191)
+  name               String @db.VarChar(180)
+  accountType        String @db.VarChar(64)
+  maskedLastFour     String? @db.VarChar(4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  version            Int @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  connection BankConnection @relation(fields: [bankConnectionId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount? @relation(fields: [businessId, financialAccountId], references: [businessId, id], onDelete: Restrict)
+  providerTransactions BankProviderTransaction[]
+
+  @@unique([businessId, bankConnectionId, externalAccountRef])
+  @@index([businessId, financialAccountId])
+}
+
+model BankSyncRun {
+  id               String @id @default(cuid())
+  businessId       String
+  bankConnectionId String
+  status           BankSyncStatus @default(STARTED)
+  cursorBefore     String? @db.VarChar(500)
+  cursorAfter      String? @db.VarChar(500)
+  importedCount    Int @default(0)
+  duplicateCount   Int @default(0)
+  updatedCount     Int @default(0)
+  errorCode        String? @db.VarChar(100)
+  errorMessage     String? @db.VarChar(500)
+  startedAt        DateTime @default(now())
+  completedAt      DateTime?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  connection BankConnection @relation(fields: [bankConnectionId], references: [id], onDelete: Restrict)
+  providerTransactions BankProviderTransaction[]
+
+  @@index([businessId, bankConnectionId, startedAt])
+}
+
+/// Provider-delivery evidence. It is normalized before an ExternalTransaction is created.
+model BankProviderTransaction {
+  id                         String @id @default(cuid())
+  businessId                 String
+  bankConnectionId           String
+  connectedFinancialAccountId String
+  bankSyncRunId              String?
+  providerTransactionRef     String @db.VarChar(191)
+  transactionDate            DateTime
+  postedDate                 DateTime?
+  description                String
+  amount                     Decimal @db.Decimal(18, 2)
+  direction                  TransactionDirection
+  pending                    Boolean @default(false)
+  providerUpdatedAt          DateTime?
+  normalizedExternalTransactionId String? @unique
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  version                    Int @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  connection BankConnection @relation(fields: [bankConnectionId], references: [id], onDelete: Restrict)
+  account ConnectedFinancialAccount @relation(fields: [connectedFinancialAccountId], references: [id], onDelete: Restrict)
+  syncRun BankSyncRun? @relation(fields: [bankSyncRunId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, bankConnectionId, providerTransactionRef])
+  @@index([businessId, connectedFinancialAccountId, transactionDate])
+}
+
+model Customer {
+  id              String @id @default(cuid())
+  businessId      String
+  businessName    String @db.VarChar(180)
+  contactName     String? @db.VarChar(180)
+  email           String? @db.VarChar(320)
+  billingAddress  String?
+  notes           String?
+  isActive        Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  version         Int @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  invoices Invoice[]
+  @@unique([businessId, id])
+  @@index([businessId, isActive, businessName])
+}
+
+model Invoice {
+  id                String @id @default(cuid())
+  businessId        String
+  customerId        String
+  invoiceNumber     String @db.VarChar(64)
+  publicTokenHash   String? @unique @db.VarChar(64)
+  issueDate         DateTime?
+  dueDate           DateTime?
+  status            InvoiceStatus @default(DRAFT)
+  subtotal          Decimal @default(0) @db.Decimal(18, 2)
+  discountAmount    Decimal @default(0) @db.Decimal(18, 2)
+  taxAmount         Decimal @default(0) @db.Decimal(18, 2)
+  total             Decimal @default(0) @db.Decimal(18, 2)
+  memo              String?
+  paymentInstructions String?
+  terms             String?
+  voidedAt          DateTime?
+  voidReason        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  version           Int @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  customer Customer @relation(fields: [businessId, customerId], references: [businessId, id], onDelete: Restrict)
+  lines InvoiceLine[]
+  payments InvoicePayment[]
+  @@unique([businessId, id])
+  @@unique([businessId, invoiceNumber])
+  @@index([businessId, status, dueDate])
+}
+
+model InvoiceLine {
+  id          String @id @default(cuid())
+  invoiceId   String
+  description String @db.VarChar(500)
+  quantity    Decimal @db.Decimal(18, 4)
+  rate        Decimal @db.Decimal(18, 2)
+  amount      Decimal @db.Decimal(18, 2)
+  sortOrder   Int
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  @@unique([invoiceId, sortOrder])
+}
+
+model InvoicePayment {
+  id                    String @id @default(cuid())
+  businessId            String
+  invoiceId             String
+  amount                Decimal @db.Decimal(18, 2)
+  receivedAt            DateTime
+  externalTransactionId String? @unique
+  reference             String? @db.VarChar(500)
+  recordedByUserId      String?
+  createdAt             DateTime @default(now())
+  invoice Invoice @relation(fields: [businessId, invoiceId], references: [businessId, id], onDelete: Restrict)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  @@index([businessId, invoiceId, receivedAt])
+}
+
+/// One-way-token, email-bound invitation for a professional reviewer.
+model CpaInvitation {
+  id                 String @id @default(cuid())
+  businessId         String
+  invitedEmail       String @db.VarChar(320)
+  tokenHash          String @unique @db.VarChar(64)
+  status             String @default("PENDING") @db.VarChar(32)
+  expiresAt          DateTime
+  acceptedByUserId   String?
+  acceptedAt         DateTime?
+  revokedAt          DateTime?
+  createdByUserId    String
+  createdAt          DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  @@index([businessId, status, expiresAt])
+}
+
+model Vendor {
+  id                    String @id @default(cuid())
+  businessId            String
+  name                  String @db.VarChar(180)
+  contactName           String? @db.VarChar(180)
+  email                 String? @db.VarChar(320)
+  defaultLedgerAccountId String?
+  paymentTerms          String? @db.VarChar(180)
+  notes                 String?
+  isActive              Boolean @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  version               Int @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  bills Bill[]
+  @@unique([businessId, id])
+  @@index([businessId, isActive, name])
+}
+
+model Bill {
+  id                  String @id @default(cuid())
+  businessId          String
+  vendorId            String
+  billNumber          String? @db.VarChar(180)
+  billDate            DateTime?
+  dueDate             DateTime?
+  status              BillStatus @default(DRAFT)
+  total               Decimal @default(0) @db.Decimal(18, 2)
+  memo                String?
+  terms               String?
+  supportingDocumentId String?
+  voidedAt            DateTime?
+  voidReason          String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  version             Int @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  vendor Vendor @relation(fields: [businessId, vendorId], references: [businessId, id], onDelete: Restrict)
+  lines BillLine[]
+  payments BillPayment[]
+  @@unique([businessId, id])
+  @@index([businessId, status, dueDate])
+}
+
+model BillLine {
+  id                    String @id @default(cuid())
+  billId                String
+  description           String @db.VarChar(500)
+  ledgerAccountId       String?
+  amount                Decimal @db.Decimal(18, 2)
+  sortOrder             Int
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Restrict)
+  @@unique([billId, sortOrder])
+}
+
+model BillPayment {
+  id                    String @id @default(cuid())
+  businessId            String
+  billId                String
+  amount                Decimal @db.Decimal(18, 2)
+  paidAt                DateTime
+  externalTransactionId String? @unique
+  reference             String? @db.VarChar(500)
+  recordedByUserId      String?
+  createdAt             DateTime @default(now())
+  bill Bill @relation(fields: [businessId, billId], references: [businessId, id], onDelete: Restrict)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  @@index([businessId, billId, paidAt])
+}
+
+/// A dated, source-backed reimbursement rate. A missing policy deliberately remains unresolved.
+model MileagePolicy {
+  id                String @id @default(cuid())
+  businessId        String
+  effectiveDate     DateTime
+  effectiveEndDate  DateTime?
+  ratePerMile       Decimal @db.Decimal(8, 4)
+  sourceReference   String @db.VarChar(500)
+  companyPolicy     String?
+  version           Int @default(1)
+  createdByUserId   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  trips MileageTrip[]
+  @@unique([businessId, id])
+  @@index([businessId, effectiveDate])
+}
+
+model MileageTrip {
+  id                  String @id @default(cuid())
+  businessId          String
+  tripDate            DateTime
+  originDescription   String @db.VarChar(500)
+  destinationDescription String @db.VarChar(500)
+  businessPurpose     String? @db.VarChar(1000)
+  miles               Decimal @db.Decimal(10, 2)
+  vehicleReference    String? @db.VarChar(180)
+  notes               String?
+  documentId          String?
+  mileagePolicyId     String?
+  reimbursementClaimId String?
+  reimbursementAmount Decimal? @db.Decimal(18, 2)
+  confirmedByUserId   String?
+  confirmedAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  version             Int @default(1)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  policy MileagePolicy? @relation(fields: [businessId, mileagePolicyId], references: [businessId, id], onDelete: Restrict)
+  @@unique([businessId, id])
+  @@index([businessId, tripDate])
+  @@index([businessId, reimbursementClaimId])
 }
 
 /// Cutover facts are bookkeeping inputs, not a QuickBooks replica or tax conclusion.
