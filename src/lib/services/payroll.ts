@@ -6,6 +6,7 @@ type Actor = { businessId: string; actorUserId: string; role: "OWNER" | "ADVISOR
 type Client = Pick<PrismaClient, "$transaction">;
 type Result = { ok: true; payrollRunId: string; journalEntryId: string } | { ok: false; message: string };
 const dateAtNoon = (date: string) => new Date(`${date}T12:00:00.000Z`);
+export function reversingPayrollLines(lines: Array<{ ledgerAccountId: string; debitAmount: Prisma.Decimal; creditAmount: Prisma.Decimal }>) { return lines.map((line, index) => ({ ledgerAccountId: line.ledgerAccountId, lineNumber: index + 1, debitAmount: line.creditAmount, creditAmount: line.debitAmount, memo: "Payroll reversal" })); }
 
 export async function recordPayrollRun(client: Client, actor: Actor, input: unknown): Promise<Result> {
   if (actor.role !== "OWNER") return { ok: false, message: "Only the business owner can record reviewed payroll results." };
@@ -87,7 +88,7 @@ export async function reversePayrollRun(client: Client, actor: Actor, input: { p
     const period = await tx.accountingPeriod.findFirst({ where: { businessId: actor.businessId, status: "OPEN", startsAt: { lte: reversalDate }, endsAt: { gte: reversalDate } }, select: { id: true } });
     if (!period) return { ok: false as const, message: "The reversal date belongs to a closed accounting period." };
     const reversal = await tx.journalEntry.create({ data: { businessId: actor.businessId, accountingPeriodId: period.id, entryNumber: `PAY-REV-${run.id}`, entryDate: reversalDate, description: `Reversal of payroll result ${run.payDate.toISOString().slice(0, 10)}`, status: "DRAFT", sourceType: "REVERSING_ENTRY", sourceEntityId: run.id, reversalOfEntryId: run.journalEntry.id, approvedByMembershipId: actor.actorUserId } });
-    await tx.journalLine.createMany({ data: run.journalEntry.lines.map((line, index) => ({ businessId: actor.businessId, journalEntryId: reversal.id, ledgerAccountId: line.ledgerAccountId, lineNumber: index + 1, debitAmount: line.creditAmount, creditAmount: line.debitAmount, memo: "Payroll reversal" })) });
+    await tx.journalLine.createMany({ data: reversingPayrollLines(run.journalEntry.lines).map((line) => ({ businessId: actor.businessId, journalEntryId: reversal.id, ...line })) });
     await tx.journalEntry.update({ where: { id: reversal.id }, data: { status: "POSTED", postedAt: new Date() } });
     await tx.journalEntry.update({ where: { id: run.journalEntry.id }, data: { reversedAt: new Date(), version: { increment: 1 } } });
     await tx.payrollRun.update({ where: { id: run.id }, data: { status: "VOIDED", version: { increment: 1 } } });
