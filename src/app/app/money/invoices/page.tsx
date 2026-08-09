@@ -1,0 +1,8 @@
+import { notFound } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { InvoiceCenter } from "@/components/invoice-center";
+import { prisma } from "@/lib/prisma";
+import { isAccessControlError, requireBusinessContext } from "@/lib/security/business-context";
+import { createCustomerAction, createInvoiceAction, issueInvoiceAction } from "./actions";
+export const dynamic = "force-dynamic"; export const revalidate = 0; export const metadata = { robots: { index: false, follow: false } };
+export default async function InvoicesPage() { let context; try { context = await requireBusinessContext(); } catch (error) { if (isAccessControlError(error)) notFound(); throw error; } const [customers, invoices] = await Promise.all([prisma.customer.findMany({ where: { businessId: context.business.id, isActive: true }, select: { id: true, businessName: true }, orderBy: { businessName: "asc" } }), prisma.invoice.findMany({ where: { businessId: context.business.id }, select: { id: true, invoiceNumber: true, total: true, status: true, dueDate: true, customer: { select: { businessName: true } } }, orderBy: { createdAt: "desc" }, take: 100 })]); return <AppShell mode="app" destination="money" businessName={context.business.displayName}><InvoiceCenter customers={customers} invoices={invoices.map((item) => ({ id: item.id, invoiceNumber: item.invoiceNumber, customer: item.customer.businessName, total: item.total.toFixed(2), status: item.status, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null }))} customerAction={createCustomerAction} invoiceAction={createInvoiceAction} issueAction={issueInvoiceAction}/></AppShell>; }
