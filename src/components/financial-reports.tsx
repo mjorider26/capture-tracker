@@ -8,9 +8,11 @@ export function FinancialReports({
   reports,
   basePath,
   focus = "overview",
+  canManageCpa = false,
 }: {
   reports: Reports;
   basePath: "/app" | "/demo";
+  canManageCpa?: boolean;
   focus?:
     | "overview"
     | "profit-and-loss"
@@ -52,7 +54,7 @@ export function FinancialReports({
         ))}
         {basePath === "/app" && <Link className="min-h-10 shrink-0 rounded bg-surface-secondary px-3 py-2 text-sm font-bold text-text-muted" href="/app/reports/operations">Operations</Link>}
       </nav>
-      {basePath === "/app" && <OperationalReportLibrary />}
+      {basePath === "/app" && <GuidedReportLibrary canManageCpa={canManageCpa} />}
       <form className="workspace-filter mt-4 flex flex-wrap gap-2 rounded-[var(--radius-md)] p-3" method="get">
         <select className="ui-input w-auto" name="period" defaultValue={reports.range.period}>
           <option value="month">This month</option>
@@ -103,13 +105,18 @@ export function FinancialReports({
   );
 }
 
-function OperationalReportLibrary() {
+function GuidedReportLibrary({ canManageCpa }: { canManageCpa: boolean }) {
   const groups = [
-    { title: "Receivables", detail: "Customer invoices and payment follow-up", links: [["Invoice register", "invoice-register"], ["AR aging", "ar-aging"], ["Invoice payments", "invoice-payments"]] },
-    { title: "Payables", detail: "Vendor bills and payment follow-up", links: [["Bill register", "bill-register"], ["AP aging", "ap-aging"], ["Bill payments", "bill-payments"]] },
-    { title: "Owner / S-Corp", detail: "Mileage and the owner reimbursement record", links: [["Mileage log", "mileage-log"], ["Mileage reimbursements", "mileage-reimbursements"], ["Owner Money", "owner-money"]] },
-  ] as const;
-  return <section className="ui-card mt-5 overflow-hidden" aria-labelledby="operational-reports-heading"><div className="p-5"><p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">Operational reports</p><h2 id="operational-reports-heading" className="mt-1 text-xl font-bold">Receivables, payables, and owner records</h2><p className="mt-2 text-sm leading-6 text-text-muted">Use these focused registers when you need a working answer, then return to the financial statements for the ledger view.</p></div><div className="divide-y divide-border-subtle">{groups.map((group) => <section key={group.title} className="p-5"><div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="font-bold">{group.title}</h3><p className="text-xs text-text-muted">{group.detail}</p></div><div className="mt-3 flex flex-wrap gap-2">{group.links.map(([label, report]) => report === "owner-money" ? <Link key={report} className="ui-button ui-button-secondary min-h-10 border border-border-subtle px-3 pt-2 text-sm font-bold" href="/app/taxes/owner-money">{label}</Link> : <Link key={report} className="ui-button ui-button-secondary min-h-10 border border-border-subtle px-3 pt-2 text-sm font-bold" href={`/app/reports/operations?report=${report}`}>{label}</Link>)}</div></section>)}</div></section>;
+    { question: "How is my business doing?", detail: "The primary financial statements for income, expenses, assets, liabilities, and equity.", links: [["Profit & Loss", "/app/reports/profit-and-loss", "Income, expenses, and net income for the selected period."], ["Balance Sheet", "/app/reports/balance-sheet", "What the business owns, owes, and retains at the report date."]] },
+    { question: "Who owes me money?", detail: "Customer invoices and receivables.", links: [["Open invoices", "/app/reports/operations?report=open-invoices", "Customer balances that remain unpaid."], ["AR Aging", "/app/reports/operations?report=ar-aging", "What customers owe, grouped by how long it has been outstanding."], ["Invoice payments", "/app/reports/operations?report=invoice-payments", "Recorded incoming payments and supporting bank evidence."]] },
+    { question: "What do I owe?", detail: "Vendor bills and payables.", links: [["Open bills", "/app/reports/operations?report=open-bills", "Vendor obligations that remain unpaid."], ["AP Aging", "/app/reports/operations?report=ap-aging", "What the business owes, grouped by how long it has been outstanding."], ["Bill payments", "/app/reports/operations?report=bill-payments", "Recorded outgoing payments and supporting bank evidence."]] },
+    { question: "What happened in my books?", detail: "Accounting detail remains available when you need to trace the ledger.", links: [["General Ledger", "/app/money/journal", "Immutable posted journal activity and accounting evidence."], ["Trial Balance", "/app/reports/trial-balance", "Debit and credit balances that must remain equal."], ["Transaction detail", "/app/money", "Reviewed activity, classifications, documents, and corrections."]] },
+    { question: "Me & my S-Corp", detail: "Keep owner transactions and workpapers distinct.", links: [["Owner Money", "/app/taxes/owner-money", "Salary, distributions, reimbursements, contributions, and loans."], ["Basis workpapers", "/app/taxes/owner-money/s-corp", "Stock basis, debt basis, benefits, and distribution readiness evidence."], ["Mileage", "/app/reports/operations?report=mileage-log", "Business trips and reimbursement status."], ["Mileage reimbursements", "/app/reports/operations?report=mileage-reimbursements", "Trips included in or still waiting for reimbursement work."], ["Payroll workpapers", "/app/taxes/payroll", "Recorded payroll-provider facts and accounting evidence."]] },
+    { question: "CPA / year-end", detail: "Finish deterministic bookkeeping checks and prepare a professional handoff.", links: [["Year-End Flight Check", "/app/taxes/year-end", "Issues that must be resolved before CPA handoff."], ["CPA access", "/app/settings/cpa", "Invite and manage a secure read-only professional reviewer."], ["CPA package", "/app/reports", "Download tenant-scoped schedules and a PDF index below."]] },
+  ];
+  const ownerOnlyLinks = new Set(["CPA access", "Owner Money", "Basis workpapers"]);
+
+  return <section className="guided-report-library mt-5" aria-labelledby="guided-reports-heading"><div className="owner-section-heading"><div><p>Reports by question</p><h2 id="guided-reports-heading">Start with what you need to know</h2></div><span>Accounting names stay visible</span></div><div>{groups.map((group) => <section key={group.question} className="guided-report-group"><div><h3>{group.question}</h3><p>{group.detail}</p></div><div>{group.links.filter(([label]) => canManageCpa || !ownerOnlyLinks.has(label)).map(([label, href, description]) => <Link key={`${label}-${href}`} href={href}><span><strong>{label}</strong><small>{description}</small></span><span aria-hidden="true">→</span></Link>)}</div></section>)}</div></section>;
 }
 
 function ReportTable({

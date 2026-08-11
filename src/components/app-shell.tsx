@@ -17,6 +17,8 @@ import { NavigationIcon } from "./navigation-icons";
 import { SignOutButton } from "./sign-out-button";
 import { AppPullToRefresh } from "./app-pull-to-refresh";
 import { FirstUseGuidance } from "./first-use-guidance";
+import { AuthenticatedWorkspaceTools } from "./authenticated-workspace-tools";
+import { WorkspaceTools } from "./workspace-tools";
 
 export { destinations, isDestination, type Destination };
 
@@ -62,7 +64,7 @@ export function AppShell({
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-brand-navy shadow-sm min-[1180px]:hidden">
                 <BrandIcon decorative className="h-8 w-7" />
               </span>
-              <div className="min-w-0">
+              <div className="app-mobile-wordmark min-w-0">
                 <p className="text-sm font-bold tracking-[-0.02em] text-brand-navy min-[1180px]:hidden">
                   Capture<span className="text-brand-teal">Tracker</span>
                 </p>
@@ -75,15 +77,11 @@ export function AppShell({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {mode === "demo" && (
-                <span className="ui-status-badge bg-surface-secondary text-text-muted">
-                  Demo / local
-                </span>
-              )}
               <span className="hidden max-w-52 truncate text-xs font-semibold text-text-muted md:inline">
                 {businessName}
               </span>
-              {mode === "app" && <SignOutButton />}
+              {mode === "app" ? <AuthenticatedWorkspaceTools /> : <WorkspaceTools basePath="/demo" role="OWNER" />}
+              {mode === "app" && <div className="hidden sm:block"><SignOutButton /></div>}
               <span
                 className="hidden h-9 w-9 place-items-center rounded-full border border-white/10 bg-surface-secondary text-brand-teal md:grid"
                 aria-hidden="true"

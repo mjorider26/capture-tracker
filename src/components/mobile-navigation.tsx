@@ -13,6 +13,7 @@ import {
 
 import { BrandIcon } from "./brand";
 import { NavigationIcon } from "./navigation-icons";
+import { SignOutButton } from "./sign-out-button";
 
 export function MobileNavigation({
   basePath,
@@ -112,6 +113,7 @@ export function MobileNavigation({
             <p className="mt-auto rounded-[var(--radius-md)] bg-surface-secondary p-3 text-xs leading-5 text-text-muted">
               Navigation changes only your view. Financial actions remain available only in their existing protected workflows.
             </p>
+            {basePath === "/app" ? <div className="mt-4 flex justify-end"><SignOutButton /></div> : null}
           </section>
         </div>
       )}

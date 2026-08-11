@@ -73,7 +73,7 @@ export function DocumentsExperience({
           <span className="ui-status-badge bg-surface-secondary text-text-muted">{documents.length} records</span>
         </div>
         {documents.length === 0 ? (
-          <EmptyState title="No document records yet">Upload a PDF, PNG, or JPEG to add private evidence for this business.</EmptyState>
+          <EmptyState title="No receipts or documents yet"><span>Upload a PDF, PNG, or JPEG as private business evidence. Every upload remains unavailable until its security validation is complete.</span>{action ? <div className="mt-4">{action}</div> : null}</EmptyState>
         ) : (
           <>
             <div className="divide-y divide-border-subtle min-[720px]:hidden">

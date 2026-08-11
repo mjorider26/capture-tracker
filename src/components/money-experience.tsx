@@ -221,22 +221,26 @@ function OperationsHub({
         <p>Clear paths for activity, customer payments, payables, and owner decisions.</p>
       </div>
       <div className="money-operations-grid">
-        <OperationGroup title="Accounts and activity" description="Bring in and review business activity.">
-          <OperationLink href={`${basePath}/money`} label="Review activity" detail={`${operations.invoices.openCount + operations.bills.dueCount} open customer or vendor item${operations.invoices.openCount + operations.bills.dueCount === 1 ? "" : "s"} alongside transactions`} />
+        <OperationGroup title="Accounts & activity" description="Bring in, review, and reconcile business activity.">
+          <OperationLink href={`${basePath}/money`} label="Review transactions" detail="Classify activity and resolve evidence exceptions" />
           <OperationLink href={`${basePath}/money/import`} label="Import CSV" detail="Available now · review before posting" />
           <OperationLink href={`${basePath}/money/bank`} label="Bank connections" detail={bankDetail} />
+          <OperationLink href={`${basePath}/money/reconciliations`} label="Reconciliation" detail="Compare each statement and finish at an exact $0.00 difference" />
         </OperationGroup>
-        <OperationGroup title="Get paid" description="Create customer invoices and follow payment status.">
-          <OperationLink href={`${basePath}/money/invoices`} label="Invoices" amount={`$${operations.invoices.openAmount}`} detail={invoiceDetail} action={operations.invoices.openCount ? "View invoices" : "Create invoice"} />
+        <OperationGroup title="Money coming in" description="Create customer invoices and follow payment status.">
+          <OperationLink href={`${basePath}/money/invoices${operations.invoices.openCount ? "" : "?new=invoice"}`} label="Invoices" amount={`$${operations.invoices.openAmount}`} detail={invoiceDetail} action={operations.invoices.openCount ? "View invoices" : "Create invoice"} />
           <OperationLink href={`${basePath}/reports/operations?report=ar-aging`} label="Open receivables" detail="See what customers still owe" action="View AR aging" />
+          <OperationLink href={`${basePath}/reports/operations?report=invoice-payments`} label="Incoming payments" detail="Review recorded customer payments and bank evidence" />
         </OperationGroup>
-        <OperationGroup title="Payables" description="Track what the business owes without double-recording expenses.">
-          <OperationLink href={`${basePath}/money/bills`} label="Bills" amount={`$${operations.bills.dueAmount}`} detail={billDetail} action={operations.bills.dueCount ? "View bills" : "Add bill"} />
+        <OperationGroup title="Money going out" description="Track what the business owes without double-recording expenses.">
+          <OperationLink href={`${basePath}/money/bills${operations.bills.dueCount ? "" : "?new=bill"}`} label="Bills" amount={`$${operations.bills.dueAmount}`} detail={billDetail} action={operations.bills.dueCount ? "View bills" : "Add bill"} />
           <OperationLink href={`${basePath}/reports/operations?report=ap-aging`} label="Open payables" detail="See upcoming and overdue vendor obligations" action="View AP aging" />
+          <OperationLink href={`${basePath}/reports/operations?report=bill-payments`} label="Outgoing payment evidence" detail="Review recorded vendor payments and bank evidence" />
         </OperationGroup>
-        <OperationGroup title="Owner and professional review" description="Keep S-Corp treatments distinct and review-ready.">
+        <OperationGroup title="You & the company" description="Keep S-Corp owner treatments distinct and review-ready.">
           <OperationLink href={`${basePath}/taxes/owner-money`} label="Owner Money" detail="Salary, distributions, reimbursements, contributions, and loans stay separate" action="Open Owner Money" />
-          <OperationLink href={`${basePath}/taxes/mileage`} label="Mileage" amount={`${operations.mileage.milesThisYear} mi`} detail={mileageDetail} action={operations.mileage.tripCount ? "View mileage" : "Record trip"} />
+          <OperationLink href={`${basePath}/taxes/mileage${operations.mileage.tripCount ? "" : "#record-trip"}`} label="Mileage" amount={`${operations.mileage.milesThisYear} mi`} detail={mileageDetail} action={operations.mileage.tripCount ? "View mileage" : "Record trip"} />
+          <OperationLink href={`${basePath}/reports/operations?report=mileage-reimbursements`} label="Reimbursements" detail="Review owner mileage and reimbursement status" />
           {canManageCpa ? <OperationLink href={`${basePath}/settings/cpa`} label="CPA access" detail={cpaDetail} action={operations.cpa.acceptedCount || operations.cpa.pendingCount ? "Manage CPA access" : "Invite CPA"} /> : null}
         </OperationGroup>
       </div>

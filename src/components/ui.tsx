@@ -130,9 +130,9 @@ export function EmptyState({
   return (
     <div className="ui-panel ui-empty-state border border-dashed border-border-subtle p-7 text-center">
       <p className="text-lg font-bold text-text-primary">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-text-muted">
+      <div className="mx-auto mt-2 max-w-md text-sm leading-6 text-text-muted">
         {children}
-      </p>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,22 @@
 import { notFound } from "next/navigation";
+import { Prisma } from "@/generated/prisma/client";
 import { AppShell } from "@/components/app-shell";
 import { AccountingNav } from "@/components/accounting-nav";
 import { InvoiceCenter } from "@/components/invoice-center";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/generated/prisma/client";
 import { isAccessControlError, requireBusinessContext } from "@/lib/security/business-context";
 import { createCustomerAction, createInvoiceAction, issueInvoiceAction, recordInvoicePaymentAction } from "./actions";
+
 export const dynamic = "force-dynamic"; export const revalidate = 0; export const metadata = { robots: { index: false, follow: false } };
-export default async function InvoicesPage() { let context; try { context = await requireBusinessContext(); } catch (error) { if (isAccessControlError(error)) notFound(); throw error; } const [customers, invoices, financialAccounts] = await Promise.all([prisma.customer.findMany({ where: { businessId: context.business.id, isActive: true }, select: { id: true, businessName: true }, orderBy: { businessName: "asc" } }), prisma.invoice.findMany({ where: { businessId: context.business.id }, select: { id: true, invoiceNumber: true, total: true, status: true, dueDate: true, customer: { select: { businessName: true } }, payments: { select: { amount: true } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.financialAccount.findMany({ where: { businessId: context.business.id, ownership: "BUSINESS", isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })]); return <AppShell mode="app" destination="money" businessName={context.business.displayName}><AccountingNav basePath="/app" active="invoices"/><InvoiceCenter customers={customers} accounts={financialAccounts} invoices={invoices.map((item) => ({ id: item.id, invoiceNumber: item.invoiceNumber, customer: item.customer.businessName, total: item.total.toFixed(2), paid: item.payments.reduce((sum, payment) => sum.plus(payment.amount), new Prisma.Decimal(0)).toFixed(2), status: item.status, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null }))} customerAction={createCustomerAction} invoiceAction={createInvoiceAction} issueAction={issueInvoiceAction} paymentAction={recordInvoicePaymentAction}/></AppShell>; }
+
+export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
+  let context; try { context = await requireBusinessContext(); } catch (error) { if (isAccessControlError(error)) notFound(); throw error; }
+  const [customers, invoices, financialAccounts, params] = await Promise.all([
+    prisma.customer.findMany({ where: { businessId: context.business.id, isActive: true }, select: { id: true, businessName: true }, orderBy: { businessName: "asc" } }),
+    prisma.invoice.findMany({ where: { businessId: context.business.id }, select: { id: true, invoiceNumber: true, total: true, status: true, dueDate: true, customer: { select: { businessName: true } }, payments: { select: { amount: true } } }, orderBy: { createdAt: "desc" }, take: 100 }),
+    prisma.financialAccount.findMany({ where: { businessId: context.business.id, ownership: "BUSINESS", isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    searchParams,
+  ]);
+  const canMutate = context.membership.role === "OWNER";
+  return <AppShell mode="app" destination="money" businessName={context.business.displayName}><AccountingNav basePath="/app" active="invoices"/><InvoiceCenter customers={customers} accounts={financialAccounts} invoices={invoices.map((item) => ({ id: item.id, invoiceNumber: item.invoiceNumber, customer: item.customer.businessName, total: item.total.toFixed(2), paid: item.payments.reduce((sum, payment) => sum.plus(payment.amount), new Prisma.Decimal(0)).toFixed(2), status: item.status, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null }))} customerAction={createCustomerAction} invoiceAction={createInvoiceAction} issueAction={issueInvoiceAction} paymentAction={recordInvoicePaymentAction} canMutate={canMutate} initialOpen={canMutate && params.new === "invoice"}/></AppShell>;
+}

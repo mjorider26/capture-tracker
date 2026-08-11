@@ -34,9 +34,9 @@ describe("Money transaction-entry presentation", () => {
     const html = renderToStaticMarkup(createElement(MoneyExperience, { dashboard, operations, canManageCpa: true, basePath: "/app" }));
 
     [
-      "/app/money/invoices",
-      "/app/money/bills",
-      "/app/taxes/mileage",
+      "/app/money/invoices?new=invoice",
+      "/app/money/bills?new=bill",
+      "/app/taxes/mileage#record-trip",
       "/app/money/bank",
       "/app/settings/cpa",
       "/app/reports/operations?report=ar-aging",
@@ -44,5 +44,9 @@ describe("Money transaction-entry presentation", () => {
     ].forEach((href) => expect(html).toContain(`href="${href}"`));
     expect(html).toContain("Live provider not configured");
     expect(html).toContain("No CPA currently has access");
+    expect(html).toContain("Accounts &amp; activity");
+    expect(html).toContain("Money coming in");
+    expect(html).toContain("Money going out");
+    expect(html).toContain("You &amp; the company");
   });
 });

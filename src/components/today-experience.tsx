@@ -1,491 +1,69 @@
 import Link from "next/link";
 
-import {
-  ButtonLink,
-  EmptyState,
-  PageHeader,
-  Panel,
-  SectionHeading,
-  StatusBadge,
-} from "./ui";
-import { type TodayDashboard } from "@/lib/data/today-dashboard";
+import type { TodayDashboard } from "@/lib/data/today-dashboard";
 
-export function TodayExperience({
-  dashboard,
-  basePath,
-}: {
-  dashboard: TodayDashboard;
-  basePath: "/app" | "/demo";
-}) {
-  return (
-    <>
-      <PageHeader
-        eyebrow="Capture Tracker Today"
-        title={dashboard.businessName}
-        description="Your approved cash, planning evidence, and the next financial decision in one working view."
-        action={
-          <StatusBadge tone="locked">Read-only financial view</StatusBadge>
-        }
-      />
+import { ButtonLink, PageHeader, StatusBadge } from "./ui";
 
-      <FinancialBriefing dashboard={dashboard} basePath={basePath} />
+export function TodayExperience({ dashboard, basePath }: { dashboard: TodayDashboard; basePath: "/app" | "/demo" }) {
+  const needsNow = dashboard.attention.filter((item) => ["transactions", "documents", "matches", "reconciliations"].includes(item.id));
+  const comingUp = dashboard.attention.filter((item) => ["tax", "payroll", "reviewTasks"].includes(item.id));
+  const calm = needsNow.length === 0 && comingUp.length === 0;
+  const setupHref = basePath === "/app" ? "/app/onboarding" : "/demo/money/reconciliations";
 
-      {dashboard.setup?.incomplete ? <section className="ui-card mt-5 border border-status-warning p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-bold">Books setup incomplete</p><p className="mt-1 text-sm text-text-muted">Opening balances, cutover facts, and an initial exact-zero reconciliation must be completed before books are current.</p></div><ButtonLink href={`${basePath}/onboarding`} tone="secondary">Continue setup</ButtonLink></div></section> : null}
-      <section className="ui-card mt-5 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-brand-teal">Books current through</p><h2 className="mt-1 text-xl font-bold">{dashboard.booksCurrent.date ?? "Books setup / current-through incomplete"}</h2><p className="mt-1 text-sm text-text-muted">{dashboard.booksCurrent.blocker ? `${dashboard.booksCurrent.blocker.count} ${dashboard.booksCurrent.blocker.label.toLowerCase()} item(s) block ${dashboard.booksCurrent.blocker.date}.` : "All deterministic evidence checks are clear through the latest reconciled account coverage."}</p></div><ButtonLink href={`${basePath}/taxes/close`} tone="secondary">What makes my books current?</ButtonLink></div>{dashboard.booksCurrent.accountCoverage.length ? <p className="mt-3 text-xs text-text-muted">{dashboard.booksCurrent.accountCoverage.map((item) => `${item.accountName}: ${item.reconciledThrough ?? "reconciliation needed"}`).join(" · ")}</p> : null}</section>
+  return <section className="space-y-7">
+    <PageHeader eyebrow="Today" title="Your books, in order" description={`${dashboard.businessName}. Start here: Capture Tracker brings forward the bookkeeping decisions that need you and keeps completed work out of the way.`} action={<StatusBadge tone={calm ? "success" : "info"}>{calm ? "Caught up" : "Owner review"}</StatusBadge>} />
 
-      {dashboard.isEmptyAccount ? (
-        <FirstTransaction basePath={basePath} />
-      ) : null}
+    <BookStatus dashboard={dashboard} basePath={basePath} />
 
-      <section className="today-workspace mt-9">
-        <NeedsAttention dashboard={dashboard} basePath={basePath} />
-        <div className="today-supporting-column">
-          <CashPosition dashboard={dashboard} />
-          <WeeklyReview review={dashboard.weeklyReview} basePath={basePath} />
-        </div>
-      </section>
+    {dashboard.setup?.incomplete ? <section className="ui-card border border-status-warning p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-bold">Finish opening your books</p><p className="mt-1 max-w-2xl text-sm text-text-muted">Confirm opening facts and complete an exact-zero reconciliation before Capture Tracker can establish a current-through date.</p></div><ButtonLink href={setupHref} tone="secondary">Continue setup</ButtonLink></div></section> : null}
 
-      <section className="today-context mt-10">
-        <Activity changes={dashboard.changes} basePath={basePath} />
-        <QuickActions basePath={basePath} />
-      </section>
-    </>
-  );
-}
+    <QuickOwnerActions basePath={basePath} />
 
-function FinancialBriefing({
-  dashboard,
-  basePath,
-}: {
-  dashboard: TodayDashboard;
-  basePath: "/app" | "/demo";
-}) {
-  return (
-    <section aria-label="Financial briefing" className="today-briefing">
-      <div className="today-cash-stage">
-        <div className="today-circuit-motif" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
-        <p className="today-kicker">Available business cash</p>
-        <p className="money-value today-cash-value">
-          {dashboard.availableCash.value}
-        </p>
-        <p className="today-cash-explanation">
-          {dashboard.availableCash.explanation}
-        </p>
-        <div className="today-cash-footer">
-          <span className="today-approved-mark">
-            Approved cash activity only
-          </span>
-          <ButtonLink href={`${basePath}/money`} tone="secondary">
-            Review transactions
-          </ButtonLink>
-        </div>
-      </div>
-
-      <aside className="today-planning-rail" aria-label="Tax planning position">
-        <div className="today-planning-heading">
-          <p>Planning position</p>
-          <span aria-hidden="true" />
-        </div>
-        <PlanningMetric
-          label="Tax reserve"
-          value={dashboard.taxReserve.value}
-          detail={
-            dashboard.taxReserve.status === "available"
-              ? "Dedicated account"
-              : "Setup needed"
-          }
-          tone={
-            dashboard.taxReserve.status === "available" ? "success" : "warning"
-          }
-        />
-        <PlanningMetric
-          label="Projected tax"
-          value={dashboard.projectedTax.value}
-          detail={
-            dashboard.projectedTax.dueDate
-              ? `Due ${dashboard.projectedTax.dueDate}`
-              : "No current estimate"
-          }
-          tone={
-            dashboard.projectedTax.status === "attention"
-              ? "warning"
-              : "neutral"
-          }
-        />
-        <PlanningMetric
-          label="Reserve position"
-          value={dashboard.reservePosition.value}
-          detail={reserveDetail(dashboard.reservePosition.status)}
-          tone={reserveTone(dashboard.reservePosition.status)}
-        />
-      </aside>
-
-      <div
-        className="today-activity-ribbon"
-        aria-label="Current month activity"
-      >
-        <RibbonMetric
-          label="This-month income"
-          value={dashboard.currentActivity.income}
-          detail="Posted income only"
-          tone="success"
-        />
-        <RibbonMetric
-          label="This-month expenses"
-          value={dashboard.currentActivity.expenses}
-          detail="Business expenses only"
-          tone="neutral"
-        />
-        <RibbonMetric
-          label="Unreviewed"
-          value={String(dashboard.currentActivity.unreviewedTransactions)}
-          detail="Transactions awaiting review"
-          tone={
-            dashboard.currentActivity.unreviewedTransactions
-              ? "warning"
-              : "neutral"
-          }
-        />
-        <RibbonMetric
-          label="Document attention"
-          value={String(dashboard.currentActivity.documentAttention)}
-          detail="Documents needing action"
-          tone={
-            dashboard.currentActivity.documentAttention ? "warning" : "neutral"
-          }
-        />
-      </div>
+    <section aria-labelledby="attention-heading" className="owner-attention-zone">
+      <div className="owner-section-heading"><div><p>What needs your attention</p><h2 id="attention-heading">Work the exceptions, then move on</h2></div><span>{needsNow.length + comingUp.length} active {needsNow.length + comingUp.length === 1 ? "group" : "groups"}</span></div>
+      {calm ? <div className="owner-calm-state"><span aria-hidden="true">✓</span><div><h3>You&apos;re caught up.</h3><p>No unresolved owner decisions are waiting here. Your frequent actions remain available above whenever new work arrives.</p></div></div> : <div className="grid gap-5 lg:grid-cols-2">
+        <AttentionGroup title="Needs you now" description="Owner decisions that block clean books." items={needsNow} basePath={basePath} />
+        <AttentionGroup title="Coming up" description="Review work that should stay on your radar." items={comingUp} basePath={basePath} />
+      </div>}
     </section>
-  );
+
+    <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle py-5 text-sm text-text-muted"><p>Need the weekly rhythm? Work through every linked exception without hiding unresolved items.</p><Link className="ui-link font-bold" href={`${basePath}/review`}>Open Weekly Review →</Link></footer>
+  </section>;
 }
 
-function PlanningMetric({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: "success" | "warning" | "neutral";
-}) {
-  return (
-    <div className="today-planning-metric">
-      <p>{label}</p>
-      <p className="money-value">{value}</p>
-      <span className={`today-tone-${tone}`}>{detail}</span>
-    </div>
-  );
+function BookStatus({ dashboard, basePath }: { dashboard: TodayDashboard; basePath: "/app" | "/demo" }) {
+  const blocker = dashboard.booksCurrent.blocker;
+  const established = Boolean(dashboard.booksCurrent.date);
+  const blockerText = blocker ? `${blocker.count} ${blocker.count === 1 ? "item is" : "items are"} blocking ${blocker.date}` : established ? "All deterministic evidence checks are clear through the latest reconciled account coverage." : "Complete setup and initial reconciliation evidence before Capture Tracker can establish this date.";
+  const blockerHref = blocker?.label.toLowerCase().includes("reconcil") ? `${basePath}/money/reconciliations` : blocker?.label.toLowerCase().includes("document") ? `${basePath}/documents` : established ? `${basePath}/money` : basePath === "/app" ? "/app/onboarding" : "/demo/money/reconciliations";
+  return <section className="book-status-stage" aria-labelledby="books-current-heading">
+    <div><p>Books current through</p><h2 id="books-current-heading">{dashboard.booksCurrent.date ?? "Not established yet"}</h2><span className={blocker || !established ? "is-blocked" : "is-clear"}>{blocker ? "Action needed" : established ? "Current" : "Setup needed"}</span></div>
+    <div><p className="book-status-explanation">{blockerText}</p>{blocker || !established ? <ButtonLink href={blockerHref}>{blocker ? "Review blocker" : "Continue setup"}</ButtonLink> : <ButtonLink href={`${basePath}/taxes/close`} tone="secondary">How this date works</ButtonLink>}{dashboard.booksCurrent.accountCoverage.length ? <p className="book-status-coverage">{dashboard.booksCurrent.accountCoverage.map((item) => `${item.accountName}: ${item.reconciledThrough ?? "reconciliation needed"}`).join(" · ")}</p> : null}</div>
+  </section>;
 }
 
-function RibbonMetric({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: "success" | "warning" | "neutral";
-}) {
-  return (
-    <div className="today-ribbon-metric">
-      <p>{label}</p>
-      <p className="money-value">{value}</p>
-      <span className={`today-tone-${tone}`}>{detail}</span>
-    </div>
-  );
-}
-
-function FirstTransaction({ basePath }: { basePath: string }) {
-  return (
-    <section className="today-first-transaction mt-7">
-      <div>
-        <p>Add your first transaction</p>
-        <p>
-          Your business has no cash account activity yet. Add a transaction to
-          begin a ledger-backed financial view.
-        </p>
-      </div>
-      <ButtonLink href={`${basePath}/money/new`} tone="primary">
-        Add transaction
-      </ButtonLink>
-    </section>
-  );
-}
-
-function NeedsAttention({
-  dashboard,
-  basePath,
-}: {
-  dashboard: TodayDashboard;
-  basePath: string;
-}) {
-  const openCount = dashboard.attention.reduce(
-    (total, item) => total + item.count,
-    0,
-  );
-
-  return (
-    <section
-      className="today-priority-zone"
-      aria-labelledby="attention-heading"
-    >
-      <div className="today-priority-heading">
-        <div>
-          <p>Decision queue</p>
-          <h2 id="attention-heading">Needs your attention</h2>
-        </div>
-        <StatusBadge tone={openCount ? "warning" : "success"}>
-          {openCount ? `${openCount} open` : "All clear"}
-        </StatusBadge>
-      </div>
-      {dashboard.attention.length === 0 ? (
-        <div className="mt-6">
-          <EmptyState title="Nothing is waiting for review">
-            Your current attention categories are clear. Continue to monitor the
-            books as new activity arrives.
-          </EmptyState>
-        </div>
-      ) : (
-        <ol className="today-priority-list">
-          {dashboard.attention.slice(0, 5).map((item, index) => (
-            <li key={item.id}>
-              <Link
-                href={`${basePath}/${item.destination}`}
-                className={`today-priority-row today-priority-${item.tone}`}
-              >
-                <span className="today-priority-number" aria-hidden="true">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="today-priority-count">{item.count}</span>
-                <span className="today-priority-copy">
-                  <strong>{item.label}</strong>
-                  <span>{item.description}</span>
-                </span>
-                <span className="today-priority-arrow" aria-hidden="true">
-                  →
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function CashPosition({ dashboard }: { dashboard: TodayDashboard }) {
-  const share = dashboard.cashVisual.reserveSharePercent;
-  const isConfigured = share !== null;
-  const description = isConfigured
-    ? `${share}% of available cash is held in a dedicated reserve.`
-    : "A dedicated tax reserve has not been configured.";
-
-  return (
-    <section
-      className="today-allocation"
-      aria-labelledby="cash-composition-heading"
-    >
-      <div className="today-allocation-heading">
-        <div>
-          <p>Cash position</p>
-          <h2 id="cash-composition-heading">Cash composition</h2>
-        </div>
-        <StatusBadge tone="neutral">Approved activity</StatusBadge>
-      </div>
-      <div className="today-allocation-values">
-        <div>
-          <p>Available business cash</p>
-          <p className="money-value">{dashboard.cashVisual.availableCash}</p>
-        </div>
-        <div>
-          <p>Dedicated reserve</p>
-          <p className="money-value">
-            {dashboard.cashVisual.dedicatedReserve ?? "Not configured"}
-          </p>
-        </div>
-      </div>
-      <div
-        className={`today-allocation-rail ${isConfigured ? "is-configured" : "is-empty"}`}
-        role="img"
-        aria-label={description}
-      >
-        {isConfigured ? (
-          <span style={{ width: `${share}%` }} aria-hidden="true" />
-        ) : (
-          <span aria-hidden="true" />
-        )}
-      </div>
-      <p className="today-allocation-caption">{description}</p>
-      <p className="today-allocation-note">
-        This uses approved business cash and the dedicated-reserve account only.
-        It does not infer a trend or move money.
-      </p>
-    </section>
-  );
-}
-
-function WeeklyReview({
-  review,
-  basePath,
-}: {
-  review: TodayDashboard["weeklyReview"];
-  basePath: string;
-}) {
-  if (!review) {
-    return (
-      <Panel className="today-review-callout p-6">
-        <SectionHeading eyebrow="Weekly rhythm" title="Weekly Review" />
-        <p className="mt-4 text-sm leading-6 text-text-muted">
-          No weekly review is available yet. Once started, progress and
-          unresolved work will appear here.
-        </p>
-      </Panel>
-    );
-  }
-
-  const next = review.tasks[0];
-  return (
-    <section className="today-review-callout">
-      <div className="today-review-topline">
-        <div>
-          <p>Weekly rhythm</p>
-          <h2>Weekly Review</h2>
-        </div>
-        <StatusBadge tone={review.status === "COMPLETED" ? "success" : "info"}>
-          {review.status.toLowerCase().replaceAll("_", " ")}
-        </StatusBadge>
-      </div>
-      <p className="today-review-count">
-        <strong>{review.tasks.length}</strong> unresolved
-      </p>
-      <p className="today-review-task">
-        {next?.title ?? "Nothing needs your attention right now."}
-      </p>
-      <p className="today-review-explanation">
-        {next?.explanation ?? "Current record workflows are clear."}
-      </p>
-      <div className="today-review-footer">
-        <span>{review.estimatedMinutes}-minute review</span>
-        <ButtonLink href={`${basePath}/review`} tone="quiet">
-          Continue review →
-        </ButtonLink>
-      </div>
-    </section>
-  );
-}
-
-function Activity({
-  changes,
-  basePath,
-}: {
-  changes: TodayDashboard["changes"];
-  basePath: string;
-}) {
-  const tone = {
-    income: "today-activity-income",
-    expense: "today-activity-expense",
-    planning: "today-activity-planning",
-    equity: "today-activity-equity",
-  };
-
-  return (
-    <section className="today-activity" aria-labelledby="activity-heading">
-      <div className="today-activity-heading">
-        <div>
-          <p>Latest ledger context</p>
-          <h2 id="activity-heading">What changed and why</h2>
-        </div>
-        <Link href={`${basePath}/activity`} className="ui-link text-sm">
-          Full activity
-        </Link>
-      </div>
-      <ol className="today-activity-list">
-        {changes.map((change, index) => (
-          <li key={change.id} className={tone[change.tone]}>
-            <span className="today-activity-dot" aria-hidden="true" />
-            {index < changes.length - 1 ? (
-              <span className="today-activity-line" aria-hidden="true" />
-            ) : null}
-            <article>
-              <div>
-                <p>{change.title}</p>
-                {change.amount ? (
-                  <span className="money-value">{change.amount}</span>
-                ) : null}
-              </div>
-              <time>{change.date}</time>
-              <p>{change.explanation}</p>
-            </article>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-function QuickActions({ basePath }: { basePath: string }) {
-  const actions = [
-    {
-      label: "Review transactions",
-      detail: "Classify pending business activity",
-      href: `${basePath}/money`,
-    },
-    {
-      label: "Continue Weekly Review",
-      detail: "Work through the current checklist",
-      href: `${basePath}/review`,
-    },
-    {
-      label: "View reports",
-      detail: "Read the ledger-backed financial view",
-      href: `${basePath}/reports`,
-    },
-    {
-      label: "Review documents",
-      detail: "Validate supporting evidence",
-      href: `${basePath}/documents`,
-    },
+function QuickOwnerActions({ basePath }: { basePath: "/app" | "/demo" }) {
+  const actions = basePath === "/app" ? [
+    ["Review activity", "Clear transaction decisions", `${basePath}/money`],
+    ["Add receipt", "Upload supporting evidence", `${basePath}/documents#document-upload`],
+    ["Create invoice", "Get paid for your work", `${basePath}/money/invoices?new=invoice`],
+    ["Add bill", "Track what the business owes", `${basePath}/money/bills?new=bill`],
+    ["Record mileage", "Log a business trip", `${basePath}/taxes/mileage#record-trip`],
+    ["Owner Money", "You and the S-Corp", `${basePath}/taxes/owner-money`],
+  ] : [
+    ["Review activity", "Clear transaction decisions", `${basePath}/money`],
+    ["Add receipt", "Upload supporting evidence", `${basePath}/documents#document-upload`],
+    ["View reports", "Read ledger-backed results", `${basePath}/reports`],
+    ["Owner Money", "You and the S-Corp", `${basePath}/taxes/owner-money`],
   ];
-
-  return (
-    <nav className="today-actions" aria-label="Protected workflows">
-      <div>
-        <p>Protected workflows</p>
-        <span>Choose the next task</span>
-      </div>
-      <div>
-        {actions.map((action) => (
-          <Link key={action.label} href={action.href}>
-            <span>{action.label}</span>
-            <span>{action.detail}</span>
-            <span aria-hidden="true">→</span>
-          </Link>
-        ))}
-      </div>
-    </nav>
-  );
+  return <section aria-labelledby="quick-actions-heading"><div className="owner-section-heading"><div><p>Quick owner actions</p><h2 id="quick-actions-heading">What do you want to do?</h2></div><span>Frequent workflows</span></div><nav aria-label="Quick owner actions" className="owner-quick-actions">{actions.map(([label, detail, href]) => <Link href={href} key={label}><span><strong>{label}</strong><small>{detail}</small></span><span aria-hidden="true">→</span></Link>)}</nav></section>;
 }
 
-function reserveDetail(
-  status: TodayDashboard["reservePosition"]["status"],
-): string {
-  if (status === "surplus") return "Reserve exceeds obligation";
-  if (status === "gap") return "Funding attention";
-  return "Needs reserve + estimate";
+function AttentionGroup({ title, description, items, basePath }: { title: string; description: string; items: TodayDashboard["attention"]; basePath: "/app" | "/demo" }) {
+  return <section className="owner-attention-group"><div><h3>{title}</h3><p>{description}</p></div>{items.length ? <ol>{items.map((item) => <li key={item.id}><Link href={attentionHref(item, basePath)}><span className={`owner-attention-count is-${item.tone}`}>{item.count}</span><span><strong>{item.label}</strong><small>{item.description}</small></span><span aria-hidden="true">→</span></Link></li>)}</ol> : <div className="owner-attention-empty"><span aria-hidden="true">✓</span><p>Nothing in this group needs action.</p></div>}</section>;
 }
 
-function reserveTone(
-  status: TodayDashboard["reservePosition"]["status"],
-): "success" | "warning" | "neutral" {
-  if (status === "surplus") return "success";
-  if (status === "gap") return "warning";
-  return "neutral";
+function attentionHref(item: TodayDashboard["attention"][number], basePath: "/app" | "/demo") {
+  if (item.id === "reconciliations") return `${basePath}/money/reconciliations`;
+  return `${basePath}/${item.destination}`;
 }
