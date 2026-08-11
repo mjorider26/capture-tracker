@@ -1,21 +1,37 @@
 # Capture Tracker Quick Start
 
-**SPENDING TRACKED. BUSINESS GROWN.** · Private pilot · V2.0.0
+**SPENDING TRACKED. BUSINESS GROWN.** · Private pilot · V2.3
 
-1. Open the private workspace URL supplied by the owner and sign in.
-   - If you are a new client owner, use the one-time invitation link sent manually by the platform operator. It is email-bound and expires after 72 hours.
-2. Read **Today** for available business cash, review items, documents, and tax-planning signals.
-3. In **Money**, use **Import transactions** to upload your bank or card CSV, review the detected columns, and confirm the prepared activity. Then classify only the exceptions before posting them.
-4. In **Documents**, take a receipt photo or upload a PDF/JPEG/PNG (10 MiB maximum). Wait for the private security scan to refresh to **Ready**, then review and link it.
-5. Use **Reports** to read complete totals; supporting detail can paginate without reducing totals. The owner can download a private CPA package containing schedules and a PDF index.
-6. In **Taxes**, record reviewed provider payroll facts, reconcile required bank evidence, and use the owner-confirmed reversal workflow if a processed payroll record needs correction.
-7. Run **Weekly Review** each week and resolve linked work before marking the review complete.
-8. In **Taxes → Fixed assets**, record possible assets and confirm placed-in-service facts only after review. Tax and depreciation treatment remain CPA review items.
-9. On a phone, use Today/Money/Documents/Reports and **More** for Taxes, Weekly Review, Reconciliation, Activity, and Settings.
-10. To install Capture Tracker on iPhone or iPad, open `/install` in Safari, tap Share, choose **Add to Home Screen**, enable **Open as Web App** if offered, then tap **Add**. Installation is optional.
+Start on **Today**. You do not need to memorize the navigation tree:
 
-Money records financial activity; imported bank activity remains separate from posted accounting entries until you approve a category. Documents stores evidence; Reports summarizes complete accounting results. Taxes is planning only.
+1. Read **Books Current Through** first. If an item blocks the next date, open it from the status panel.
+2. Use Today’s **Quick owner actions** or the global **+ New** button to review activity, add a receipt, create an invoice, add a bill, record mileage, or open Owner Money.
+3. Use **Find** (or `⌘K` / `Ctrl+K`) when you know what you want to do but not where it lives. Try “invoice,” “mileage,” “CPA,” or “reconcile.” Finder searches curated product destinations, not customer financial data.
+4. Work **Needs you now** before **Coming up**. When nothing is unresolved, Today stays calm and says you are caught up.
 
-> Uploaded files remain private and are security-scanned before they can be opened or used as evidence. A pending, failed, or rejected scan is not usable. Capture Tracker is not a CPA and does not file taxes, submit payments, run payroll, or provide public signup. It can prepare professional service invoices and record payment evidence; it never initiates payment processing.
+## Common owner tasks
 
-For access problems, contact the workspace owner. In a completed private workspace, Create account will not appear and there is no self-service password reset.
+| I want to… | Fastest path |
+| --- | --- |
+| Review or import activity | **Today → Review activity**, or **+ New → Import transactions** |
+| Upload a receipt | **Today → Add receipt**, or **+ New → Upload receipt** |
+| Create an invoice | **Today → Create invoice**, **+ New → Create invoice**, or **Money → Money coming in** |
+| Add a bill | **Today → Add bill**, **+ New → Add bill**, or **Money → Money going out** |
+| Record mileage | **Today → Record mileage**, **+ New → Record mileage**, or **Money → You & the company** |
+| Handle owner-paid costs or transfers | **+ New → Record owner-paid expense / Record owner transfer**, or **Money → You & the company → Owner Money** |
+| Read Profit & Loss | **Reports → How is my business doing? → Profit & Loss**, or **Find → Profit & Loss** |
+| Reconcile an account | **Money → Accounts & activity → Reconciliation**, or **Find → Reconciliation** |
+| Invite a CPA | **Find → Manage CPA access**, **Money → CPA access**, or **Reports → CPA / year-end** |
+| Prepare for year-end | **Reports → CPA / year-end → Year-End Flight Check**, or **Find → Year-End Flight Check** |
+
+## Safety boundaries
+
+- Imported bank activity remains evidence until an owner reviews its accounting treatment.
+- Uploaded PDF, JPEG, and PNG files remain private and unavailable until security validation is complete.
+- Invoices and bills record receivables, payables, and payment evidence; Capture Tracker does not process payments.
+- Reconciliation can finalize only at an exact **$0.00** difference.
+- Salary, distributions, reimbursements, contributions, shareholder loans, mileage, basis, and benefits remain distinct.
+- CPA access is secure and read-only. CPA users do not receive owner mutation actions in **+ New** or Finder.
+- Capture Tracker does not file taxes, initiate payments, run payroll, or replace a CPA.
+
+On phones, use the persistent Today / Money / Documents / Reports / More bar. To install on iPhone or iPad, open `/install` in Safari, tap Share, choose **Add to Home Screen**, enable **Open as Web App** if offered, then tap **Add**. Installation is optional.

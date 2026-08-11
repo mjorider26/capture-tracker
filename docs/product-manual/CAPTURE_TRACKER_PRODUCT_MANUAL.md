@@ -4,7 +4,7 @@
 
 **SPENDING TRACKED. BUSINESS GROWN.**
 
-Private-pilot client guide · V2.0.0 · Documented source: `6883719f82796a919e53f080d2dcf15f2fc13b0a` (`v2.0.0`)
+Private-pilot client guide · V2.3 guided owner experience
 
 > **Private-pilot boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, manage inventory, or offer public self-service onboarding. It can prepare service invoices and record payment evidence, but never initiates a customer or vendor payment. Uploaded PDF, JPEG, and PNG files stay private and are security-scanned before they become available in Capture Tracker.
 
@@ -14,11 +14,11 @@ Use the private workspace URL supplied by your owner. Sign in with your existing
 
 ## Navigation
 
-Desktop navigation lists **Today, Money, Documents, Reports, Taxes, Weekly Review, Reconciliation, Activity, Settings**. On phones, the primary bar is **Today, Money, Documents, Reports, More**; More contains **Taxes, Weekly Review, Reconciliation, Activity, Settings**. Taxes also contains **Fixed assets** and **Year-end**.
+Desktop navigation lists **Today, Money, Documents, Reports, Taxes, Weekly Review, Reconciliation, Activity, Settings**. On phones, the primary bar is **Today, Money, Documents, Reports, More**; More contains **Taxes, Weekly Review, Reconciliation, Activity, Settings**. Use the global **+ New** launcher for frequent owner actions and **Find** for deterministic product destinations such as invoices, mileage, reconciliation, CPA access, and Year-End. CPA read-only users do not receive owner mutation actions.
 
 ## Today — the decision briefing
 
-Today is a read-only summary, not a second ledger. Start with Available Business Cash, planning signals for tax reserve and projected tax, current-period income and business expenses, unreviewed transactions, document attention, Weekly Review, and recent activity. Follow its links to make the underlying review or correction; Today never moves money or changes accounting.
+Today is the owner home, not a second ledger or a report dashboard. Read **Books Current Through**, use the restrained quick actions, then work **Needs you now** before **Coming up**. A blocker links to the protected workflow that resolves it. When no decisions remain, Today displays a calm caught-up state rather than filler metrics. Today never moves money or changes accounting.
 
 ![Local fictional demo — Today desktop](images/local-demo-today-desktop.png)
 
@@ -78,6 +78,14 @@ Activity is the read-only, business-scoped history of transactions, corrections 
 Settings currently supports default report period, Weekly Review day (0–6), and document-retention target (12–120 months). Save after valid values are entered. Settings changes appear in Activity; if a concurrent update wins, refresh before saving again.
 
 ## Practical workflows
+
+Use **+ New** or **Find** from any authenticated screen when you know the task but not its route. The launcher uses owner language only and every destination retains its existing server-side authorization.
+
+**Create an invoice:** Today → Create invoice, + New → Create invoice, or Money → Money coming in → Invoices.
+
+**Add a bill:** Today → Add bill, + New → Add bill, or Money → Money going out → Bills.
+
+**Record mileage:** Today → Record mileage, + New → Record mileage, or Money → You & the company → Mileage.
 
 **Business purchase:** Money → Add expense → choose category → Documents → take/upload receipt → review and link → Reports.
 
