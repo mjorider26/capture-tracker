@@ -6,7 +6,7 @@ import { routineScale } from "@/lib/navigation/guided-financial-routine";
 import { ButtonLink, PageHeader, StatusBadge } from "./ui";
 
 export function TodayExperience({ dashboard, basePath }: { dashboard: TodayDashboard; basePath: "/app" | "/demo" }) {
-  const needsNow = dashboard.attention.filter((item) => ["transactions", "documents", "matches", "reconciliations"].includes(item.id));
+  const needsNow = dashboard.attention.filter((item) => ["transactions", "documents", "matches", "reconciliations", "bankConnections"].includes(item.id));
   const comingUp = dashboard.attention.filter((item) => ["tax", "payroll", "reviewTasks"].includes(item.id));
   const attentionCount = needsNow.reduce((sum, item) => sum + item.count, 0) + comingUp.reduce((sum, item) => sum + item.count, 0);
   const routineCount = dashboard.weeklyReview?.tasks.length ?? attentionCount;
@@ -44,7 +44,8 @@ function BookStatus({ dashboard, basePath }: { dashboard: TodayDashboard; basePa
   const established = Boolean(dashboard.booksCurrent.date);
   const headline = blocker ? `${blocker.count} ${blocker.count === 1 ? "item is" : "items are"} blocking ${blocker.date}` : established ? "You’re caught up" : "Finish setup to establish this date";
   const blockerHref = blocker?.label.toLowerCase().includes("reconcil") ? `${basePath}/money/reconciliations` : blocker?.label.toLowerCase().includes("document") ? `${basePath}/documents` : established && basePath === "/app" ? "/app/taxes/close" : basePath === "/app" ? "/app/onboarding" : "/demo/money/reconciliations";
-  return <section className="book-status-stage" aria-labelledby="books-current-heading"><div><p>Books current through</p><h2 id="books-current-heading">{dashboard.booksCurrent.date ?? "Not established yet"}</h2><span className={blocker || !established ? "is-blocked" : "is-clear"}>{blocker ? "Action needed" : established ? "Current" : "Setup needed"}</span></div><div><p className="book-status-explanation">{headline}</p><ButtonLink href={blockerHref} tone={blocker || !established ? "primary" : "secondary"}>{blocker ? "Review what’s blocking" : established ? "Month-end status" : "Continue setup"}</ButtonLink>{dashboard.booksCurrent.accountCoverage.length ? <details className="mt-3 text-xs text-text-muted"><summary className="cursor-pointer font-bold">Account coverage</summary><p className="mt-2">{dashboard.booksCurrent.accountCoverage.map((item) => `${item.accountName}: ${item.reconciledThrough ?? "reconciliation needed"}`).join(" · ")}</p></details> : null}</div></section>;
+  const staleManual = dashboard.booksCurrent.accountCoverage.filter((item) => item.bankFeedMethod === "MANUAL" && item.activityMayBeMissingAfter);
+  return <section className="book-status-stage" aria-labelledby="books-current-heading"><div><p>Books current through</p><h2 id="books-current-heading">{dashboard.booksCurrent.date ?? "Not established yet"}</h2><span className={blocker || !established ? "is-blocked" : "is-clear"}>{blocker ? "Action needed" : established ? "Current" : "Setup needed"}</span></div><div><p className="book-status-explanation">{headline}</p><ButtonLink href={blockerHref} tone={blocker || !established ? "primary" : "secondary"}>{blocker ? "Review what’s blocking" : established ? "Month-end status" : "Continue setup"}</ButtonLink>{staleManual.map((item) => <p key={item.accountName} className="mt-3 text-xs text-text-muted"><strong>{item.accountName} activity may be missing after {item.activityMayBeMissingAfter}.</strong> <Link className="ui-link" href={`${basePath}/money/import`}>Import transactions</Link></p>)}{dashboard.booksCurrent.accountCoverage.length ? <details className="mt-3 text-xs text-text-muted"><summary className="cursor-pointer font-bold">Account coverage</summary><p className="mt-2">{dashboard.booksCurrent.accountCoverage.map((item) => `${item.accountName}: ${item.reconciledThrough ?? "reconciliation needed"}`).join(" · ")}</p></details> : null}</div></section>;
 }
 
 function QuickOwnerActions({ basePath }: { basePath: "/app" | "/demo" }) {
@@ -67,5 +68,6 @@ function AttentionGroup({ title, description, items, basePath }: { title: string
 
 function attentionHref(item: TodayDashboard["attention"][number], basePath: "/app" | "/demo") {
   if (item.id === "reconciliations") return `${basePath}/money/reconciliations`;
+  if (item.id === "bankConnections") return `${basePath}/money/bank`;
   return `${basePath}/${item.destination}`;
 }

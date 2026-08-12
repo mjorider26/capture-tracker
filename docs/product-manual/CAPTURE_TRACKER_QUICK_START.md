@@ -1,5 +1,11 @@
 # How to Run Your Books
 
+## Keep bank activity current
+
+For each business checking, savings, or card account, choose either **Connect automatically** in **Money → Bank** or **Import manually** in **Money → Import**. Automatic sync uses the optional Plaid connection; manual import uses a transaction CSV from the bank/card provider. Different accounts can use different methods, and the choice can change later.
+
+Either way, Capture Tracker brings activity into the same owner review process before it becomes accounting. A PDF/image statement uploaded to Documents is supporting evidence and does not create transactions.
+
 **SPENDING TRACKED. BUSINESS GROWN.** · Private pilot · V2.4
 
 Capture Tracker tells you what needs attention and takes you to the protected workflow that resolves it. You do not need to learn the navigation before keeping the S-Corp’s books current.

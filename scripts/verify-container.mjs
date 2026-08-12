@@ -1,12 +1,12 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-const forbidden = ["DATABASE_URL", "DIRECT_DATABASE_URL", "BETTER_AUTH_SECRET", "R2_SECRET_ACCESS_KEY", "R2_ACCESS_KEY_ID", "postgresql://", "-----BEGIN PRIVATE KEY-----"];
+const forbidden = ["DATABASE_URL", "DIRECT_DATABASE_URL", "BETTER_AUTH_SECRET", "R2_SECRET_ACCESS_KEY", "R2_ACCESS_KEY_ID", "PLAID_CLIENT_ID", "PLAID_SECRET", "PLAID_TOKEN_ENCRYPTION_KEY", "postgresql://", "-----BEGIN PRIVATE KEY-----"];
 const root = join(process.cwd(), ".next", "static");
 if (!existsSync(root)) throw new Error("Production build output is missing.");
 const files = []; const walk = (dir) => { for (const item of readdirSync(dir, { withFileTypes: true })) { if (item.isDirectory()) walk(join(dir, item.name)); else if (item.name.endsWith(".js")) files.push(join(dir, item.name)); } }; walk(root);
 const secretValues = existsSync(".env")
   ? readFileSync(".env", "utf8").split(/\r?\n/).flatMap((line) => {
-      const match = line.match(/^\s*(BETTER_AUTH_SECRET|DATABASE_URL|DIRECT_DATABASE_URL|R2_SECRET_ACCESS_KEY|R2_ACCESS_KEY_ID)=(.*)$/);
+      const match = line.match(/^\s*(BETTER_AUTH_SECRET|DATABASE_URL|DIRECT_DATABASE_URL|R2_SECRET_ACCESS_KEY|R2_ACCESS_KEY_ID|PLAID_CLIENT_ID|PLAID_SECRET|PLAID_TOKEN_ENCRYPTION_KEY)=(.*)$/);
       if (!match) return [];
       const value = match[2].trim().replace(/^(?:"|')|(?:"|')$/g, "");
       return value ? [[match[1], value]] : [];

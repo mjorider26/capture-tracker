@@ -12,8 +12,9 @@ export function ImportHelp() {
     <div className="mt-5 grid gap-4 text-sm leading-6 text-text-muted sm:grid-cols-2">
       <p><strong className="text-text-primary">Bank and card required:</strong> <code>date</code>, <code>description</code>, and <code>amount</code>. You may use <code>debit</code> and <code>credit</code> instead of <code>amount</code>.</p>
       <p><strong className="text-text-primary">Optional:</strong> posted date, merchant/payee, memo, and external transaction ID. An external ID makes duplicate detection more reliable.</p>
-      <p><strong className="text-text-primary">If a preview is unavailable:</strong> make sure the file is a non-empty CSV, dates use YYYY-MM-DD, and amounts contain numbers only. Choose the account that actually issued the statement.</p>
+      <p><strong className="text-text-primary">If a preview is unavailable:</strong> make sure the transaction file is a non-empty CSV, dates use YYYY-MM-DD, and amounts contain numbers only. Choose the account that issued the transaction export.</p>
       <p><strong className="text-text-primary">Duplicates are safe:</strong> exact duplicates are not imported. Possible duplicates stay in review so you decide whether to post or exclude them.</p>
+      <p><strong className="text-text-primary">Statement documents are different:</strong> upload a PDF or image statement through Documents for secure evidence storage. A statement document does not create transactions; use this transaction CSV importer for activity.</p>
     </div>
   </section>;
 }

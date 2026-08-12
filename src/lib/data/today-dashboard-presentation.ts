@@ -6,6 +6,7 @@ export type TodayAttentionCounts = {
   tax: number;
   payroll: number;
   reviewTasks: number;
+  bankConnections: number;
 };
 
 export type TodayAttentionItem = {
@@ -22,6 +23,13 @@ const definitions: Array<Omit<TodayAttentionItem, "count">> = [
     id: "transactions",
     label: "Transactions awaiting review",
     description: "Classify pending business activity before it reaches the books.",
+    destination: "money",
+    tone: "urgent",
+  },
+  {
+    id: "bankConnections",
+    label: "Bank connection needs attention",
+    description: "Reconnect the existing institution or switch the affected account to manual import.",
     destination: "money",
     tone: "urgent",
   },

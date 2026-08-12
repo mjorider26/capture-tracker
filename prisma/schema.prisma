@@ -40,6 +40,24 @@ enum BankSyncStatus {
   FAILED
 }
 
+enum BankFeedMethod {
+  MANUAL
+  PLAID
+}
+
+enum BankProviderTransactionState {
+  ACTIVE
+  REMOVED
+  REPLACED
+}
+
+enum BankWebhookStatus {
+  RECEIVED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum InvoiceStatus {
   DRAFT
   ISSUED
@@ -470,6 +488,7 @@ model Business {
   connectedFinancialAccounts   ConnectedFinancialAccount[]
   bankSyncRuns                 BankSyncRun[]
   bankProviderTransactions     BankProviderTransaction[]
+  bankWebhookEvents            BankWebhookEvent[]
   customers                    Customer[]
   invoices                     Invoice[]
   invoicePayments              InvoicePayment[]
@@ -740,6 +759,7 @@ model FinancialAccount {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   version         Int              @default(1)
+  bankFeedMethod  BankFeedMethod   @default(MANUAL)
 
   business                   Business                   @relation(fields: [businessId], references: [id], onDelete: Restrict)
   transactions               Transaction[]
@@ -1961,20 +1981,25 @@ model BusinessOnboarding {
   @@unique([businessId, id])
 }
 
-/// Provider-neutral connection metadata. Provider credentials are held only by the provider,
-/// never persisted in Capture Tracker.
+/// Provider-neutral connection metadata. Provider credentials are stored only as versioned,
+/// authenticated encrypted envelopes and are never exposed to the browser.
 model BankConnection {
   id                 String              @id @default(cuid())
   businessId         String
   providerId         String              @db.VarChar(64)
   providerConnectionRef String            @db.VarChar(191)
   institutionName    String?             @db.VarChar(180)
+  institutionId      String?             @db.VarChar(191)
+  encryptedAccessToken String?
+  accessTokenKeyVersion Int?
+  connectedByUserId  String?
   state              BankConnectionState @default(CONNECTED)
   lastSuccessfulSyncAt DateTime?
   lastAttemptedSyncAt DateTime?
   syncCursor         String?             @db.VarChar(500)
   errorCode          String?             @db.VarChar(100)
   errorMessage       String?             @db.VarChar(500)
+  disconnectedAt     DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   version            Int                 @default(1)
@@ -1983,9 +2008,11 @@ model BankConnection {
   accounts ConnectedFinancialAccount[]
   syncRuns BankSyncRun[]
   providerTransactions BankProviderTransaction[]
+  webhookEvents BankWebhookEvent[]
 
   @@unique([businessId, providerId, providerConnectionRef])
   @@index([businessId, state])
+  @@index([providerId, providerConnectionRef])
 }
 
 /// Explicitly maps a provider account to the existing Capture Tracker financial account.
@@ -1998,6 +2025,7 @@ model ConnectedFinancialAccount {
   name               String @db.VarChar(180)
   accountType        String @db.VarChar(64)
   maskedLastFour     String? @db.VarChar(4)
+  isSelected         Boolean @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   version            Int @default(1)
@@ -2021,6 +2049,7 @@ model BankSyncRun {
   importedCount    Int @default(0)
   duplicateCount   Int @default(0)
   updatedCount     Int @default(0)
+  removedCount     Int @default(0)
   errorCode        String? @db.VarChar(100)
   errorMessage     String? @db.VarChar(500)
   startedAt        DateTime @default(now())
@@ -2041,6 +2070,8 @@ model BankProviderTransaction {
   connectedFinancialAccountId String
   bankSyncRunId              String?
   providerTransactionRef     String @db.VarChar(191)
+  pendingTransactionRef      String? @db.VarChar(191)
+  state                      BankProviderTransactionState @default(ACTIVE)
   transactionDate            DateTime
   postedDate                 DateTime?
   description                String
@@ -2048,6 +2079,9 @@ model BankProviderTransaction {
   direction                  TransactionDirection
   pending                    Boolean @default(false)
   providerUpdatedAt          DateTime?
+  providerContentHash        String? @db.VarChar(64)
+  removedAt                  DateTime?
+  replacedByRef              String? @db.VarChar(191)
   normalizedExternalTransactionId String? @unique
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
@@ -2060,6 +2094,31 @@ model BankProviderTransaction {
 
   @@unique([businessId, bankConnectionId, providerTransactionRef])
   @@index([businessId, connectedFinancialAccountId, transactionDate])
+  @@index([businessId, bankConnectionId, pendingTransactionRef])
+}
+
+/// Sanitized delivery evidence only. Raw webhook bodies and provider credentials are never stored.
+model BankWebhookEvent {
+  id                 String @id @default(cuid())
+  businessId         String
+  bankConnectionId   String
+  providerId         String @db.VarChar(64)
+  requestBodySha256  String @db.VarChar(64)
+  verificationSignatureSha256 String @db.VarChar(64)
+  verificationKeyId  String @db.VarChar(191)
+  webhookType        String @db.VarChar(100)
+  webhookCode        String @db.VarChar(100)
+  status             BankWebhookStatus @default(RECEIVED)
+  errorCode          String? @db.VarChar(100)
+  receivedAt         DateTime @default(now())
+  processedAt        DateTime?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  connection BankConnection @relation(fields: [bankConnectionId], references: [id], onDelete: Restrict)
+
+  @@unique([providerId, verificationSignatureSha256])
+  @@index([businessId, receivedAt])
+  @@index([bankConnectionId, status])
 }
 
 model Customer {

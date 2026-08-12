@@ -25,7 +25,7 @@ export function openItemAge(dueDate: Date | null, now = new Date()): OpenItemSta
   return days <= 30 ? "1_30" : days <= 60 ? "31_60" : days <= 90 ? "61_90" : "90_PLUS";
 }
 
-export type ProviderTransaction = { id: string; accountRef: string; date: string; postedDate?: string | null; description: string; amount: string; direction: "INFLOW" | "OUTFLOW"; pending?: boolean; updatedAt?: string | null };
+export type ProviderTransaction = { id: string; accountRef: string; date: string; postedDate?: string | null; description: string; amount: string; direction: "INFLOW" | "OUTFLOW"; pending?: boolean; pendingTransactionRef?: string | null; contentHash?: string | null; updatedAt?: string | null };
 export type ProviderPage = { cursor: string | null; transactions: ProviderTransaction[] };
 
 export interface BankProvider {
@@ -52,9 +52,10 @@ export class FakeBankProvider implements BankProvider {
 }
 
 export type SyncDecision = "CREATE" | "UPDATE" | "REDLIVERED";
-export function decideSync(existing: Pick<ProviderTransaction, "id" | "pending" | "updatedAt"> | null, incoming: ProviderTransaction): SyncDecision {
+export function decideSync(existing: Pick<ProviderTransaction, "id" | "pending" | "updatedAt" | "contentHash"> | null, incoming: ProviderTransaction): SyncDecision {
   if (!existing) return "CREATE";
   if (existing.pending && !incoming.pending) return "UPDATE";
+  if (incoming.contentHash && incoming.contentHash !== existing.contentHash) return "UPDATE";
   if ((incoming.updatedAt ?? "") > (existing.updatedAt ?? "")) return "UPDATE";
   return "REDLIVERED";
 }

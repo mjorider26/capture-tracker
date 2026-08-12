@@ -90,9 +90,15 @@ The primary mobile navigation is: Today, Money, Documents, Reports, and More. Mo
 - **More:** secondary operational workflows.
 
 
+### Bank activity: current production and Plaid release boundary
+
+The currently accepted production release uses manual transaction CSV import. Plaid source code and additive migrations 29–30 are not active merely because they exist on `main`; production remains on the accepted 28-migration release until the exact release controls below complete.
+
+The Plaid release candidate requests read-only Transactions connectivity only. It never enables Auth, Transfer, payment initiation, ACH, or money movement. Each business account can remain manual, use Plaid after owner connection and mapping, or switch methods without deleting import evidence or posted journals. Both sources enter the same review-before-post workflow. Use [Plaid production operations](PLAID_PRODUCTION_OPERATIONS.md) for credential, webhook, Trial conservation, recovery, and incident steps. Never enter Plaid secrets into chat, logs, documentation, or a checked-in environment file.
+
 ### CSV import and review
 
-Money imports bank or credit-card CSV exports; it does not provide a bank feed. The operator selects the financial account, reviews detected or corrected mappings, then sees total rows, new rows, duplicates, possible duplicates, and invalid rows before confirmation. Repeating the same file is duplicate-safe. Imported activity remains separate bank evidence until an authorized reviewer accepts a deterministic classification and creates the corresponding balanced accounting entry. Ambiguous transfers, owner activity, payroll withdrawals, and possible duplicates stay unresolved rather than receiving guessed treatment. Today and Weekly Review show unresolved import exceptions only.
+Money imports bank or credit-card CSV exports whether or not Plaid is configured. The operator selects the financial account, reviews detected or corrected mappings, then sees total rows, new rows, duplicates, possible duplicates, and invalid rows before confirmation. Repeating the same file is duplicate-safe. Imported activity remains separate bank evidence until an authorized reviewer accepts a deterministic classification and creates the corresponding balanced accounting entry. Ambiguous transfers, owner activity, payroll withdrawals, and possible duplicates stay unresolved rather than receiving guessed treatment. Today and Weekly Review show unresolved import exceptions only.
 
 V2 automated acceptance uses fictional fixtures and protected application/service boundaries. Physical CSV-picker, file-picker, and CPA-download interaction is documented as **ASSUMED — AUTOMATED COVERAGE** only when route health, parser/output content, authorization, tenant scope, persistence, downstream accounting behavior, and failure handling are verified. Do not use database/operator workarounds to create or remove records.
 

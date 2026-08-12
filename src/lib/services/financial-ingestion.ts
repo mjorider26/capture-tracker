@@ -84,6 +84,10 @@ export async function postExternalTransaction(actor: Actor, input: { externalTra
   try { return await prisma.$transaction(async (tx) => {
     const external = await tx.externalTransaction.findFirst({ where: { id: input.externalTransactionId, businessId: actor.businessId }, include: { financialAccount: { include: { ledgerAccount: true } } } });
     if (!external || ["POSTED", "DUPLICATE", "POSSIBLE_DUPLICATE", "INVALID", "IGNORED"].includes(external.status)) return { ok: false as const, message: "This imported activity cannot be posted." };
+    const pendingProviderEvidence = await tx.bankProviderTransaction.findFirst({ where: { businessId: actor.businessId, normalizedExternalTransactionId: external.id, pending: true, state: "ACTIVE" }, select: { id: true } });
+    if (pendingProviderEvidence) return { ok: false as const, message: "Wait for this pending bank activity to post before approving it." };
+    const cutover = await tx.businessCutover.findUnique({ where: { businessId: actor.businessId }, select: { startDate: true } });
+    if (cutover && external.transactionDate < cutover.startDate) return { ok: false as const, message: "This activity predates the accounting cutover and cannot be posted into the current books." };
     const category = await tx.ledgerAccount.findFirst({ where: { id: input.ledgerAccountId, businessId: actor.businessId, isActive: true, financialAccountId: null, type: external.direction === "INFLOW" ? "INCOME" : "EXPENSE" }, select: { id: true, name: true } });
     if (!category || !external.financialAccount.ledgerAccount) return { ok: false as const, message: "Choose an active accounting category for this transaction." };
     const period = await tx.accountingPeriod.findFirst({ where: { businessId: actor.businessId, status: "OPEN", startsAt: { lte: external.transactionDate }, endsAt: { gte: external.transactionDate } }, select: { id: true } });

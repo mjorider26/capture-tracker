@@ -12,10 +12,12 @@ describe("Today dashboard presentation", () => {
       tax: 5,
       payroll: 6,
       reviewTasks: 7,
+      bankConnections: 8,
     });
 
     expect(attention.map(({ id, destination, count }) => ({ id, destination, count }))).toEqual([
       { id: "transactions", destination: "money", count: 1 },
+      { id: "bankConnections", destination: "money", count: 8 },
       { id: "reconciliations", destination: "money", count: 4 },
       { id: "documents", destination: "documents", count: 2 },
       { id: "matches", destination: "documents", count: 3 },
@@ -35,6 +37,7 @@ describe("Today dashboard presentation", () => {
         tax: 0,
         payroll: 0,
         reviewTasks: 0,
+        bankConnections: 0,
       }),
     ).toEqual([]);
   });

@@ -26,6 +26,7 @@ const expectedTables = new Set([
   "ConnectedFinancialAccount",
   "BankSyncRun",
   "BankProviderTransaction",
+  "BankWebhookEvent",
   "MerchantCategoryRule",
   "Customer",
   "Invoice",

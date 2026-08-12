@@ -27,7 +27,7 @@ export type TodayDashboard = {
   };
   currentActivity: { income: string; expenses: string; unreviewedTransactions: number; documentAttention: number };
   setup?: { incomplete: boolean; booksCurrentThrough: string | null };
-  booksCurrent: { date: string | null; blocker: { label: string; count: number; date: string } | null; accountCoverage: Array<{ accountName: string; reconciledThrough: string | null }> };
+  booksCurrent: { date: string | null; blocker: { label: string; count: number; date: string } | null; accountCoverage: Array<{ accountName: string; reconciledThrough: string | null; bankFeedMethod?: "MANUAL" | "PLAID"; activityMayBeMissingAfter?: string | null }> };
   isEmptyAccount: boolean;
   taxReserve: {
     value: string;
@@ -178,11 +178,12 @@ export async function getTodayDashboard(
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
   const cashLedgerIds = cashAccounts.flatMap((account) => account.ledgerAccount ? [account.ledgerAccount.id] : []);
   const reserveLedgerIds = taxReserveAccounts.flatMap((account) => account.ledgerAccount ? [account.ledgerAccount.id] : []);
-  const [cashLines, periodLines, unreviewedTransactions, documentAttention, booksCurrent] = await Promise.all([
+  const [cashLines, periodLines, unreviewedTransactions, documentAttention, bankConnectionAttention, booksCurrent] = await Promise.all([
     cashLedgerIds.length ? prisma.journalLine.findMany({ where: { businessId, ledgerAccountId: { in: cashLedgerIds }, journalEntry: { status: "POSTED" } }, select: { ledgerAccountId: true, debitAmount: true, creditAmount: true } }) : [],
     prisma.journalLine.findMany({ where: { businessId, journalEntry: { status: "POSTED", entryDate: { gte: monthStart } } }, select: { debitAmount: true, creditAmount: true, ledgerAccount: { select: { type: true } } } }),
     prisma.transaction.count({ where: { businessId, status: "PENDING_REVIEW" } }),
     prisma.document.count({ where: { businessId, OR: [{ status: "PENDING_VALIDATION" }, { status: "QUARANTINED", malwareScanStatus: { not: "PENDING" } }, { status: "REJECTED" }, { transactions: { none: { unlinkedAt: null } }, status: "ACTIVE", malwareScanStatus: "CLEAN" }] } }),
+    prisma.bankConnection.count({ where: { businessId, state: { in: ["NEEDS_ATTENTION", "RECONNECT_REQUIRED"] } } }),
     getBooksCurrentThrough(prisma, businessId),
   ]);
 
@@ -263,7 +264,7 @@ export async function getTodayDashboard(
     },
     currentActivity: { income: formatUsd(income), expenses: formatUsd(expenses), unreviewedTransactions, documentAttention },
     setup: { incomplete: business.onboarding?.status === "IN_PROGRESS", booksCurrentThrough: business.onboarding?.booksCurrentThrough ? formatDate(business.onboarding.booksCurrentThrough) : null },
-    booksCurrent: { date: booksCurrent.date ? formatDate(booksCurrent.date) : null, blocker: booksCurrent.blockers[0] ? { label: booksCurrent.blockers[0].label, count: booksCurrent.blockers[0].count, date: formatDate(booksCurrent.blockers[0].date) } : null, accountCoverage: booksCurrent.accountCoverage.map((item) => ({ accountName: item.accountName, reconciledThrough: item.reconciledThrough ? formatDate(item.reconciledThrough) : null })) },
+    booksCurrent: { date: booksCurrent.date ? formatDate(booksCurrent.date) : null, blocker: booksCurrent.blockers[0] ? { label: booksCurrent.blockers[0].label, count: booksCurrent.blockers[0].count, date: formatDate(booksCurrent.blockers[0].date) } : null, accountCoverage: booksCurrent.accountCoverage.map((item) => ({ accountName: item.accountName, reconciledThrough: item.reconciledThrough ? formatDate(item.reconciledThrough) : null, bankFeedMethod: item.bankFeedMethod, activityMayBeMissingAfter: item.activityMayBeMissingAfter ? formatDate(item.activityMayBeMissingAfter) : null })) },
     isEmptyAccount: cashAccounts.length === 0 && entries.length === 0,
     taxReserve:
       reserve === null
@@ -325,6 +326,7 @@ export async function getTodayDashboard(
       matches: 0,
       payroll: taskCounts.payroll,
       reviewTasks: 0,
+      bankConnections: bankConnectionAttention,
     }),
     weeklyReview: review
       ? {

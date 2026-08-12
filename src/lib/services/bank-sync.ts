@@ -4,6 +4,7 @@ import { Prisma, type BusinessRole } from "../../generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { decideSync, type BankProvider, type ProviderTransaction } from "./operational-independence-core";
 import { fingerprint, normalizedMerchant } from "./financial-ingestion-core";
+import { plaidConfigured } from "@/lib/providers/plaid/client";
 
 type Actor = { businessId: string; actorUserId: string; role: BusinessRole };
 const validId = (value: unknown) => typeof value === "string" && /^[A-Za-z0-9_-]{1,191}$/.test(value);
@@ -45,9 +46,33 @@ export async function mapConnectedFinancialAccount(actor: Actor, input: { connec
     if (input.financialAccountId) {
       const account = await tx.financialAccount.findFirst({ where: { id: input.financialAccountId, businessId: actor.businessId, ownership: "BUSINESS", isActive: true }, select: { id: true } });
       if (!account) return { ok: false as const, message: "Choose an active business financial account." };
+      const competing = await tx.connectedFinancialAccount.findFirst({ where: { businessId: actor.businessId, financialAccountId: account.id, id: { not: connected.id }, isSelected: true, connection: { state: { not: "DISCONNECTED" } } }, select: { id: true } });
+      if (competing) return { ok: false as const, message: "That Capture Tracker account is already mapped to another selected bank feed." };
     }
     await tx.connectedFinancialAccount.update({ where: { id: connected.id }, data: { financialAccountId: input.financialAccountId, version: { increment: 1 } } });
     await tx.auditEvent.create({ data: { actorType: "USER", businessId: actor.businessId, actorMembershipId: actor.actorUserId, action: "UPDATE", entityType: "ConnectedFinancialAccount", entityId: connected.id, afterJson: { financialAccountId: input.financialAccountId }, metadataJson: { accountingEffect: "none" } } });
+    return { ok: true as const };
+  });
+}
+
+export async function setFinancialAccountBankFeedMethod(actor: Actor, input: { financialAccountId: string; method: "MANUAL" | "PLAID" }) {
+  if (actor.role !== "OWNER" || !validId(input.financialAccountId) || !["MANUAL", "PLAID"].includes(input.method)) return { ok: false as const, message: "The account method is invalid." };
+  return prisma.$transaction(async (tx) => {
+    const account = await tx.financialAccount.findFirst({ where: { id: input.financialAccountId, businessId: actor.businessId, ownership: "BUSINESS", isActive: true }, select: { id: true, bankFeedMethod: true } });
+    if (!account) return { ok: false as const, message: "That business account is unavailable." };
+    await tx.financialAccount.update({ where: { id: account.id }, data: { bankFeedMethod: input.method, version: { increment: 1 } } });
+    await tx.auditEvent.create({ data: { actorType: "USER", businessId: actor.businessId, actorMembershipId: actor.actorUserId, action: "UPDATE", entityType: "FinancialAccount", entityId: account.id, beforeJson: { bankFeedMethod: account.bankFeedMethod }, afterJson: { bankFeedMethod: input.method }, metadataJson: { historyPreserved: true, accountingEffect: "none" } } });
+    return { ok: true as const };
+  });
+}
+
+export async function setConnectedFinancialAccountSelection(actor: Actor, input: { connectedAccountId: string; selected: boolean }) {
+  if (actor.role !== "OWNER" || !validId(input.connectedAccountId) || typeof input.selected !== "boolean") return { ok: false as const, message: "The account selection is invalid." };
+  return prisma.$transaction(async (tx) => {
+    const connected = await tx.connectedFinancialAccount.findFirst({ where: { id: input.connectedAccountId, businessId: actor.businessId, connection: { state: { not: "DISCONNECTED" } } }, select: { id: true, isSelected: true } });
+    if (!connected) return { ok: false as const, message: "That connected account is unavailable." };
+    await tx.connectedFinancialAccount.update({ where: { id: connected.id }, data: { isSelected: input.selected, version: { increment: 1 } } });
+    await tx.auditEvent.create({ data: { actorType: "USER", businessId: actor.businessId, actorMembershipId: actor.actorUserId, action: "UPDATE", entityType: "ConnectedFinancialAccount", entityId: connected.id, beforeJson: { isSelected: connected.isSelected }, afterJson: { isSelected: input.selected }, metadataJson: { providerItemDisconnected: false, historyPreserved: true, accountingEffect: "none" } } });
     return { ok: true as const };
   });
 }
@@ -113,6 +138,6 @@ export async function syncBankConnection(actor: Actor, connectionId: string, pro
 }
 
 export async function getBankConnectionWorkspace(businessId: string) {
-  const [connections, accounts] = await Promise.all([prisma.bankConnection.findMany({ where: { businessId }, include: { accounts: { include: { financialAccount: { select: { name: true } } }, orderBy: { name: "asc" } }, syncRuns: { orderBy: { startedAt: "desc" }, take: 1 } }, orderBy: { createdAt: "desc" } }), prisma.financialAccount.findMany({ where: { businessId, ownership: "BUSINESS", isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
-  return { liveProviderConfigured: false, accounts, connections: connections.map((connection) => ({ id: connection.id, institutionName: connection.institutionName, state: connection.state, lastAttemptedSyncAt: connection.lastAttemptedSyncAt?.toISOString() ?? null, lastSuccessfulSyncAt: connection.lastSuccessfulSyncAt?.toISOString() ?? null, lastRun: connection.syncRuns[0] ? { status: connection.syncRuns[0].status, imported: connection.syncRuns[0].importedCount, duplicates: connection.syncRuns[0].duplicateCount, error: connection.syncRuns[0].errorMessage } : null, accounts: connection.accounts.map((account) => ({ id: account.id, name: account.name, type: account.accountType, lastFour: account.maskedLastFour, financialAccountId: account.financialAccountId, financialAccountName: account.financialAccount?.name ?? null })) })) };
+  const [connections, accounts] = await Promise.all([prisma.bankConnection.findMany({ where: { businessId }, include: { accounts: { include: { financialAccount: { select: { name: true } } }, orderBy: { name: "asc" } }, syncRuns: { orderBy: { startedAt: "desc" }, take: 1 } }, orderBy: { createdAt: "desc" } }), prisma.financialAccount.findMany({ where: { businessId, ownership: "BUSINESS", isActive: true }, select: { id: true, name: true, institutionName: true, type: true, lastFour: true, bankFeedMethod: true }, orderBy: { name: "asc" } })]);
+  return { liveProviderConfigured: plaidConfigured(), accounts, connections: connections.map((connection) => ({ id: connection.id, providerId: connection.providerId, institutionName: connection.institutionName, state: connection.state, lastAttemptedSyncAt: connection.lastAttemptedSyncAt?.toISOString() ?? null, lastSuccessfulSyncAt: connection.lastSuccessfulSyncAt?.toISOString() ?? null, lastRun: connection.syncRuns[0] ? { status: connection.syncRuns[0].status, imported: connection.syncRuns[0].importedCount, duplicates: connection.syncRuns[0].duplicateCount, updated: connection.syncRuns[0].updatedCount, removed: connection.syncRuns[0].removedCount, error: connection.syncRuns[0].errorMessage } : null, accounts: connection.accounts.map((account) => ({ id: account.id, name: account.name, type: account.accountType, lastFour: account.maskedLastFour, isSelected: account.isSelected, financialAccountId: account.financialAccountId, financialAccountName: account.financialAccount?.name ?? null })) })) };
 }

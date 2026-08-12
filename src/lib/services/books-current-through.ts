@@ -2,13 +2,13 @@ import { Prisma, type PrismaClient } from "../../generated/prisma/client";
 
 import { booksCurrentThrough } from "./s-corp-intelligence-core";
 
-export type BooksCurrentThrough = { date: Date | null; blockers: Array<{ date: Date; label: string; count: number }>; accountCoverage: Array<{ accountName: string; reconciledThrough: Date | null }> };
+export type BooksCurrentThrough = { date: Date | null; blockers: Array<{ date: Date; label: string; count: number }>; accountCoverage: Array<{ accountName: string; reconciledThrough: Date | null; bankFeedMethod: "MANUAL" | "PLAID"; activityMayBeMissingAfter: Date | null }> };
 
 /** Evidence-backed current-through calculation; an account without a completed reconciliation leaves the result incomplete. */
 export async function getBooksCurrentThrough(client: PrismaClient, businessId: string): Promise<BooksCurrentThrough> {
   const today = new Date();
   const [accounts, unresolved, duplicates, transfers, reimbursements, payroll, assets, journals] = await Promise.all([
-    client.financialAccount.findMany({ where: { businessId, ownership: "BUSINESS", isActive: true }, select: { id: true, name: true, reconciliations: { where: { status: "COMPLETED", statementEndDate: { lte: today } }, select: { statementEndDate: true }, orderBy: { statementEndDate: "desc" }, take: 1 } } }),
+    client.financialAccount.findMany({ where: { businessId, ownership: "BUSINESS", isActive: true }, select: { id: true, name: true, bankFeedMethod: true, reconciliations: { where: { status: "COMPLETED", statementEndDate: { lte: today } }, select: { statementEndDate: true }, orderBy: { statementEndDate: "desc" }, take: 1 } } }),
     client.externalTransaction.findMany({ where: { businessId, transactionDate: { lte: today }, status: { in: ["IMPORTED", "NORMALIZED", "NEEDS_REVIEW", "SUGGESTED", "READY_TO_POST"] } }, select: { transactionDate: true } }),
     client.externalTransaction.findMany({ where: { businessId, transactionDate: { lte: today }, status: "POSSIBLE_DUPLICATE" }, select: { transactionDate: true } }),
     client.ownerMoneyTransfer.findMany({ where: { businessId, status: "PENDING_REVIEW", externalTransaction: { transactionDate: { lte: today } } }, select: { externalTransaction: { select: { transactionDate: true } } } }),
@@ -17,7 +17,8 @@ export async function getBooksCurrentThrough(client: PrismaClient, businessId: s
     client.fixedAsset.findMany({ where: { businessId, status: "POSSIBLE_REVIEW", acquisitionDate: { lte: today } }, select: { acquisitionDate: true } }),
     client.journalEntry.findMany({ where: { businessId, status: "POSTED", entryDate: { lte: today } }, include: { lines: { select: { debitAmount: true, creditAmount: true } } } }),
   ]);
-  const accountCoverage = accounts.map((account) => ({ accountName: account.name, reconciledThrough: account.reconciliations[0]?.statementEndDate ?? null }));
+  const staleBefore = new Date(today.getTime() - 14 * 86_400_000);
+  const accountCoverage = accounts.map((account) => { const reconciledThrough = account.reconciliations[0]?.statementEndDate ?? null; return { accountName: account.name, reconciledThrough, bankFeedMethod: account.bankFeedMethod, activityMayBeMissingAfter: account.bankFeedMethod === "MANUAL" && reconciledThrough && reconciledThrough < staleBefore ? reconciledThrough : null }; });
   if (!accounts.length || accountCoverage.some((account) => !account.reconciledThrough)) return { date: null, blockers: [], accountCoverage };
   const candidate = accountCoverage.reduce<Date>((earliest, account) => account.reconciledThrough! < earliest ? account.reconciledThrough! : earliest, accountCoverage[0]!.reconciledThrough!);
   const unbalanced = journals.filter((entry) => !entry.lines.reduce((sum, line) => sum.plus(line.debitAmount).minus(line.creditAmount), new Prisma.Decimal(0)).isZero()).map((entry) => entry.entryDate);

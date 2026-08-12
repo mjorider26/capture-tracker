@@ -1,6 +1,16 @@
 # Capture Tracker Product Manual
 
-> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. Bank Connections is provider-ready and accurately displays **LIVE BANK PROVIDER NOT CONFIGURED** until separately authorized provider activation. **Money → Invoices** and **Bills** record owner-confirmed receivables and payables; public invoices are read-only professional documents. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal. **Taxes → Fixed assets** records possible assets and owner-confirmed in-service facts; depreciation and tax treatment remain CPA review items.
+## Bank activity: automatic or manual
+
+The owner chooses an activity method for each business financial account. **Automatic sync** uses an optional read-only Plaid connection. **Manual import** uses transaction CSV files downloaded from the bank or card provider. Both choices are supported equally and can coexist across different accounts.
+
+Plaid activity and CSV activity enter the same duplicate checks and review queue. Capture Tracker never automatically posts either source. The owner approves accounting categories, and posted journals remain immutable if later provider evidence changes or disappears.
+
+To connect, open **Money → Bank**, choose **Connect bank** for the intended Capture Tracker account, then complete institution authorization inside Plaid Link. Select business accounts only and map each selected Plaid account to one Capture Tracker financial account. If the institution later requests access again, use **Reconnect bank** on the existing connection rather than adding a duplicate.
+
+To work manually, download a **transaction CSV**, open **Money → Import**, preview it, confirm it, review exceptions, and reconcile it against the statement. Upload a statement PDF/image through Documents if you want retained statement evidence; that document does not create transactions.
+
+> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. Bank Connections is provider-ready and displays **Plaid is not configured** until separately authorized provider activation. Manual CSV remains fully available in that state. **Money → Invoices** and **Bills** record owner-confirmed receivables and payables; public invoices are read-only professional documents. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal. **Taxes → Fixed assets** records possible assets and owner-confirmed in-service facts; depreciation and tax treatment remain CPA review items.
 
 **SPENDING TRACKED. BUSINESS GROWN.**
 
