@@ -126,13 +126,30 @@ function Navigation({
   destination: NavigationDestination | null;
 }) {
   const { primary, secondary } = splitNavigation(navigationItems);
+  const runBooks = secondary.find((item) => item.slug === "review");
+  const routine = secondary.filter((item) => item.slug === "reconciliation");
+  const owner = secondary.filter((item) => item.slug === "taxes");
+  const tools = secondary.filter((item) => ["activity", "help", "settings"].includes(item.slug));
   return (
     <nav aria-label="Primary navigation" className="app-shell-navigation mt-7">
       <NavigationGroup items={primary} basePath={basePath} destination={destination} />
       <div className="app-shell-nav-divider" aria-hidden="true" />
-      <NavigationGroup items={secondary} basePath={basePath} destination={destination} />
+      {runBooks ? <NavigationGroup items={[runBooks]} basePath={basePath} destination={destination} /> : null}
+      <details className="mt-2" open={Boolean(destination && destination !== "review" && secondary.some((item) => item.slug === destination)) || undefined}>
+        <summary className="app-shell-nav-link cursor-pointer list-none"><span aria-hidden="true" className="app-shell-nav-mark"><NavigationIcon name="more" className="h-[1.05rem] w-[1.05rem]" /></span><span>More</span></summary>
+        <div className="mt-2 space-y-4 border-l border-white/15 pl-2">
+          <SidebarGroup label="Monthly routine" items={routine} basePath={basePath} destination={destination} />
+          <SidebarGroup label="Owner & professional" items={owner} basePath={basePath} destination={destination} />
+          <SidebarGroup label="Tools & support" items={tools} basePath={basePath} destination={destination} />
+        </div>
+      </details>
     </nav>
   );
+}
+
+function SidebarGroup({ label, items, basePath, destination }: { label: string; items: readonly NavigationItem[]; basePath: string; destination: NavigationDestination | null }) {
+  if (!items.length) return null;
+  return <section><p className="px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">{label}</p><div className="mt-1"><NavigationGroup items={items} basePath={basePath} destination={destination} /></div></section>;
 }
 
 function NavigationGroup({

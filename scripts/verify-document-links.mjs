@@ -29,7 +29,7 @@ requireText("src/lib/documents/transaction-links-core.ts", [
   "action: \"UNLINKED\"",
 ]);
 requireText("src/app/app/money/[transactionId]/actions.ts", [
-  "requireBusinessContext",
+  "requireBusinessMutationContext",
   "revalidatePath",
   "linkDocumentToTransaction",
 ]);

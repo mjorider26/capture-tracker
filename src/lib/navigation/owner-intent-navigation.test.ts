@@ -3,7 +3,7 @@ import { findWorkspaceEntries, isWorkspaceEntryAvailable, quickAddEntries, works
 
 describe("guided owner navigation catalog", () => {
   it("keeps the curated owner launcher complete and business-language only", () => {
-    expect(quickAddEntries("OWNER").map((entry) => entry.label)).toEqual(["Create invoice", "Add bill", "Upload receipt", "Record mileage", "Record owner-paid expense", "Record owner transfer", "Import transactions"]);
+    expect(quickAddEntries("OWNER").map((entry) => entry.label)).toEqual(["Create invoice", "Add bill", "Add receipt", "Record mileage", "Record owner-paid expense", "Record owner transfer", "Import transactions"]);
     expect(quickAddEntries("OWNER").some((entry) => entry.label.includes("JournalEntry"))).toBe(false);
   });
 
@@ -24,7 +24,7 @@ describe("guided owner navigation catalog", () => {
 
   it("does not advertise unavailable routes in the fictional demo shell", () => {
     const demoActions = quickAddEntries("OWNER").filter((entry) => isWorkspaceEntryAvailable("/demo", entry));
-    expect(demoActions.map((entry) => entry.label)).toEqual(["Upload receipt", "Record owner-paid expense", "Record owner transfer", "Import transactions"]);
+    expect(demoActions.map((entry) => entry.label)).toEqual(["Add receipt", "Record owner-paid expense", "Record owner transfer", "Import transactions"]);
     expect(demoActions.map((entry) => entry.label)).not.toContain("Create invoice");
   });
 });

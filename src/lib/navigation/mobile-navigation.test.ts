@@ -13,12 +13,13 @@ describe("mobile shell navigation", () => {
     expect([...mobilePrimaryDestinationSlugs, "more"]).toEqual(["today", "money", "documents", "reports", "more"]);
   });
 
-  it("keeps Taxes, Review, Reconciliation, Activity, and Settings reachable through More", () => {
+  it("keeps routine, Owner & S-Corp, professional detail, help, and settings reachable through More", () => {
     expect(splitNavigation(navigationItems).secondary.map((item) => item.slug)).toEqual([
-      "taxes",
       "review",
       "reconciliation",
+      "taxes",
       "activity",
+      "help",
       "settings",
     ]);
   });

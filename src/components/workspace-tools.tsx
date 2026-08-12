@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import {
   findWorkspaceEntries,
   isWorkspaceEntryAvailable,
-  quickAddEntries,
+  quickAddGroups,
   workspaceHref,
   type WorkspaceRole,
 } from "@/lib/navigation/owner-intent-navigation";
@@ -21,7 +21,7 @@ export function WorkspaceTools({ basePath, role }: { basePath: "/app" | "/demo";
   const findButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const results = useMemo(() => findWorkspaceEntries(query, role).filter((entry) => isWorkspaceEntryAvailable(basePath, entry)), [basePath, query, role]);
-  const actions = quickAddEntries(role).filter((entry) => isWorkspaceEntryAvailable(basePath, entry));
+  const actionGroups = quickAddGroups(role).map((group) => ({ ...group, entries: group.entries.filter((entry) => isWorkspaceEntryAvailable(basePath, entry)) })).filter((group) => group.entries.length);
 
   useEffect(() => {
     if (!panel) return;
@@ -29,7 +29,11 @@ export function WorkspaceTools({ basePath, role }: { basePath: "/app" | "/demo";
     document.body.style.overflow = "hidden";
     window.requestAnimationFrame(() => panel === "find" ? findInput.current?.focus() : closeButton.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPanel(null);
+      if (event.key === "Escape") {
+        const previousPanel = panel;
+        setPanel(null);
+        window.requestAnimationFrame(() => (previousPanel === "new" ? newButton : findButton).current?.focus());
+      }
       if (event.key === "Tab") {
         const focusable = [...(panelRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled])') ?? [])];
         const first = focusable[0]; const last = focusable.at(-1);
@@ -81,7 +85,7 @@ export function WorkspaceTools({ basePath, role }: { basePath: "/app" | "/demo";
           </div>
           {panel === "find" ? <div className="p-5"><label className="block text-sm font-bold text-text-muted">Search actions and destinations<input ref={findInput} className="ui-input mt-2" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try invoice, mileage, CPA, or reconcile" /></label><p className="mt-2 text-xs text-text-muted">Navigation only. Capture Tracker does not search customer financial data here.</p></div> : null}
           <nav aria-label={panel === "new" ? "New owner actions" : "Finder results"} className="workspace-dialog-results">
-            {(panel === "new" ? actions : results).map((entry) => <Link key={entry.id} href={workspaceHref(basePath, entry)} onClick={close} className="workspace-dialog-result"><span><strong>{entry.label}</strong><small>{entry.description}</small></span><span aria-hidden="true">→</span></Link>)}
+            {panel === "new" ? actionGroups.map((group) => <section key={group.label}><p className="bg-surface-secondary px-5 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-text-subtle">{group.label}</p>{group.entries.map((entry) => <Link key={entry.id} href={workspaceHref(basePath, entry)} onClick={close} className="workspace-dialog-result"><span><strong>{entry.label}</strong><small>{entry.description}</small></span><span aria-hidden="true">→</span></Link>)}</section>) : results.map((entry) => <Link key={entry.id} href={workspaceHref(basePath, entry)} onClick={close} className="workspace-dialog-result"><span><strong>{entry.label}</strong><small>{entry.description}</small></span><span aria-hidden="true">→</span></Link>)}
             {panel === "find" && results.length === 0 ? <p className="p-6 text-center text-sm text-text-muted">No matching workflow. Try a business task such as invoice, bill, receipt, mileage, CPA, or reconciliation.</p> : null}
           </nav>
         </section>

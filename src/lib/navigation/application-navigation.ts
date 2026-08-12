@@ -8,6 +8,7 @@ export type NavigationIconName =
   | "reconciliation"
   | "activity"
   | "settings"
+  | "help"
   | "more";
 
 export const destinations = [
@@ -15,9 +16,9 @@ export const destinations = [
   { slug: "money", label: "Money", icon: "wallet" },
   { slug: "documents", label: "Documents", icon: "receipt" },
   { slug: "reports", label: "Reports", icon: "reports" },
-  { slug: "taxes", label: "Taxes", icon: "taxes" },
-  { slug: "review", label: "Weekly Review", icon: "review" },
-  { slug: "activity", label: "Activity", icon: "activity" },
+  { slug: "review", label: "Run My Books", icon: "review" },
+  { slug: "taxes", label: "Owner & S-Corp", icon: "taxes" },
+  { slug: "activity", label: "Accounting Detail", icon: "activity" },
   { slug: "settings", label: "Settings", icon: "settings" },
 ] as const satisfies readonly {
   slug: string;
@@ -26,7 +27,7 @@ export const destinations = [
 }[];
 
 export type Destination = (typeof destinations)[number]["slug"];
-export type NavigationDestination = Destination | "reconciliation";
+export type NavigationDestination = Destination | "reconciliation" | "help";
 export type NavigationItem = {
   slug: NavigationDestination;
   label: string;
@@ -35,14 +36,18 @@ export type NavigationItem = {
 };
 
 export const navigationItems: readonly NavigationItem[] = [
-  ...destinations.slice(0, 6),
+  ...destinations.slice(0, 4),
+  destinations[4],
   {
     slug: "reconciliation",
     label: "Reconciliation",
     icon: "reconciliation",
     path: "/money/reconciliations",
   },
-  ...destinations.slice(6),
+  destinations[5],
+  destinations[6],
+  { slug: "help", label: "How to Run My Books", icon: "help", path: "/help" },
+  destinations[7],
 ];
 
 export const mobilePrimaryDestinationSlugs = [

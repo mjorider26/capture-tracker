@@ -83,6 +83,30 @@ describe("per-record weekly review tasks", () => {
     expect(buildWeeklyReviewTasks(paid)).toEqual([]);
   });
 
+  it("routes payment, owner, payroll, and periodic exceptions into the guided owner routine", () => {
+    const tasks = buildWeeklyReviewTasks(records({
+      externalTransactions: [
+        { id: "in", description: "Possible customer payment", transactionDate: date, amount: amount("100.00"), status: "NEEDS_REVIEW", direction: "INFLOW", financialAccount: { name: "Checking" } },
+        { id: "out", description: "Possible vendor payment", transactionDate: date, amount: amount("50.00"), status: "NEEDS_REVIEW", direction: "OUTFLOW", financialAccount: { name: "Checking" } },
+      ],
+      ownerTransfers: [{ id: "owner", direction: "COMPANY_TO_OWNER", classification: "UNRESOLVED", externalTransaction: { description: "Owner transfer", amount: amount("20.00") } }],
+      payrollMatches: [{ id: "payroll", kind: "NET_PAY", status: "UNMATCHED", payrollRun: { payDate: date } }],
+      fixedAssets: [{ id: "asset", name: "Laptop", acquisitionCost: amount("1000.00"), acquisitionDate: date, status: "POSSIBLE_REVIEW" }],
+    }));
+    expect(tasks.map((task) => task.category)).toEqual(["Money Coming In", "Money Going Out", "Owner Money", "Payroll", "Periodic Review"]);
+  });
+
+  it("includes only overdue invoices and review-or-due bills supplied by the scoped reader", () => {
+    const tasks = buildWeeklyReviewTasks(records({
+      invoiceExceptions: [{ id: "invoice", invoiceNumber: "INV-101", dueDate: date, total: amount("500.00"), status: "OVERDUE" }],
+      billExceptions: [{ id: "bill", billNumber: "B-20", dueDate: date, total: amount("90.00"), status: "DUE", vendor: { name: "Fictional Vendor" } }],
+    }));
+    expect(tasks).toEqual([
+      expect.objectContaining({ category: "Money Coming In", href: "/money/invoices" }),
+      expect.objectContaining({ category: "Money Going Out", href: "/money/bills" }),
+    ]);
+  });
+
   it("surfaces each required missing payroll evidence component once and resolves it after a match", () => {
     const zero = { isZero: () => true };
     const nonZero = { isZero: () => false };

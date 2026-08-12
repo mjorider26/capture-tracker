@@ -23,10 +23,10 @@ describe("TodayExperience guided owner home", () => {
   it("orders book status, frequent actions, and genuine owner attention", () => {
     const html = renderToStaticMarkup(<TodayExperience dashboard={dashboard} basePath="/app" />);
     const books = html.indexOf("Books current through");
-    const actions = html.indexOf("Quick owner actions");
+    const actions = html.indexOf("Quick things to record");
     const attention = html.indexOf("What needs your attention");
-    expect(books).toBeGreaterThan(-1); expect(actions).toBeGreaterThan(books); expect(attention).toBeGreaterThan(actions);
-    ["Review activity", "Add receipt", "Create invoice", "Add bill", "Record mileage", "Owner Money"].forEach((label) => expect(html).toContain(label));
+    expect(books).toBeGreaterThan(-1); expect(attention).toBeGreaterThan(books); expect(actions).toBeGreaterThan(attention);
+    ["Run My Books", "Add receipt", "Create invoice", "Add bill", "Record mileage"].forEach((label) => expect(html).toContain(label));
     expect(html).toContain("1 item is blocking Aug 8, 2026");
     expect(html).not.toContain("Available business cash");
   });
@@ -34,7 +34,14 @@ describe("TodayExperience guided owner home", () => {
   it("shows a calm state without invented metrics when no work needs attention", () => {
     const html = renderToStaticMarkup(<TodayExperience dashboard={{ ...dashboard, attention: [], booksCurrent: { ...dashboard.booksCurrent, blocker: null }, weeklyReview: null }} basePath="/app" />);
     expect(html).toContain("You&#x27;re caught up.");
-    expect(html).toContain("How this date works");
+    expect(html).toContain("Month-end status");
     expect(html).not.toContain("0% complete");
+  });
+
+  it("keeps fictional demo quick actions and month guidance on available demo routes", () => {
+    const html = renderToStaticMarkup(<TodayExperience dashboard={{ ...dashboard, attention: [], booksCurrent: { ...dashboard.booksCurrent, blocker: null }, weeklyReview: null }} basePath="/demo" />);
+    ["/demo/documents#document-upload", "/demo/taxes/owner-money?new=expense#personally-paid-expense", "/demo/money/import", "/demo/money/reconciliations"].forEach((href) => expect(html).toContain(href));
+    expect(html).not.toContain("/demo/taxes/mileage");
+    expect(html).not.toContain("/demo/taxes/close");
   });
 });

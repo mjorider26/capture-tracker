@@ -30,6 +30,11 @@ export function MobileNavigation({
   const closeButton = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   const { primary, secondary } = splitNavigation(items);
+  const secondaryGroups = [
+    { label: "Your routine", items: secondary.filter((item) => ["review", "reconciliation"].includes(item.slug)) },
+    { label: "Owner & S-Corp", items: secondary.filter((item) => item.slug === "taxes") },
+    { label: "Tools & support", items: secondary.filter((item) => ["activity", "help", "settings"].includes(item.slug)) },
+  ].filter((group) => group.items.length);
   const moreActive = isSecondaryNavigationDestination(destination);
 
   useEffect(() => {
@@ -96,19 +101,10 @@ export function MobileNavigation({
             <p className="mt-5 text-xs font-bold uppercase tracking-[0.12em] text-text-subtle">
               More workspace tools
             </p>
-            <nav className="mt-3 space-y-1" aria-label="Secondary navigation">
-              {secondary.map((item) => (
-                <Link
-                  key={item.slug}
-                  href={navigationHref(basePath, item)}
-                  aria-current={destination === item.slug ? "page" : undefined}
-                  onClick={() => setOpen(false)}
-                  className={`flex min-h-12 items-center gap-3 rounded-[var(--radius-md)] border px-3 text-sm font-bold transition-[transform,opacity,background-color,color,border-color] active:scale-[0.99] motion-reduce:transform-none ${destination === item.slug ? "border-brand-teal/35 bg-brand-teal-soft text-brand-teal shadow-sm" : "border-transparent text-text-muted hover:bg-surface-secondary hover:text-text-primary"}`}
-                >
-                  <NavigationIcon name={item.icon} className="h-5 w-5 shrink-0" />
-                  {item.label}
-                </Link>
-              ))}
+            <nav className="mt-3 space-y-5" aria-label="Secondary navigation">
+              {secondaryGroups.map((group) => <section key={group.label}><p className="px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-subtle">{group.label}</p><div className="mt-1 space-y-1">{group.items.map((item) => (
+                <Link key={item.slug} href={navigationHref(basePath, item)} aria-current={destination === item.slug ? "page" : undefined} onClick={() => setOpen(false)} className={`flex min-h-12 items-center gap-3 rounded-[var(--radius-md)] border px-3 text-sm font-bold transition-[transform,opacity,background-color,color,border-color] active:scale-[0.99] motion-reduce:transform-none ${destination === item.slug ? "border-brand-teal/35 bg-brand-teal-soft text-brand-teal shadow-sm" : "border-transparent text-text-muted hover:bg-surface-secondary hover:text-text-primary"}`}><NavigationIcon name={item.icon} className="h-5 w-5 shrink-0" />{item.label}</Link>
+              ))}</div></section>)}
             </nav>
             <p className="mt-auto rounded-[var(--radius-md)] bg-surface-secondary p-3 text-xs leading-5 text-text-muted">
               Navigation changes only your view. Financial actions remain available only in their existing protected workflows.

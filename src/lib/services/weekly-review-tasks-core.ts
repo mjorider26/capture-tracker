@@ -1,8 +1,12 @@
 export type WeeklyReviewTaskCategory =
   | "Transactions"
   | "Documents"
+  | "Money Coming In"
+  | "Money Going Out"
+  | "Owner Money"
+  | "Payroll"
   | "Reconciliation"
-  | "Taxes";
+  | "Periodic Review";
 
 export type WeeklyReviewTask = {
   id: string;
@@ -76,6 +80,7 @@ type ExternalTransaction = {
   transactionDate: Date;
   amount: { toFixed: (digits: number) => string };
   status: string;
+  direction: string;
   financialAccount: { name: string };
 };
 type OwnerTransfer = { id: string; direction: string; classification: string; externalTransaction: { description: string; amount: { toFixed: (digits: number) => string } } };
@@ -92,6 +97,8 @@ type PayrollRunEvidence = {
   matches: Array<{ kind: string; status: string }>;
 };
 type FixedAsset = { id: string; name: string; acquisitionCost: { toFixed: (digits: number) => string }; acquisitionDate: Date; status: string };
+type InvoiceException = { id: string; invoiceNumber: string; dueDate: Date | null; total: { toFixed: (digits: number) => string }; status: string };
+type BillException = { id: string; billNumber: string | null; dueDate: Date | null; total: { toFixed: (digits: number) => string }; status: string; vendor: { name: string } };
 
 export type WeeklyReviewTaskRecords = {
   transactions: Transaction[];
@@ -105,6 +112,8 @@ export type WeeklyReviewTaskRecords = {
   payrollMatches?: PayrollMatch[];
   payrollRuns?: PayrollRunEvidence[];
   fixedAssets?: FixedAsset[];
+  invoiceExceptions?: InvoiceException[];
+  billExceptions?: BillException[];
 };
 
 const formatDate = (value: Date) =>
@@ -185,21 +194,21 @@ export function buildWeeklyReviewTasks(
   for (const transaction of records.externalTransactions ?? []) {
     add(tasks, {
       id: `imported-activity:${transaction.id}`,
-      category: "Transactions",
+      category: transaction.direction === "INFLOW" ? "Money Coming In" : "Money Going Out",
       title: `${transaction.status === "POSSIBLE_DUPLICATE" ? "Resolve possible duplicate" : "Classify imported activity"}: ${transaction.description}`,
       explanation: transaction.status === "POSSIBLE_DUPLICATE" ? "This activity resembles prior imported activity and cannot reach the books until you decide it." : "Choose the accounting category before this imported activity reaches the books.",
-      detail: `${formatDate(transaction.transactionDate)} Â· ${money(transaction.amount)} Â· ${transaction.financialAccount.name}`,
+      detail: `${formatDate(transaction.transactionDate)} · ${money(transaction.amount)} · ${transaction.financialAccount.name}`,
       href: "/money/import",
       state: "UNRESOLVED",
     });
   }
 
   for (const transfer of records.ownerTransfers ?? []) {
-    add(tasks, { id: `owner-transfer:${transfer.id}`, category: "Taxes", title: `Resolve owner transfer: ${transfer.externalTransaction.description}`, explanation: "Company-to-owner and owner-to-company activity requires an explicit accounting treatment.", detail: `${transfer.direction.replaceAll("_", " ").toLowerCase()} · ${money(transfer.externalTransaction.amount)} · ${transfer.classification.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/owner-money", state: "UNRESOLVED" });
+    add(tasks, { id: `owner-transfer:${transfer.id}`, category: "Owner Money", title: `Resolve owner transfer: ${transfer.externalTransaction.description}`, explanation: "Company-to-owner and owner-to-company activity requires an explicit accounting treatment.", detail: `${transfer.direction.replaceAll("_", " ").toLowerCase()} · ${money(transfer.externalTransaction.amount)} · ${transfer.classification.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/owner-money", state: "UNRESOLVED" });
   }
 
   for (const match of records.payrollMatches ?? []) {
-    add(tasks, { id: `payroll-match:${match.id}`, category: "Taxes", title: `Reconcile payroll ${match.kind.replaceAll("_", " ").toLowerCase()}`, explanation: "Payroll provider facts and bank evidence do not yet agree.", detail: `${formatDate(match.payrollRun.payDate)} · ${match.status.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/payroll", state: "UNRESOLVED" });
+    add(tasks, { id: `payroll-match:${match.id}`, category: "Payroll", title: `Reconcile payroll ${match.kind.replaceAll("_", " ").toLowerCase()}`, explanation: "Payroll provider facts and bank evidence do not yet agree.", detail: `${formatDate(match.payrollRun.payDate)} · ${match.status.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/payroll", state: "UNRESOLVED" });
   }
 
   for (const run of records.payrollRuns ?? []) {
@@ -207,12 +216,12 @@ export function buildWeeklyReviewTasks(
     const expectedKinds = ["NET_PAY", ...(payrollTaxDue ? ["PAYROLL_TAX"] : []), ...(!run.providerFee.isZero() ? ["PROVIDER_FEE"] : [])];
     for (const kind of expectedKinds) {
       if (run.matches.some((match) => match.kind === kind)) continue;
-      add(tasks, { id: `payroll-evidence-missing:${run.id}:${kind}`, category: "Taxes", title: `Find payroll ${kind.replaceAll("_", " ").toLowerCase()} evidence`, explanation: "No imported bank evidence has been recorded for this required payroll component.", detail: `${formatDate(run.payDate)} · missing`, href: "/taxes/payroll", state: "UNRESOLVED" });
+      add(tasks, { id: `payroll-evidence-missing:${run.id}:${kind}`, category: "Payroll", title: `Find payroll ${kind.replaceAll("_", " ").toLowerCase()} evidence`, explanation: "No imported bank evidence has been recorded for this required payroll component.", detail: `${formatDate(run.payDate)} · missing`, href: "/taxes/payroll", state: "UNRESOLVED" });
     }
   }
 
   for (const asset of records.fixedAssets ?? []) {
-    add(tasks, { id: `fixed-asset:${asset.id}`, category: "Taxes", title: `Review possible fixed asset: ${asset.name}`, explanation: "Do not capitalize or choose depreciation treatment until the owner or CPA explicitly reviews it.", detail: `${formatDate(asset.acquisitionDate)} · ${money(asset.acquisitionCost)} · ${asset.status.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/fixed-assets", state: "UNRESOLVED" });
+    add(tasks, { id: `fixed-asset:${asset.id}`, category: "Periodic Review", title: `Review possible fixed asset: ${asset.name}`, explanation: "Do not capitalize or choose depreciation treatment until the owner or CPA explicitly reviews it.", detail: `${formatDate(asset.acquisitionDate)} · ${money(asset.acquisitionCost)} · ${asset.status.replaceAll("_", " ").toLowerCase()}`, href: "/taxes/fixed-assets", state: "UNRESOLVED" });
   }
 
   for (const document of records.documents) {
@@ -292,7 +301,7 @@ export function buildWeeklyReviewTasks(
     if (remaining <= 0) continue;
     add(tasks, {
       id: `quarterly-tax-estimate:${estimate.id}`,
-      category: "Taxes",
+      category: "Periodic Review",
       title: `Record ${estimate.taxYear} Q${estimate.quarter} tax payment`,
       explanation: `The ${estimate.jurisdictionCode} estimate still has a payment to record.`,
       detail: `Due ${formatDate(estimate.dueDate)} · remaining $${remaining.toFixed(2)}`,
@@ -301,7 +310,15 @@ export function buildWeeklyReviewTasks(
     });
   }
 
-  const order = { Transactions: 0, Documents: 1, Reconciliation: 2, Taxes: 3 };
+  for (const invoice of records.invoiceExceptions ?? []) {
+    add(tasks, { id: `overdue-invoice:${invoice.id}`, category: "Money Coming In", title: `Follow up on overdue invoice ${invoice.invoiceNumber}`, explanation: "This customer invoice is overdue and needs an owner decision or follow-up.", detail: `${invoice.dueDate ? `Due ${formatDate(invoice.dueDate)} · ` : ""}${money(invoice.total)}`, href: "/money/invoices", state: "UNRESOLVED" });
+  }
+
+  for (const bill of records.billExceptions ?? []) {
+    add(tasks, { id: `bill-attention:${bill.id}`, category: "Money Going Out", title: `${bill.status === "REVIEW" ? "Review" : "Handle due"} bill from ${bill.vendor.name}`, explanation: bill.status === "REVIEW" ? "This bill needs owner review before it can move forward." : "This bill is due and needs a payment or evidence decision.", detail: `${bill.dueDate ? `Due ${formatDate(bill.dueDate)} · ` : ""}${money(bill.total)}${bill.billNumber ? ` · ${bill.billNumber}` : ""}`, href: "/money/bills", state: "UNRESOLVED" });
+  }
+
+  const order: Record<WeeklyReviewTaskCategory, number> = { Transactions: 0, Documents: 1, "Money Coming In": 2, "Money Going Out": 3, "Owner Money": 4, Payroll: 5, Reconciliation: 6, "Periodic Review": 7 };
   return tasks.sort(
     (left, right) => order[left.category] - order[right.category] || left.id.localeCompare(right.id),
   );

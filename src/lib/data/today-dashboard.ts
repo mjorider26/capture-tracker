@@ -234,10 +234,11 @@ export async function getTodayDashboard(
       if (task.category === "Transactions") counts.transactions += 1;
       if (task.category === "Documents") counts.documents += 1;
       if (task.category === "Reconciliation") counts.reconciliations += 1;
-      if (task.category === "Taxes") counts.tax += 1;
+      if (task.category === "Periodic Review") counts.tax += 1;
+      if (task.category === "Payroll") counts.payroll += 1;
       return counts;
     },
-    { transactions: 0, documents: 0, reconciliations: 0, tax: 0 },
+    { transactions: 0, documents: 0, reconciliations: 0, tax: 0, payroll: 0 },
   );
   const reserveSharePercent =
     reserve && cash.greaterThan(0)
@@ -322,7 +323,7 @@ export async function getTodayDashboard(
     attention: prioritizeTodayAttention({
       ...taskCounts,
       matches: 0,
-      payroll: 0,
+      payroll: taskCounts.payroll,
       reviewTasks: 0,
     }),
     weeklyReview: review

@@ -38,12 +38,12 @@ export function MoneyExperience({
       <AccountingNav basePath={basePath} active="overview" />
       <PageHeader
         eyebrow="Money workspace"
-        title="Financial operations"
-        description="See what is moving, what is owed, and where to act next. Every workflow keeps the existing protected accounting decisions in place."
-        action={<div className="flex flex-wrap items-center gap-3"><StatusBadge tone="warning">{dashboard.summary.awaitingReviewCount} awaiting review</StatusBadge><ButtonLink href={`${basePath}/money/import`} tone="secondary">Import transactions</ButtonLink><ButtonLink href={`${basePath}/money/new`}>Add transaction</ButtonLink></div>}
+        title="What needs attention"
+        description="Start with genuine money exceptions. Browse accounts and technical detail only when you need them."
+        action={<ButtonLink href={`${basePath}/review`}>Run My Books</ButtonLink>}
       />
 
-      {operations ? <OperationsHub basePath={basePath} operations={operations} canManageCpa={canManageCpa} /> : null}
+      {operations ? <OperationsHub basePath={basePath} operations={operations} canManageCpa={canManageCpa} awaitingReviewCount={dashboard.summary.awaitingReviewCount} /> : null}
 
       <section
         aria-label="Money review summary"
@@ -188,10 +188,12 @@ function OperationsHub({
   basePath,
   operations,
   canManageCpa,
+  awaitingReviewCount,
 }: {
   basePath: "/app" | "/demo";
   operations: MoneyOperationsSummary;
   canManageCpa: boolean;
+  awaitingReviewCount: number;
 }) {
   const invoiceDetail = operations.invoices.openCount
     ? `${operations.invoices.openCount} open${operations.invoices.overdueCount ? ` · ${operations.invoices.overdueCount} overdue` : ""}`
@@ -216,11 +218,16 @@ function OperationsHub({
       <div className="money-operations-heading">
         <div>
           <p>Money overview</p>
-          <h2 id="money-operations-heading">Run the financial work</h2>
+          <h2 id="money-operations-heading">Act on what needs you</h2>
         </div>
-        <p>Clear paths for activity, customer payments, payables, and owner decisions.</p>
+        <p>Normal open invoices and future bills stay out of the attention queue.</p>
       </div>
-      <div className="money-operations-grid">
+      <div className="grid gap-3 md:grid-cols-3">
+        <OperationLink href={`${basePath}/money`} label="Transactions to review" detail={awaitingReviewCount ? "Classification or evidence decisions are waiting" : "No transaction decisions are waiting"} amount={String(awaitingReviewCount)} action={awaitingReviewCount ? "Review" : "View activity"} />
+        <OperationLink href={`${basePath}/money/invoices`} label="Overdue invoices" detail={operations.invoices.overdueCount ? "Customer follow-up may be needed" : "No overdue customer invoices"} amount={String(operations.invoices.overdueCount)} action="Open invoices" />
+        <OperationLink href={`${basePath}/money/bills`} label="Bills needing attention" detail={operations.bills.dueCount ? "Review due or overdue obligations" : "No bills need action now"} amount={String(operations.bills.dueCount)} action="Open bills" />
+      </div>
+      <details className="ui-card mt-5 p-5"><summary className="cursor-pointer font-bold text-brand-navy">Browse all money tools</summary><p className="mt-2 text-sm text-text-muted">Accounts, receivables, payables, and Owner Money remain available here without competing with the next action.</p><div className="money-operations-grid mt-5">
         <OperationGroup title="Accounts & activity" description="Bring in, review, and reconcile business activity.">
           <OperationLink href={`${basePath}/money`} label="Review transactions" detail="Classify activity and resolve evidence exceptions" />
           <OperationLink href={`${basePath}/money/import`} label="Import CSV" detail="Available now · review before posting" />
@@ -243,7 +250,7 @@ function OperationsHub({
           <OperationLink href={`${basePath}/reports/operations?report=mileage-reimbursements`} label="Reimbursements" detail="Review owner mileage and reimbursement status" />
           {canManageCpa ? <OperationLink href={`${basePath}/settings/cpa`} label="CPA access" detail={cpaDetail} action={operations.cpa.acceptedCount || operations.cpa.pendingCount ? "Manage CPA access" : "Invite CPA"} /> : null}
         </OperationGroup>
-      </div>
+      </div></details>
     </section>
   );
 }

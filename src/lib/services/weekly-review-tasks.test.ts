@@ -27,6 +27,8 @@ function client() {
       payrollBankMatch: { findMany: findMany("payrollBankMatch", []) },
       payrollRun: { findMany: findMany("payrollRun", []) },
       fixedAsset: { findMany: findMany("fixedAsset", []) },
+      invoice: { findMany: findMany("invoice", []) },
+      bill: { findMany: findMany("bill", []) },
     },
   };
 }
@@ -37,10 +39,10 @@ describe("loadWeeklyReviewTasks", () => {
     const tasks = await loadWeeklyReviewTasks(harness.client as never, "business-a");
 
     expect(tasks.map((task) => task.id)).toEqual(["transaction-awaiting-review:tx-1"]);
-    expect(harness.calls).toHaveLength(11);
+    expect(harness.calls).toHaveLength(13);
     expect(harness.calls.every((call) => (call.where as { businessId: string }).businessId === "business-a")).toBe(true);
     await expect(loadWeeklyReviewTaskCount(harness.client as never, "business-b")).resolves.toBe(1);
-    expect(harness.calls.slice(11).every((call) => (call.where as { businessId: string }).businessId === "business-b")).toBe(true);
+    expect(harness.calls.slice(13).every((call) => (call.where as { businessId: string }).businessId === "business-b")).toBe(true);
   });
 
   it("starts each independent business-scoped reader before waiting for results", async () => {
@@ -62,6 +64,8 @@ describe("loadWeeklyReviewTasks", () => {
       payrollBankMatch: { findMany: delayed("payrollMatch") },
       payrollRun: { findMany: delayed("payrollRun") },
       fixedAsset: { findMany: delayed("fixedAsset") },
+      invoice: { findMany: delayed("invoice") },
+      bill: { findMany: delayed("bill") },
     };
 
     const loading = loadWeeklyReviewTasks(harness as never, "business-a");
@@ -78,6 +82,8 @@ describe("loadWeeklyReviewTasks", () => {
       "payrollMatch",
       "payrollRun",
       "fixedAsset",
+      "invoice",
+      "bill",
     ]);
     pending.forEach((resolve) => resolve());
     await expect(loading).resolves.toEqual([]);

@@ -17,13 +17,14 @@ export function TaxesExperience({
   return (
     <>
       <PageHeader
-        description="Recorded financial facts and review signals for tax planning."
-        eyebrow="Taxes"
-        title="Tax planning workspace"
+        description="An occasional owner check for payroll context, estimated-tax history, distributions, basis, benefits, and CPA workpapers. Capture Tracker does not prepare or file taxes."
+        eyebrow="During the year"
+        title="Periodic owner review"
       />
       <CpaBoundary />
       <p className="mt-4 text-sm text-text-muted">Tax year {data.overview.taxYear} · Quarter {data.overview.taxQuarter}. Capture Tracker records planning facts; it does not file returns, send payments, or guarantee outcomes.</p>
-      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <InlineAlert title={data.current?.readiness.title ?? "Needs review"} tone="warning">{data.current?.readiness.detail ?? "No current estimate is configured. Review this with your CPA when applicable; it is not a daily bookkeeping task."}</InlineAlert>
+      <details className="ui-card mt-6 p-5"><summary className="cursor-pointer font-bold text-brand-navy">Recorded planning details</summary><section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Metric label="Ledger business income" value={`$${data.overview.businessIncome}`} />
         <Metric label="Recorded salary expense" value={`$${data.overview.salaryExpense}`} />
         <Metric label="Owner distributions" value={`$${data.distributions.total}`} />
@@ -44,16 +45,7 @@ export function TaxesExperience({
           label="YTD payroll wages"
           value={`$${data.payroll.grossWages}`}
         />
-      </section>
-      <div className="mt-6">
-        <InlineAlert
-          title={data.current?.readiness.title ?? "Not configured"}
-          tone="warning"
-        >
-          {data.current?.readiness.detail ??
-            "No current estimate, prior-year tax, withholding, or CPA method is configured."}
-        </InlineAlert>
-      </div>
+      </section></details>
       {data.overview.missingInputs && <InlineAlert title="Missing tax-planning inputs" tone="warning">{data.overview.missingInputs}</InlineAlert>}
       <Card className="mt-6 p-5"><h2 className="font-bold">Tax workflows</h2><div className="mt-3 flex flex-wrap gap-3"><Link className="ui-link" href={`${basePath}/taxes/estimates`}>Estimate history</Link><Link className="ui-link" href={`${basePath}/taxes/payroll`}>Payroll summary</Link><Link className="ui-link" href={`${basePath}/taxes/owner-compensation`}>Owner compensation</Link></div></Card>
       <Card className="mt-6 p-5">

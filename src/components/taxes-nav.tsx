@@ -16,11 +16,14 @@ export function TaxesNav({ basePath }: { basePath: "/app" | "/demo" }) {
     ["Month-end close", "/close"],
     ["Year-end", "/year-end"],
   ] as const;
+  const availableItems = basePath === "/app"
+    ? items
+    : items.filter(([, suffix]) => !["/mileage", "/fixed-assets", "/close"].includes(suffix));
 
   return (
     <nav aria-label="Taxes sections" className="mb-6 overflow-x-auto pb-1">
       <div className="flex min-w-max gap-2">
-        {items.map(([label, suffix]) => {
+        {availableItems.map(([label, suffix]) => {
           const href = `${basePath}/taxes${suffix}`;
           const active = suffix
             ? pathname === href || pathname.startsWith(`${href}/`)

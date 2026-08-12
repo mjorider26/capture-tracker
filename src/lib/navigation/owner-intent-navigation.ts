@@ -17,7 +17,7 @@ export const workspaceEntries: readonly WorkspaceEntry[] = [
   { id: "add-bill", label: "Add bill", description: "Record a vendor obligation before its payment is matched.", path: "/money/bills?new=bill", keywords: ["bill", "vendor", "payable", "ap", "owe"], ownerOnly: true, quickAdd: true },
   { id: "open-bills", label: "Open bills", description: "Review vendor bills, due dates, and payment status.", path: "/money/bills", keywords: ["bill", "vendor", "payable", "ap", "owe"] },
   { id: "ap-aging", label: "What do I owe? (AP Aging)", description: "See unpaid vendor balances grouped by age.", path: "/reports/operations?report=ap-aging", keywords: ["bill", "vendor", "payable", "ap", "owe", "aging"] },
-  { id: "upload-receipt", label: "Upload receipt", description: "Add private supporting evidence for security validation.", path: "/documents#document-upload", keywords: ["receipt", "document", "upload", "evidence"], ownerOnly: true, quickAdd: true },
+  { id: "upload-receipt", label: "Add receipt", description: "Add private supporting evidence for security validation.", path: "/documents#document-upload", keywords: ["receipt", "document", "upload", "evidence"], ownerOnly: true, quickAdd: true },
   { id: "documents", label: "Documents", description: "Review receipt validation, matching, and linked evidence.", path: "/documents", keywords: ["receipt", "document", "upload", "evidence", "scan"] },
   { id: "record-mileage", label: "Record mileage", description: "Log a substantiated business trip for reimbursement.", path: "/taxes/mileage#record-trip", keywords: ["mileage", "miles", "trip", "drive", "reimbursement"], ownerOnly: true, quickAdd: true },
   { id: "mileage-log", label: "Mileage log", description: "Review business trips and reimbursement status.", path: "/reports/operations?report=mileage-log", keywords: ["mileage", "miles", "trip", "drive", "reimbursement"] },
@@ -42,6 +42,18 @@ export function workspaceEntriesForRole(role: WorkspaceRole) {
 
 export function quickAddEntries(role: WorkspaceRole) {
   return workspaceEntriesForRole(role).filter((entry) => entry.quickAdd);
+}
+
+export function quickAddGroups(role: WorkspaceRole) {
+  const entries = quickAddEntries(role);
+  const groups = [
+    { label: "Money in", ids: ["create-invoice"] },
+    { label: "Money out", ids: ["add-bill"] },
+    { label: "Capture", ids: ["upload-receipt", "record-mileage"] },
+    { label: "Owner", ids: ["owner-paid-expense", "owner-transfer"] },
+    { label: "Import", ids: ["import-transactions"] },
+  ];
+  return groups.map((group) => ({ label: group.label, entries: group.ids.flatMap((id) => entries.filter((entry) => entry.id === id)) })).filter((group) => group.entries.length);
 }
 
 export function findWorkspaceEntries(query: string, role: WorkspaceRole) {

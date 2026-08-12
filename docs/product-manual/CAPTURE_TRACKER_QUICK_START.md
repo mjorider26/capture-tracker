@@ -1,37 +1,90 @@
-# Capture Tracker Quick Start
+# How to Run Your Books
 
-**SPENDING TRACKED. BUSINESS GROWN.** · Private pilot · V2.3
+**SPENDING TRACKED. BUSINESS GROWN.** · Private pilot · V2.4
 
-Start on **Today**. You do not need to memorize the navigation tree:
+Capture Tracker tells you what needs attention and takes you to the protected workflow that resolves it. You do not need to learn the navigation before keeping the S-Corp’s books current.
 
-1. Read **Books Current Through** first. If an item blocks the next date, open it from the status panel.
-2. Use Today’s **Quick owner actions** or the global **+ New** button to review activity, add a receipt, create an invoice, add a bill, record mileage, or open Owner Money.
-3. Use **Find** (or `⌘K` / `Ctrl+K`) when you know what you want to do but not where it lives. Try “invoice,” “mileage,” “CPA,” or “reconcile.” Finder searches curated product destinations, not customer financial data.
-4. Work **Needs you now** before **Coming up**. When nothing is unresolved, Today stays calm and says you are caught up.
+## First setup
 
-## Common owner tasks
+Follow the visible roadmap:
 
-| I want to… | Fastest path |
+1. Confirm the business.
+2. Add the business bank or credit-card account.
+3. Tell Capture Tracker where the books start.
+4. Confirm applicable owner and payroll context.
+5. Import and review the first activity.
+6. Complete the initial exact reconciliation.
+7. Begin the normal routine.
+
+Use approved source facts. Unknown or uncertain opening facts remain **UNKNOWN**, **NEEDS REVIEW**, or **CPA REVIEW** rather than becoming invented accounting history.
+
+## As things happen
+
+Use **+ New** or Today’s four frequent actions:
+
+- Create invoice
+- Add bill
+- Add receipt
+- Record mileage
+
+Owner-paid expenses, owner transfers, and transaction imports remain grouped in **+ New** without competing on Today.
+
+## Once a week
+
+Open **Today → Run My Books**.
+
+Capture Tracker assembles only relevant owner-action sections: transactions, receipts and documents, money coming in, money going out, Owner Money, payroll, reconciliation, and occasional periodic review. Irrelevant sections are skipped. Resolve each linked exception, return to the routine, and finish when the screen shows the current-through state.
+
+Completing Run My Books records acknowledgement. It does not post transactions, hide unresolved records, or change accounting history.
+
+## Once a month
+
+Open the month-end prompt or **More → Monthly routine → Reconciliation**:
+
+1. Review activity.
+2. Resolve documents.
+3. Reconcile business accounts.
+4. Resolve Owner Money and payroll exceptions.
+5. Review remaining blockers.
+6. Close the month with explicit owner confirmation.
+
+Closing locks the period. Corrections use controlled reversal or adjustment workflows; history is never deleted.
+
+## During the year
+
+Use **More → Owner & S-Corp** for occasional payroll context, estimated-tax history, distribution readiness, reasonable-compensation evidence, basis status, and shareholder benefits. These are review/workpaper tasks, not everyday tax preparation. Capture Tracker does not file taxes or make tax conclusions.
+
+## At year-end
+
+Open **Year-End Flight Check** and follow the sequence: Books, Owner Money, Payroll, Basis, Benefits, Fixed Assets, CPA Review Items, and CPA Package. Each section says **DONE**, **NEEDS YOU**, or **CPA REVIEW**.
+
+The final bookkeeping state is **READY FOR CPA**, never “tax return ready.” Then use the supported owner-only CPA access or package workflow.
+
+## Where common answers live
+
+| Question | Answer |
 | --- | --- |
-| Review or import activity | **Today → Review activity**, or **+ New → Import transactions** |
-| Upload a receipt | **Today → Add receipt**, or **+ New → Upload receipt** |
-| Create an invoice | **Today → Create invoice**, **+ New → Create invoice**, or **Money → Money coming in** |
-| Add a bill | **Today → Add bill**, **+ New → Add bill**, or **Money → Money going out** |
-| Record mileage | **Today → Record mileage**, **+ New → Record mileage**, or **Money → You & the company** |
-| Handle owner-paid costs or transfers | **+ New → Record owner-paid expense / Record owner transfer**, or **Money → You & the company → Owner Money** |
-| Read Profit & Loss | **Reports → How is my business doing? → Profit & Loss**, or **Find → Profit & Loss** |
-| Reconcile an account | **Money → Accounts & activity → Reconciliation**, or **Find → Reconciliation** |
-| Invite a CPA | **Find → Manage CPA access**, **Money → CPA access**, or **Reports → CPA / year-end** |
-| Prepare for year-end | **Reports → CPA / year-end → Year-End Flight Check**, or **Find → Year-End Flight Check** |
+| What should I do today? | Read Today’s Books Current Through status and primary next action. |
+| How do I capture a receipt? | Today → Add receipt, or + New → Capture → Add receipt. |
+| How do I invoice someone? | Today → Create invoice, or + New → Money in. |
+| How do I add a bill? | Today → Add bill, or + New → Money out. |
+| How do I record mileage? | Today → Record mileage, or + New → Capture. |
+| How do I know the books are current? | Read Books Current Through and its deterministic blocker. |
+| What do I do weekly? | Run My Books. |
+| What do I do monthly? | Reconcile and close the month. |
+| Where do I see profit? | Reports → Profit & Loss. |
+| What is Owner Money? | Money → You & the company → Owner Money. |
+| How do I prepare for my CPA? | Year-End Flight Check → CPA access/package. |
+
+Finder remains an escape hatch for destinations such as invoice, mileage, CPA, and reconciliation. It searches curated product destinations, not customer financial data.
 
 ## Safety boundaries
 
-- Imported bank activity remains evidence until an owner reviews its accounting treatment.
-- Uploaded PDF, JPEG, and PNG files remain private and unavailable until security validation is complete.
-- Invoices and bills record receivables, payables, and payment evidence; Capture Tracker does not process payments.
-- Reconciliation can finalize only at an exact **$0.00** difference.
-- Salary, distributions, reimbursements, contributions, shareholder loans, mileage, basis, and benefits remain distinct.
-- CPA access is secure and read-only. CPA users do not receive owner mutation actions in **+ New** or Finder.
+- Imported bank activity remains evidence until an owner confirms its accounting treatment.
+- Uploaded documents remain private and unavailable until security validation succeeds.
+- Reconciliation completes only at an exact **$0.00** difference.
+- Salary, distributions, reimbursements, contributions, shareholder loans, mileage, stock basis, debt basis, and benefits remain distinct.
+- CPA access is read-only. CPA users receive no owner mutation controls in + New, Finder, or Run My Books.
 - Capture Tracker does not file taxes, initiate payments, run payroll, or replace a CPA.
 
-On phones, use the persistent Today / Money / Documents / Reports / More bar. To install on iPhone or iPad, open `/install` in Safari, tap Share, choose **Add to Home Screen**, enable **Open as Web App** if offered, then tap **Add**. Installation is optional.
+On phones, use Today / Money / Documents / Reports / More. Existing installed-iPhone pull-to-refresh behavior is unchanged.
