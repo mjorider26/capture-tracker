@@ -1,10 +1,10 @@
 # Capture Tracker Production Operations
 
-> **Current V2.3 release note (2026-08-11):** the Guided Owner Experience source `fbe81db1625f634c5ff4cfcb3ba0ee47a84dff00` is deployed after exact-SHA CI [31462481881](https://github.com/mjorider26/capture-tracker/actions/runs/31462481881) passed. All 28 source migrations remain applied with zero pending, the application Worker is `03ca7100-130a-4f8f-827a-a1f25ea66420`, fresh encrypted exact-source pre-release and post-release backups plus isolated restore verification completed, and the scanner was not redeployed.
+> **Current V2.4 release note (2026-08-11):** the Guided Financial Routine source `679abb2fa05fa3b9979f6fd98723f8446dbec31a` is deployed after exact-SHA CI [31561749767](https://github.com/mjorider26/capture-tracker/actions/runs/31561749767) passed. All 28 source migrations remain applied with zero pending, the application Worker is `40e73abd-38a7-4295-8029-84d45674af47`, deployed OpenNext build ID `tL11o-Ew5D9drQISHNoYi` matches the verified artifact, fresh encrypted exact-source pre-release and post-release backups plus isolated restore verification completed, and the scanner was not redeployed.
 
-**Status:** CAPTURE TRACKER V2.3 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
+**Status:** CAPTURE TRACKER V2.4 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
 **Last updated:** 2026-08-11
-**Accepted V2 application release:** `fbe81db1625f634c5ff4cfcb3ba0ee47a84dff00` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
+**Accepted V2 application release:** `679abb2fa05fa3b9979f6fd98723f8446dbec31a` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
 
 This runbook is for the operators of the current private production pilot. It is the source of truth for live Capture Tracker operations. Older planning, staging, and phase documents may accurately preserve their original context but can describe superseded states; do not use them as current production instructions.
 
@@ -69,7 +69,7 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 ### Scanner and document-removal operations
 
 - Production uses the private Queue `capture-tracker-production-document-scan`, its isolated DLQ `capture-tracker-production-document-scan-dlq`, and a private ClamAV Container on `standard-1`, `max_instances=1`. No document bytes appear in Queue messages or public URLs.
-- The app Worker is `19bad3aa-5511-4282-b500-5e17c30c5c15`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07`.
+- The app Worker is `40e73abd-38a7-4295-8029-84d45674af47`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07` and was not redeployed for V2.4.
 - The scanner has a 15-minute warm window. A measured cold run spent about 93.77 seconds on FreshClam/ClamAV readiness; Queue wait was about 1.63 seconds, private R2 fetch about 1.24 seconds, and scan time about 215 ms. Recheck a scan still pending beyond 60 seconds with sanitized Worker and Queue logs; do not weaken quarantine.
 - Queue deliveries are idempotent and version-aware. Scanner unavailable, timeout, malformed response, or exhausted retries leaves the document quarantined and unreadable. Consumer retries are bounded at three with a 30-second delay, then route to the isolated DLQ.
 - Promotion is database-authoritative: validate the current document version and CLEAN result, commit ACTIVE plus private-read eligibility, then clean up the quarantine object. A stale delivery cannot promote a deleted or replaced document.
