@@ -35,4 +35,10 @@ The global **+ New** launcher is owner-only and contains curated business workfl
 - Reconciliation remains tied to exact-zero statement evidence and Books Current Through.
 - Year-End links to reconciliation, reimbursements, S-Corp workpapers, and CPA-package preparation.
 
-Production release remains a separate owner-authorized action after exact-SHA CI is green.
+## Production release
+
+The owner-authorized release completed on 2026-08-11 from exact source `fbe81db1625f634c5ff4cfcb3ba0ee47a84dff00` after exact-SHA CI run `31462481881` passed. Cloudflare production Worker version `03ca7100-130a-4f8f-827a-a1f25ea66420` passed liveness, readiness, private/no-store cache checks, exact native-artifact correspondence, and the supported automated release acceptance. Source and production each contain 28 checksum-matching migrations with zero pending; no schema migration was run.
+
+Fresh encrypted pre-release and post-release logical backups passed private upload and checksum verification. Both were verified through the guarded isolated WSL restore path; the post-release restore additionally verified 85 tables, 14 functions, 11 triggers, 312 constraints, and matching sanitized data counts. The document scanner remained on `5a813776-4648-4d9e-b033-77da395b5f07` and was not redeployed. Plaid, staging, and unrelated Workers were not touched.
+
+Automated responsive and accessibility acceptance corresponds to the exact deployed artifact. Installed-iPhone owner acceptance remains a separate physical check and must not be represented as completed until the owner performs it.

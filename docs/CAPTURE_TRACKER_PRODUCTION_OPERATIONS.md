@@ -1,10 +1,10 @@
 # Capture Tracker Production Operations
 
-> **Current V2.2 release note (2026-08-09):** the V2.2 operational-independence source `da40d2d97fa6f106aad647f5a18d1cebb6015dc3` is deployed after exact-SHA CI [31337501235](https://github.com/mjorider26/capture-tracker/actions/runs/31337501235) passed. All 28 migrations are applied, the application Worker is `50bfa04c-47c5-4907-a653-ef74a9878e8f`, fresh encrypted pre-migration and exact-source post-release backups completed, and the scanner was not redeployed.
+> **Current V2.3 release note (2026-08-11):** the Guided Owner Experience source `fbe81db1625f634c5ff4cfcb3ba0ee47a84dff00` is deployed after exact-SHA CI [31462481881](https://github.com/mjorider26/capture-tracker/actions/runs/31462481881) passed. All 28 source migrations remain applied with zero pending, the application Worker is `03ca7100-130a-4f8f-827a-a1f25ea66420`, fresh encrypted exact-source pre-release and post-release backups plus isolated restore verification completed, and the scanner was not redeployed.
 
-**Status:** CAPTURE TRACKER V2.2 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
-**Last updated:** 2026-08-09
-**Accepted V2 application release:** `da40d2d97fa6f106aad647f5a18d1cebb6015dc3` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
+**Status:** CAPTURE TRACKER V2.3 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
+**Last updated:** 2026-08-11
+**Accepted V2 application release:** `fbe81db1625f634c5ff4cfcb3ba0ee47a84dff00` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
 
 This runbook is for the operators of the current private production pilot. It is the source of truth for live Capture Tracker operations. Older planning, staging, and phase documents may accurately preserve their original context but can describe superseded states; do not use them as current production instructions.
 
