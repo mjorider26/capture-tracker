@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
-import { buildGuidedFinancialRoutine, routineScale } from "@/lib/services/guided-financial-routine";
+import { buildGuidedFinancialRoutine, routineScale } from "@/lib/navigation/guided-financial-routine";
 import type { WeeklyReviewTask } from "@/lib/services/weekly-review-tasks-core";
 
 type ActionState = { ok: boolean; message?: string };

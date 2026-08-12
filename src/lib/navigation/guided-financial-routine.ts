@@ -1,4 +1,4 @@
-import type { WeeklyReviewTask, WeeklyReviewTaskCategory } from "./weekly-review-tasks-core";
+import type { WeeklyReviewTask, WeeklyReviewTaskCategory } from "../services/weekly-review-tasks-core";
 
 export type GuidedRoutineStep = {
   category: WeeklyReviewTaskCategory;

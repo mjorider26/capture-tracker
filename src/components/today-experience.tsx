@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { TodayDashboard } from "@/lib/data/today-dashboard";
-import { routineScale } from "@/lib/services/guided-financial-routine";
+import { routineScale } from "@/lib/navigation/guided-financial-routine";
 
 import { ButtonLink, PageHeader, StatusBadge } from "./ui";
 
