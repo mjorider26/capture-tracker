@@ -1,10 +1,10 @@
 # Capture Tracker Production Operations
 
-> **Current V2.4 release note (2026-08-12):** Plaid candidate `437300964d14a800b9998724355e3011a7938620` passed exact-SHA CI [31662201236](https://github.com/mjorider26/capture-tracker/actions/runs/31662201236), native build, migration, backup, and health gates, but failed production UX/operations acceptance and was rolled back. The active application Worker remains V2.4 `40e73abd-38a7-4295-8029-84d45674af47` from source `679abb2fa05fa3b9979f6fd98723f8446dbec31a`, with deployed OpenNext build ID `tL11o-Ew5D9drQISHNoYi`. The additive database migrations remain applied at 30 with zero pending; production has zero Plaid Items, Plaid-mapped accounts, and webhook events. The scanner was not redeployed.
+> **Current V2.4 release note (2026-08-12):** The Plaid corrective release is active as Worker `264c3d32-e8e3-4993-b4d8-8720dad2839e` from source `56cb6ce43f15eb01c5613f9103c11f05dfce731c`, exact-SHA CI [31668638940](https://github.com/mjorider26/capture-tracker/actions/runs/31668638940), with deployed OpenNext build ID `omJISJs_EGlZwnD5bkiFJ`. Production remains at 30 source and production migrations with zero pending and zero Plaid Items, mapped accounts, provider transactions, or webhook events. Manual CSV remains first-class, automatic bank sync is configured, and the scanner was not redeployed.
 
 **Status:** CAPTURE TRACKER V2.4 — PRODUCTION READY; CURRENT AUTHORITATIVE OPERATIONS RUNBOOK
 **Last updated:** 2026-08-12
-**Accepted V2 application release:** `679abb2fa05fa3b9979f6fd98723f8446dbec31a` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
+**Accepted V2 application release:** `56cb6ce43f15eb01c5613f9103c11f05dfce731c` (immutable V2.0.0 baseline: `6883719f82796a919e53f080d2dcf15f2fc13b0a`)
 
 This runbook is for the operators of the current private production pilot. It is the source of truth for live Capture Tracker operations. Older planning, staging, and phase documents may accurately preserve their original context but can describe superseded states; do not use them as current production instructions.
 
@@ -69,13 +69,13 @@ Capture Tracker now quarantines and malware-scans new document uploads before th
 ### Scanner and document-removal operations
 
 - Production uses the private Queue `capture-tracker-production-document-scan`, its isolated DLQ `capture-tracker-production-document-scan-dlq`, and a private ClamAV Container on `standard-1`, `max_instances=1`. No document bytes appear in Queue messages or public URLs.
-- The app Worker is `40e73abd-38a7-4295-8029-84d45674af47`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07` and was not redeployed for the Plaid attempt.
+- The app Worker is `264c3d32-e8e3-4993-b4d8-8720dad2839e`; the scanner Worker is `5a813776-4648-4d9e-b033-77da395b5f07` and was not redeployed for the Plaid corrective release.
 - The scanner has a 15-minute warm window. A measured cold run spent about 93.77 seconds on FreshClam/ClamAV readiness; Queue wait was about 1.63 seconds, private R2 fetch about 1.24 seconds, and scan time about 215 ms. Recheck a scan still pending beyond 60 seconds with sanitized Worker and Queue logs; do not weaken quarantine.
 - Queue deliveries are idempotent and version-aware. Scanner unavailable, timeout, malformed response, or exhausted retries leaves the document quarantined and unreadable. Consumer retries are bounded at three with a 30-second delay, then route to the isolated DLQ.
 - Promotion is database-authoritative: validate the current document version and CLEAN result, commit ACTIVE plus private-read eligibility, then clean up the quarantine object. A stale delivery cannot promote a deleted or replaced document.
 - Removal is database-authoritative: tenant and relationship checks, DELETED tombstone plus private-read revocation plus version increment, commit, then exact-object R2 cleanup. A cleanup failure never resurrects bytes or grants; stale Queue work acknowledges the tombstone safely.
 - Sanitized observability covers Worker failures, queue retries/DLQ, scanner readiness and latency, scan finalization/promotion recovery, and R2 cleanup/removal failures. Never log bytes, object keys, credentials, or raw antivirus output.
-- The encrypted logical-backup process completed a 28-migration pre-Plaid predecessor backup and a post-release exact-source 30-migration backup: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, sanitized version-3 manifests, and isolated restore verification. Plaintext archives remain temporary only.
+- The corrective release completed fresh pre-release and post-release exact-source 30-migration backups: AES-256-GCM plus scrypt, SHA-256 receipt validation, private bucket storage, sanitized version-3 manifests, and isolated restore verification. The post-release restore verified 86 tables, 14 functions, 11 triggers, 315 constraints, and matching sanitized counts. Plaintext archives remain temporary only.
 - Current provider pricing is usage-based under the existing Workers Paid plan; no separate scanner subscription is used. Conservative incremental estimate with a 15-minute warm window is about $0.03 for 25 scans/month, $1.32 for 100, and $9.53 for 500. Actual per-container usage analytics are provider-side and must be checked before billing decisions.
 - The accepted mobile production path confirms automatic scan-status refresh from pending to terminal state without manual page refresh. Continue to measure and record real warm-path timings through sanitized operational telemetry; do not present an estimate as a measured timing.
 
@@ -92,11 +92,11 @@ The primary mobile navigation is: Today, Money, Documents, Reports, and More. Mo
 
 ### Bank activity: current production and Plaid release boundary
 
-The active production Worker preserves manual transaction CSV import. The Plaid candidate is not active: production acceptance found that its Money hub falsely reported the live provider as unconfigured when zero Items existed and that its operator status page expected 29 rather than the required 30 migrations. The candidate Worker was rolled back instead of deploying an unauthorized follow-up SHA. The additive Plaid schema and configured secret names remain in place, with zero real Items or Plaid-mapped accounts.
+The active production Worker supports both optional Plaid synchronization and first-class manual transaction CSV import. Provider availability is derived from sanitized server configuration rather than customer connection count, so zero Items is a valid state with automatic connection and manual import choices. The operator migration status derives its expected inventory canonically and reports the exact 30/30/0 production state. Production has zero real Items or Plaid-mapped accounts.
 
 Plaid requests read-only Transactions connectivity only. It never enables Auth, Transfer, payment initiation, ACH, or money movement. Both Plaid and CSV evidence enter the same review-before-post workflow. Use [Plaid production operations](PLAID_PRODUCTION_OPERATIONS.md) for credential, webhook, Trial conservation, recovery, and incident steps. Never enter Plaid secrets into chat, logs, documentation, or a checked-in environment file. Treat `PLAID_TOKEN_ENCRYPTION_KEY` and its configured key version as durable infrastructure: after real Items exist, rotation requires an approved versioned re-encryption procedure rather than casual secret replacement.
 
-While the candidate was deployed, its production webhook endpoint was publicly reachable and rejected invalid or unsigned requests. Exact-source verification covers JWK retrieval, ES256, raw-body SHA-256, five-minute freshness, tenant resolution, and replay protection. Plaid-originated signed Production delivery was not performed, and the current rolled-back Worker does not activate the Plaid route.
+The active production webhook endpoint is publicly reachable and rejects invalid or unsigned requests with `401`. Exact-source verification covers JWK retrieval, ES256, raw-body SHA-256, five-minute freshness, tenant resolution, and replay protection. Plaid-originated signed Production delivery remains deferred until the first real owner-authorized Item; do not create an Item merely for release acceptance.
 
 ### CSV import and review
 

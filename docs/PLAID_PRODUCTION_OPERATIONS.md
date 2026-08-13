@@ -1,5 +1,7 @@
 # Plaid production operations
 
+> **Active release (2026-08-12):** source `56cb6ce43f15eb01c5613f9103c11f05dfce731c`, Worker `264c3d32-e8e3-4993-b4d8-8720dad2839e`, OpenNext build `omJISJs_EGlZwnD5bkiFJ`. Production is configured with zero Items; manual CSV remains first-class. Plaid-originated signed delivery and link-token initialization remain owner-acceptance steps and were not fabricated during release verification.
+
 ## Source-independent readiness
 
 Required runtime values:
