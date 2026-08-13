@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { OperatorStatusPanel } from "@/components/operator-status-panel";
 import { appBuildId } from "@/lib/app-version";
 import { OperatorAuthorizationError, requireOperatorSession } from "@/lib/auth/operator-authorization";
+import { operatorMigrationStatus } from "@/lib/operations/operator-migration-status";
 import { prisma } from "@/lib/prisma";
 import { plaidConfigured } from "@/lib/providers/plaid/client";
 
@@ -24,9 +25,14 @@ async function loadStatus() {
       prisma.bankSyncRun.count({ where: { status: "FAILED", connection: { providerId: "plaid" } } }),
       prisma.bankWebhookEvent.count({ where: { status: "FAILED", providerId: "plaid" } }),
     ]);
-    const migrationRows = await prisma.$queryRaw<Array<{ count: number }>>`SELECT count(*)::int AS count FROM "_prisma_migrations"`;
+    const migrationRows = await prisma.$queryRaw<Array<{ name: string; checksum: string | null; finishedAt: Date | null; rolledBackAt: Date | null; logs: string | null }>>`
+      SELECT migration_name AS "name", checksum, finished_at AS "finishedAt", rolled_back_at AS "rolledBackAt", logs
+      FROM "_prisma_migrations"
+      ORDER BY migration_name
+    `;
+    const migrationState = operatorMigrationStatus(migrationRows);
     const count = (status: string) => groups.find((group) => group.status === status)?._count._all ?? 0;
-    return { build: appBuildId(), database: "Connected" as const, migrations: migrationRows[0]?.count === 29 ? "Current" as const : "Mismatch" as const, email: "Not configured" as const, plaid: { configured: plaidConfigured(), connections: plaidConnections, syncFailures: plaidFailures, webhookFailures: plaidWebhookFailures }, invitations: { pending: count("PENDING"), accepted: count("ACCEPTED"), expired: count("EXPIRED") } };
+    return { build: appBuildId(), database: "Connected" as const, migrations: migrationState.status === "Current" ? "Current" as const : "Mismatch" as const, email: "Not configured" as const, plaid: { configured: plaidConfigured(), connections: plaidConnections, syncFailures: plaidFailures, webhookFailures: plaidWebhookFailures }, invitations: { pending: count("PENDING"), accepted: count("ACCEPTED"), expired: count("EXPIRED") } };
   } catch (error) {
     if (error instanceof OperatorAuthorizationError) notFound();
     return { build: appBuildId(), database: "Unavailable" as const, migrations: "Unavailable" as const, email: "Not configured" as const, plaid: { configured: plaidConfigured(), connections: 0, syncFailures: 0, webhookFailures: 0 }, invitations: { pending: 0, accepted: 0, expired: 0 } };

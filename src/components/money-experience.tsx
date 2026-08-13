@@ -206,7 +206,14 @@ function OperationsHub({
     : "Record a substantiated business trip";
   const bankDetail = operations.bank.connectionCount
     ? `${operations.bank.connectionCount} connected institution${operations.bank.connectionCount === 1 ? "" : "s"}`
-    : "Live provider not configured · CSV available";
+    : operations.bank.automaticBankSyncAvailable
+      ? "Automatic bank sync is available · no banks or cards connected yet"
+      : "Automatic bank sync is not configured · manual import remains available";
+  const bankAction = operations.bank.connectionCount
+    ? "Manage connections"
+    : operations.bank.automaticBankSyncAvailable
+      ? "Connect automatically"
+      : "View manual options";
   const cpaDetail = operations.cpa.acceptedCount
     ? `${operations.cpa.acceptedCount} read-only reviewer${operations.cpa.pendingCount ? ` · ${operations.cpa.pendingCount} invite pending` : ""}`
     : operations.cpa.pendingCount
@@ -231,7 +238,7 @@ function OperationsHub({
         <OperationGroup title="Accounts & activity" description="Bring in, review, and reconcile business activity.">
           <OperationLink href={`${basePath}/money`} label="Review transactions" detail="Classify activity and resolve evidence exceptions" />
           <OperationLink href={`${basePath}/money/import`} label="Import CSV" detail="Available now · review before posting" />
-          <OperationLink href={`${basePath}/money/bank`} label="Bank connections" detail={bankDetail} />
+          <OperationLink href={`${basePath}/money/bank`} label="Bank connections" detail={bankDetail} action={bankAction} />
           <OperationLink href={`${basePath}/money/reconciliations`} label="Reconciliation" detail="Compare each statement and finish at an exact $0.00 difference" />
         </OperationGroup>
         <OperationGroup title="Money coming in" description="Create customer invoices and follow payment status.">

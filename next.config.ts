@@ -2,9 +2,11 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { deriveSourceMigrationInventory } from "./scripts/production-logical-restore-core";
 import { localDevOrigins } from "./src/lib/security/local-dev-origins";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
+const sourceMigrationInventory = deriveSourceMigrationInventory(projectRoot);
 
 if (process.env.NODE_ENV === "development") {
   void initOpenNextCloudflareForDev();
@@ -16,6 +18,15 @@ const allowedDevOrigins = process.env.NODE_ENV !== "production"
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Derive the operator's expected migration inventory from the same source
+  // contract used by production backup/restore tooling. This non-secret value
+  // is consumed only by a server-only helper and prevents stale count literals.
+  env: {
+    CAPTURE_TRACKER_SOURCE_MIGRATION_INVENTORY: JSON.stringify({
+      names: sourceMigrationInventory.names,
+      checksums: sourceMigrationInventory.checksums,
+    }),
+  },
   // OpenNext copies listed external packages with a `workerd` export condition
   // into the server-function tree. `pg` conditionally requires this package
   // when it runs in Cloudflare Workers.

@@ -49,7 +49,7 @@
     "v1:verify": "npm run check:phase && npm run check:accounting && npm run activity:verify && npm run pilot:smoke && npm run data-boundary:verify && npm run client-secret:verify",
     "rehearsal:backup-restore": "node scripts/phase14a-backup-restore.mjs",
     "operations:cleanup:verify": "vitest run --config vitest.operations.config.ts src/lib/operations/production-acceptance-cleanup-core.test.ts",
-    "operations:backup:verify": "vitest run --config vitest.operations.config.ts scripts/production-logical-backup-core.test.ts scripts/production-logical-migration-state.test.ts scripts/production-logical-restore-core.test.ts",
+    "operations:backup:verify": "vitest run --config vitest.operations.config.ts src/lib/operations/operator-migration-status-core.test.ts scripts/production-logical-backup-core.test.ts scripts/production-logical-migration-state.test.ts scripts/production-logical-restore-core.test.ts",
     "cloud:migrate": "tsx scripts/cloud-migrate.ts",
     "cloud:build": "opennextjs-cloudflare build",
     "cloud:deploy:preview": "tsx scripts/deploy-free-preview.ts",

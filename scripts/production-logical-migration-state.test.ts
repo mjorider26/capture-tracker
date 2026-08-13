@@ -59,17 +59,21 @@ describe("production backup migration release modes", () => {
     expect(state.pendingMigrationNames).toEqual([source.names[2]]);
   });
 
-  it("models the current V2.2 release boundary with 25 production migrations and three exact pending migrations", () => {
+  it("models the historical V2.2 release boundary with 25 production migrations and three exact pending migrations", () => {
     const currentSource = deriveSourceMigrationInventory();
-    const currentRecords = currentSource.names.slice(0, 25).map((name) => ({
+    const v22Source = sourceMigrationInventoryFromChecksums(currentSource.names.slice(0, 28).map((name) => ({
       name,
       checksum: currentSource.checksums[name],
+    })));
+    const currentRecords = v22Source.names.slice(0, 25).map((name) => ({
+      name,
+      checksum: v22Source.checksums[name],
       finishedAt: new Date("2026-08-10T00:00:00.000Z"),
       rolledBackAt: null,
       logs: null,
     }));
-    const state = assertBackupMigrationState({ mode: "PRE_MIGRATION_RELEASE", source: currentSource, records: currentRecords, authorizedReleaseCommit: "a".repeat(40) });
-    expect(currentSource.names).toHaveLength(28);
+    const state = assertBackupMigrationState({ mode: "PRE_MIGRATION_RELEASE", source: v22Source, records: currentRecords, authorizedReleaseCommit: "a".repeat(40) });
+    expect(v22Source.names).toHaveLength(28);
     expect(state.productionMigrationInventory.names).toHaveLength(25);
     expect(state.pendingMigrationNames).toEqual([
       "20260811090000_add_operational_independence",

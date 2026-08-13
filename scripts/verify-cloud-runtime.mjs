@@ -44,6 +44,7 @@ assert(productionWrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "true"
 assert(wrangler.includes('"observability"'), "Worker logging must be enabled.");
 assert(nextConfig.includes('output: "standalone"') && nextConfig.includes("initOpenNextCloudflareForDev"), "Next.js must retain standalone and OpenNext development support.");
 assert(nextConfig.includes("turbopack: { root: projectRoot }"), "Next.js must pin Turbopack to this repository root.");
+assert(nextConfig.includes("deriveSourceMigrationInventory(projectRoot)") && nextConfig.includes("CAPTURE_TRACKER_SOURCE_MIGRATION_INVENTORY"), "Operator migration status must derive its expected inventory from the canonical source migrations at build time.");
 assert(nextConfig.includes('X-Content-Type-Options') && nextConfig.includes('X-Frame-Options'), "Cloud staging must set baseline security headers.");
 assert(openNext.includes("defineCloudflareConfig"), "OpenNext configuration is required.");
 assert(!openNext.includes("r2IncrementalCache"), "Financial application routes must not opt into R2 incremental caching.");

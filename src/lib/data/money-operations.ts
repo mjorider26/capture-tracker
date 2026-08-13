@@ -3,12 +3,13 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { plaidConfigured } from "@/lib/providers/plaid/client";
 
 export type MoneyOperationsSummary = {
   invoices: { openAmount: string; openCount: number; overdueCount: number };
   bills: { dueAmount: string; dueCount: number; upcomingCount: number };
   mileage: { milesThisYear: string; tripCount: number; unclaimedCount: number };
-  bank: { connectionCount: number };
+  bank: { automaticBankSyncAvailable: boolean; connectionCount: number };
   cpa: { acceptedCount: number; pendingCount: number };
 };
 
@@ -81,7 +82,10 @@ export async function getMoneyOperationsSummary(
       tripCount: mileage.length,
       unclaimedCount: mileage.filter((trip) => !trip.reimbursementClaimId).length,
     },
-    bank: { connectionCount },
+    bank: {
+      automaticBankSyncAvailable: plaidConfigured(),
+      connectionCount,
+    },
     cpa: { acceptedCount, pendingCount },
   };
 }
