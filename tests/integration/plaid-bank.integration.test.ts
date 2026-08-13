@@ -15,6 +15,7 @@ import {
 import { postExternalTransaction } from "../../src/lib/services/financial-ingestion";
 import {
   completePlaidReconnect,
+  createPlaidLinkToken,
   disconnectPlaidConnection,
   exchangePlaidPublicToken,
   processPlaidWebhookEvent,
@@ -122,6 +123,41 @@ describe("Plaid Sandbox-equivalent lifecycle with full PostgreSQL integrity", ()
     await prisma.$disconnect();
   });
 
+  it("allows loopback HTTP only for Sandbox Link while keeping provider callbacks on HTTPS", async () => {
+    const createLinkToken = vi.spyOn(plaidClient, "createLinkToken").mockResolvedValue({
+      link_token: `link-sandbox-${run}`,
+      expiration: "2026-08-12T23:59:59Z",
+    });
+    const previous = {
+      base: process.env.BETTER_AUTH_URL,
+      environment: process.env.PLAID_ENV,
+      redirect: process.env.PLAID_REDIRECT_URI,
+      webhook: process.env.PLAID_WEBHOOK_URL,
+    };
+
+    try {
+      process.env.PLAID_ENV = "sandbox";
+      process.env.BETTER_AUTH_URL = "http://localhost:3443";
+      delete process.env.PLAID_REDIRECT_URI;
+      process.env.PLAID_WEBHOOK_URL = "https://example.invalid/api/plaid/webhook";
+      await expect(createPlaidLinkToken(actor)).resolves.toMatchObject({ ok: true, mode: "CREATE" });
+      expect(createLinkToken).toHaveBeenCalledTimes(1);
+      expect(createLinkToken).toHaveBeenCalledWith(expect.objectContaining({ redirectUri: undefined }));
+
+      process.env.BETTER_AUTH_URL = "http://capture-tracker.example";
+      await expect(createPlaidLinkToken(actor)).resolves.toMatchObject({ ok: false });
+      process.env.BETTER_AUTH_URL = "http://localhost:3443";
+      process.env.PLAID_ENV = "production";
+      await expect(createPlaidLinkToken(actor)).resolves.toMatchObject({ ok: false });
+      expect(createLinkToken).toHaveBeenCalledTimes(1);
+    } finally {
+      if (previous.base === undefined) delete process.env.BETTER_AUTH_URL; else process.env.BETTER_AUTH_URL = previous.base;
+      if (previous.environment === undefined) delete process.env.PLAID_ENV; else process.env.PLAID_ENV = previous.environment;
+      if (previous.redirect === undefined) delete process.env.PLAID_REDIRECT_URI; else process.env.PLAID_REDIRECT_URI = previous.redirect;
+      if (previous.webhook === undefined) delete process.env.PLAID_WEBHOOK_URL; else process.env.PLAID_WEBHOOK_URL = previous.webhook;
+    }
+  });
+
   it("exchanges a Sandbox public token, encrypts the access token, maps one account, and rejects duplicate Items", async () => {
     const result = await exchangePlaidPublicToken(actor, `public-sandbox-${run}`);
     expect(result).toMatchObject({ ok: true, accountCount: 1 });
@@ -144,6 +180,63 @@ describe("Plaid Sandbox-equivalent lifecycle with full PostgreSQL integrity", ()
     expect(remove.mock.calls.length).toBe(before + 1);
   });
 
+  it("flags a CSV-first overlap when Plaid changes the merchant text", async () => {
+    const importRecord = await prisma.transactionImport.create({
+      data: {
+        businessId: ids.business,
+        financialAccountId: ids.account,
+        createdByUserId: ids.owner,
+        sourceFilename: "csv-first-overlap.csv",
+        sourceSha256: "e".repeat(64),
+        mappingJson: { source: "CSV" },
+        rowCount: 1,
+        newCount: 1,
+        status: "COMPLETED",
+        confirmedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+    const csvFirst = await prisma.externalTransaction.create({
+      data: {
+        businessId: ids.business,
+        transactionImportId: importRecord.id,
+        financialAccountId: ids.account,
+        rowNumber: 2,
+        transactionDate: new Date("2026-08-03T12:00:00.000Z"),
+        postedDate: new Date("2026-08-03T12:00:00.000Z"),
+        description: "CSV merchant wording",
+        normalizedMerchant: "CSV MERCHANT WORDING",
+        amount: "17.41",
+        direction: "OUTFLOW",
+        fingerprint: "f".repeat(64),
+        status: "NEEDS_REVIEW",
+      },
+    });
+    vi.spyOn(plaidClient, "transactionsSync").mockResolvedValueOnce({
+      cursor: "cursor-overlap",
+      added: [{
+        id: `provider-overlap-${run}`,
+        accountRef: pending.accountRef,
+        date: "2026-08-03",
+        postedDate: "2026-08-03",
+        description: "Provider-altered merchant",
+        amount: "17.41",
+        direction: "OUTFLOW",
+        pending: false,
+        pendingTransactionRef: null,
+        contentHash: "1".repeat(64),
+      }],
+      modified: [],
+      removed: [],
+    });
+
+    await expect(syncPlaidBankConnection(actor, connectionId)).resolves.toMatchObject({ ok: true });
+    await expect(prisma.externalTransaction.findFirstOrThrow({
+      where: { businessId: ids.business, externalTransactionId: `plaid:provider-overlap-${run}` },
+      select: { status: true, duplicateOfId: true },
+    })).resolves.toEqual({ status: "POSSIBLE_DUPLICATE", duplicateOfId: csvFirst.id });
+  });
+
   it("handles pending to posted, modifications, removals, replay-safe webhooks, and tenant isolation without rewriting posted history", async () => {
     const sync = vi.spyOn(plaidClient, "transactionsSync");
     sync.mockResolvedValueOnce({ cursor: "cursor-1", added: [pending], modified: [], removed: [] });
@@ -160,7 +253,7 @@ describe("Plaid Sandbox-equivalent lifecycle with full PostgreSQL integrity", ()
     await expect(syncPlaidBankConnection(actor, connectionId)).resolves.toMatchObject({ ok: true, imported: 0, updated: 1 });
     const postedEvidence = await prisma.bankProviderTransaction.findFirstOrThrow({ where: { businessId: ids.business, providerTransactionRef: posted.id } });
     expect(postedEvidence.normalizedExternalTransactionId).toBe(externalId);
-    expect(await prisma.externalTransaction.count({ where: { businessId: ids.business } })).toBe(1);
+    expect(await prisma.externalTransaction.count({ where: { id: externalId, businessId: ids.business } })).toBe(1);
 
     sync.mockResolvedValueOnce({ cursor: "cursor-3", added: [], modified: [{ ...posted, amount: "12.34", description: "Provider-corrected evidence", contentHash: "c".repeat(64) }], removed: [] });
     await expect(syncPlaidBankConnection(actor, connectionId)).resolves.toMatchObject({ ok: true });

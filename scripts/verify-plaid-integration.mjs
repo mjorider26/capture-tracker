@@ -8,6 +8,7 @@ const files = Object.fromEntries(await Promise.all([
   "src/app/api/plaid/webhook/route.ts",
   "src/lib/services/plaid-bank.ts",
   "src/components/plaid-link-button.tsx",
+  "next.config.ts",
 ].map(async (path) => [path, await readFile(path, "utf8")])));
 const all = Object.values(files).join("\n");
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
@@ -22,5 +23,7 @@ assert(files["src/app/api/plaid/webhook/route.ts"].includes('providerConnectionR
 assert(!/(console\.(?:log|error)|metadataJson|afterJson)[^\n]*(?:access[_-]?token|public[_-]?token|PLAID_SECRET|rawBody)/iu.test(all), "Possible Plaid credential or raw-payload logging found.");
 assert(files["src/lib/services/plaid-bank.ts"].includes("postedTransactionId") && files["src/lib/services/plaid-bank.ts"].includes('"REMOVED"') && files["src/lib/services/plaid-bank.ts"].includes("postedTransactionId: null"), "Posted-history and removal safeguards are required.");
 assert(files["src/components/plaid-link-button.tsx"].includes("usePlaidLink") && !files["src/components/plaid-link-button.tsx"].match(/password|routing number|account number/iu), "Plaid Link must be used without a credential form.");
+for (const source of ["https://cdn.plaid.com", "https://sandbox.plaid.com", "https://production.plaid.com"]) assert(files["next.config.ts"].includes(source), `Plaid Link CSP source is missing ${source}.`);
+assert(files["next.config.ts"].includes("frame-src https://cdn.plaid.com"), "Plaid Link iframe must be permitted by the CSP.");
 
 console.log("PLAID INTEGRATION VERIFIED: read-only Transactions scope, encrypted tokens, signed/replay-safe webhooks, Item-scoped tenant resolution, Link consent, and immutable posted history safeguards passed.");

@@ -149,7 +149,7 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
     }),
     await client.reconciliation.count({ where: { businessId: ids.business } }),
   ];
-  const expectedCounts = [3, 9, 2, 1, 1, 1, 1, 1, 1, 5, 13, 6, 18, 1, 1];
+  const expectedCounts = [3, 9, 2, 1, 1, 1, 1, 1, 1, 5, 11, 6, 18, 1, 1];
   const labels = [
     "financial accounts",
     "transactions",
@@ -367,7 +367,7 @@ export async function verifyDemoSeed(client: PrismaClient): Promise<void> {
 
   console.log("DEMO SEED VERIFIED");
   console.log(
-    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=9, documents=4, activeDocumentLinks=4, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=13, journalEntries=6, journalLines=18, accountingPeriods=1, reconciliations=1",
+    "Counts: users=1, memberships=1, credentials=0, financialAccounts=3, transactions=9, documents=4, activeDocumentLinks=4, splits=2, reimbursementClaims=1, reimbursementExpenses=1, payrollRuns=1, ownerDistributions=1, taxEstimates=1, weeklyReviews=1, reviewTasks=5, ledgerAccounts=11, journalEntries=6, journalLines=18, accountingPeriods=1, reconciliations=1",
   );
 }
 

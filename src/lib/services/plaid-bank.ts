@@ -15,10 +15,19 @@ const dateAtNoon = (value: string) => new Date(`${value}T12:00:00.000Z`);
 
 function providerUrls() {
   const base = process.env.BETTER_AUTH_URL?.trim();
-  if (!base || !/^https:\/\/[^/?#]+$/u.test(base)) throw new Error("BETTER_AUTH_URL must be an HTTPS origin for Plaid Link.");
+  let baseUrl: URL | null = null;
+  try { baseUrl = base ? new URL(base) : null; } catch { baseUrl = null; }
+  const isOrigin = Boolean(baseUrl && baseUrl.origin === base);
+  const isSandboxLoopback = Boolean(
+    baseUrl &&
+    process.env.PLAID_ENV?.trim().toLowerCase() === "sandbox" &&
+    baseUrl.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(baseUrl.hostname),
+  );
+  if (!baseUrl || !isOrigin || (baseUrl.protocol !== "https:" && !isSandboxLoopback)) throw new Error("BETTER_AUTH_URL must be an HTTPS origin for Plaid Link, except for loopback HTTP in Sandbox.");
   const webhookUrl = process.env.PLAID_WEBHOOK_URL?.trim() || `${base}/api/plaid/webhook`;
-  const redirectUri = process.env.PLAID_REDIRECT_URI?.trim() || `${base}/app/money/bank`;
-  if (!/^https:\/\//u.test(webhookUrl) || !/^https:\/\/[^?#]+$/u.test(redirectUri)) throw new Error("Plaid webhook and redirect URLs must use HTTPS.");
+  const redirectUri = process.env.PLAID_REDIRECT_URI?.trim() || (isSandboxLoopback ? undefined : `${base}/app/money/bank`);
+  if (!/^https:\/\//u.test(webhookUrl) || (redirectUri && !/^https:\/\/[^?#]+$/u.test(redirectUri))) throw new Error("Plaid webhook and redirect URLs must use HTTPS.");
   return { webhookUrl, redirectUri };
 }
 
@@ -100,10 +109,10 @@ async function createNormalizedEvidence(tx: Prisma.TransactionClient, input: { b
   const values = transactionValues(input.item, input.financialAccountId);
   const providerIdentity = `plaid:${input.item.id}`;
   const exact = await tx.externalTransaction.findFirst({ where: { businessId: input.businessId, financialAccountId: input.financialAccountId, OR: [{ externalTransactionId: providerIdentity }, { fingerprint: values.fingerprint }] }, select: { id: true } });
-  const possible = exact ? null : await tx.externalTransaction.findFirst({ where: { businessId: input.businessId, financialAccountId: input.financialAccountId, transactionDate: values.transactionDate, amount: values.amount, direction: input.item.direction, normalizedMerchant: values.merchant }, select: { id: true } });
+  const possible = exact ? null : await tx.externalTransaction.findFirst({ where: { businessId: input.businessId, financialAccountId: input.financialAccountId, transactionDate: values.transactionDate, amount: values.amount, direction: input.item.direction }, select: { id: true } });
   const importRecord = await tx.transactionImport.create({ data: { businessId: input.businessId, financialAccountId: input.financialAccountId, createdByUserId: input.actorUserId, sourceFilename: "Plaid bank sync", sourceSha256: `plaid:${input.providerRecordId}`, mappingJson: { source: "PLAID" }, rowCount: 1, newCount: exact ? 0 : 1, duplicateCount: exact ? 1 : 0, possibleDuplicateCount: possible ? 1 : 0, status: "COMPLETED", confirmedAt: new Date(), completedAt: new Date() }, select: { id: true } });
   if (exact) return { externalTransactionId: exact.id, created: false, duplicate: true };
-  const external = await tx.externalTransaction.create({ data: { businessId: input.businessId, transactionImportId: importRecord.id, financialAccountId: input.financialAccountId, rowNumber: 1, transactionDate: values.transactionDate, postedDate: values.postedDate, description: input.item.description.slice(0, 1000), normalizedMerchant: values.merchant, amount: values.amount, direction: input.item.direction, externalTransactionId: providerIdentity, sourceReference: providerIdentity, fingerprint: values.fingerprint, status: possible ? "POSSIBLE_DUPLICATE" : "NEEDS_REVIEW", duplicateOfId: possible?.id, suggestionReason: possible ? "Plaid activity matches the date, amount, direction, and merchant of existing imported activity. Review before posting." : input.item.pending ? "Pending Plaid activity. Wait for it to post before approving it." : "Imported from Plaid. Review before posting." }, select: { id: true } });
+  const external = await tx.externalTransaction.create({ data: { businessId: input.businessId, transactionImportId: importRecord.id, financialAccountId: input.financialAccountId, rowNumber: 1, transactionDate: values.transactionDate, postedDate: values.postedDate, description: input.item.description.slice(0, 1000), normalizedMerchant: values.merchant, amount: values.amount, direction: input.item.direction, externalTransactionId: providerIdentity, sourceReference: providerIdentity, fingerprint: values.fingerprint, status: possible ? "POSSIBLE_DUPLICATE" : "NEEDS_REVIEW", duplicateOfId: possible?.id, suggestionReason: possible ? "Plaid activity matches the date, amount, and direction of existing imported activity. Review before posting." : input.item.pending ? "Pending Plaid activity. Wait for it to post before approving it." : "Imported from Plaid. Review before posting." }, select: { id: true } });
   return { externalTransactionId: external.id, created: true, duplicate: false };
 }
 
