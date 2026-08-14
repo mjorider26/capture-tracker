@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { plaidClient } from "./client";
+import { plaidClient, PlaidProviderError, plaidLinkTokenFailureTelemetry } from "./client";
 
 describe("Plaid typed HTTPS client", () => {
   beforeEach(() => {
@@ -36,5 +36,37 @@ describe("Plaid typed HTTPS client", () => {
     await plaidClient.createLinkToken({ clientUserId: "ct_user", webhookUrl: "https://example.com/api/plaid/webhook", redirectUri: "https://example.com/app/money/bank", accessToken: "access-sandbox-test-1" });
     const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
     expect(body).toMatchObject({ access_token: "access-sandbox-test-1" }); expect(body).not.toHaveProperty("products");
+  });
+
+  it("retains only sanitized Plaid response diagnostics", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      error_code: "INVALID_FIELD",
+      error_type: "INVALID_REQUEST",
+      error_message: "redirect_uri must be configured in the Plaid Dashboard",
+      request_id: "request_AbC123",
+    }), { status: 400 }));
+    let caught: unknown;
+    try { await plaidClient.createLinkToken({ clientUserId: "ct_user", webhookUrl: "https://example.com/api/plaid/webhook", redirectUri: "https://example.com/app/money/bank" }); } catch (error) { caught = error; }
+    expect(caught).toBeInstanceOf(PlaidProviderError);
+    expect(plaidLinkTokenFailureTelemetry(caught)).toEqual({
+      event: "PLAID_LINK_TOKEN_CREATE_FAILED",
+      failure_stage: "provider_response",
+      http_status: 400,
+      error_type: "INVALID_REQUEST",
+      error_code: "INVALID_FIELD",
+      error_message: "redirect_uri must be configured in the Plaid Dashboard",
+      request_id: "request_AbC123",
+    });
+  });
+
+  it("drops sensitive provider messages and classifies pre-provider failures", () => {
+    const sensitive = new PlaidProviderError("INVALID_FIELD", "INVALID_REQUEST", 400, "request_1", "link-production-sensitive-token was rejected");
+    expect(plaidLinkTokenFailureTelemetry(sensitive)).toMatchObject({ error_message: null, request_id: "request_1" });
+    expect(plaidLinkTokenFailureTelemetry(new Error("PLAID_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key."))).toMatchObject({
+      failure_stage: "local_setup",
+      http_status: null,
+      error_code: "ENCRYPTION_KEY_INVALID",
+      request_id: null,
+    });
   });
 });

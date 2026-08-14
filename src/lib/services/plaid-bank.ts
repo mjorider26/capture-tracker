@@ -3,7 +3,7 @@ import "server-only";
 import { Prisma, type BusinessRole } from "../../generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fingerprint, normalizedMerchant } from "./financial-ingestion-core";
-import { plaidClient, PlaidProviderError, type PlaidAccountEvidence, type PlaidSyncBatch } from "@/lib/providers/plaid/client";
+import { plaidClient, PlaidProviderError, plaidLinkTokenFailureTelemetry, type PlaidAccountEvidence, type PlaidSyncBatch } from "@/lib/providers/plaid/client";
 import { decryptPlaidAccessToken, encryptPlaidAccessToken, stablePlaidClientUserId } from "@/lib/providers/plaid/crypto";
 import type { ProviderTransaction } from "./operational-independence-core";
 
@@ -59,7 +59,10 @@ export async function createPlaidLinkToken(actor: Actor, connectionId?: string) 
     const token = await plaidClient.createLinkToken({ clientUserId, webhookUrl: urls.webhookUrl, redirectUri: urls.redirectUri, accessToken });
     await prisma.auditEvent.create({ data: { actorType: "USER", businessId: actor.businessId, actorMembershipId: actor.actorUserId, action: "CREATE", entityType: "PlaidConnectionAttempt", entityId: connectionId ?? actor.businessId, afterJson: { mode: connectionId ? "UPDATE" : "CREATE", product: "transactions" }, metadataJson: { credentialsStored: false, accountingEffect: "none" } } });
     return { ok: true as const, linkToken: token.link_token, mode: connectionId ? "UPDATE" as const : "CREATE" as const };
-  } catch { return { ok: false as const, message: "Secure bank connection setup is temporarily unavailable. CSV import remains available." }; }
+  } catch (error) {
+    console.error(JSON.stringify(plaidLinkTokenFailureTelemetry(error)));
+    return { ok: false as const, message: "Secure bank connection setup is temporarily unavailable. CSV import remains available." };
+  }
 }
 
 function duplicateItem(existing: Array<{ institutionId: string | null; accounts: Array<{ name: string; maskedLastFour: string | null }> }>, institutionId: string | null, accounts: PlaidAccountEvidence[]) {

@@ -4,10 +4,58 @@ import { createHash } from "node:crypto";
 import type { ProviderTransaction } from "@/lib/services/operational-independence-core";
 
 export type PlaidEnvironment = "sandbox" | "production";
-type PlaidErrorBody = { error_code?: unknown; error_type?: unknown };
+type PlaidErrorBody = { error_code?: unknown; error_type?: unknown; error_message?: unknown; request_id?: unknown };
+
+const safePlaidCode = (value: unknown, fallback: string) => typeof value === "string" && /^[A-Z0-9_]{1,100}$/u.test(value) ? value : fallback;
+const safePlaidRequestId = (value: unknown) => typeof value === "string" && /^[A-Za-z0-9_-]{1,100}$/u.test(value) ? value : null;
+
+function safePlaidMessage(value: unknown) {
+  if (typeof value !== "string") return null;
+  const message = value.replace(/[\u0000-\u001f\u007f]+/gu, " ").trim();
+  if (!message || message.length > 500 || /(?:access|link|public)-(?:sandbox|production)-[A-Za-z0-9-]+|client[_ -]?id|secret|access[_ -]?token|link[_ -]?token|public[_ -]?token|encryption[_ -]?key|cookie|session[_ -]?token/iu.test(message)) return null;
+  return message;
+}
 
 export class PlaidProviderError extends Error {
-  constructor(public readonly code: string, public readonly type: string) { super(`PLAID_${code}`); this.name = "PlaidProviderError"; }
+  constructor(
+    public readonly code: string,
+    public readonly type: string,
+    public readonly status = 500,
+    public readonly requestId: string | null = null,
+    public readonly providerMessage: string | null = null,
+  ) { super(`PLAID_${code}`); this.name = "PlaidProviderError"; }
+}
+
+function internalFailureCode(error: unknown) {
+  if (!(error instanceof Error)) return "LINK_TOKEN_SETUP_FAILED";
+  if (error instanceof TypeError) return "OUTBOUND_REQUEST_FAILED";
+  if (error.message === "PLAID_TOKEN_ENCRYPTION_KEY is not configured.") return "ENCRYPTION_KEY_MISSING";
+  if (error.message === "PLAID_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key.") return "ENCRYPTION_KEY_INVALID";
+  if (error.message === "PLAID_ENV must be sandbox or production.") return "ENVIRONMENT_INVALID";
+  if (error.message === "Plaid server credentials are not configured.") return "CREDENTIAL_BINDING_MISSING";
+  if (error.message.startsWith("BETTER_AUTH_URL must be") || error.message === "Plaid webhook and redirect URLs must use HTTPS.") return "PROVIDER_URL_CONFIG_INVALID";
+  return "LINK_TOKEN_SETUP_FAILED";
+}
+
+export function plaidLinkTokenFailureTelemetry(error: unknown) {
+  if (error instanceof PlaidProviderError) return {
+    event: "PLAID_LINK_TOKEN_CREATE_FAILED",
+    failure_stage: "provider_response",
+    http_status: error.status,
+    error_type: error.type,
+    error_code: error.code,
+    error_message: safePlaidMessage(error.providerMessage),
+    request_id: error.requestId,
+  };
+  return {
+    event: "PLAID_LINK_TOKEN_CREATE_FAILED",
+    failure_stage: error instanceof TypeError ? "outbound_request" : "local_setup",
+    http_status: null,
+    error_type: null,
+    error_code: internalFailureCode(error),
+    error_message: null,
+    request_id: null,
+  };
 }
 
 function configuration() {
@@ -33,9 +81,9 @@ async function request<T>(path: string, input: Record<string, unknown>): Promise
   });
   const payload = await response.json().catch(() => ({})) as T & PlaidErrorBody;
   if (!response.ok) {
-    const code = typeof payload.error_code === "string" && /^[A-Z0-9_]{1,100}$/u.test(payload.error_code) ? payload.error_code : "PROVIDER_REQUEST_FAILED";
-    const type = typeof payload.error_type === "string" && /^[A-Z0-9_]{1,100}$/u.test(payload.error_type) ? payload.error_type : "PROVIDER_ERROR";
-    throw new PlaidProviderError(code, type);
+    const code = safePlaidCode(payload.error_code, "PROVIDER_REQUEST_FAILED");
+    const type = safePlaidCode(payload.error_type, "PROVIDER_ERROR");
+    throw new PlaidProviderError(code, type, response.status, safePlaidRequestId(payload.request_id), safePlaidMessage(payload.error_message));
   }
   return payload;
 }
@@ -105,7 +153,7 @@ export const plaidClient = {
         if (!(error instanceof PlaidProviderError) || error.code !== "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION" || attempt === 2) throw error;
       }
     }
-    throw new PlaidProviderError("SYNC_RETRY_EXHAUSTED", "TRANSACTIONS_ERROR");
+    throw new PlaidProviderError("SYNC_RETRY_EXHAUSTED", "TRANSACTIONS_ERROR", 500, null, null);
   },
 };
 
