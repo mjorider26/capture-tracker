@@ -5,6 +5,7 @@ import type { ProviderTransaction } from "@/lib/services/operational-independenc
 
 export type PlaidEnvironment = "sandbox" | "production";
 type PlaidErrorBody = { error_code?: unknown; error_type?: unknown; error_message?: unknown; request_id?: unknown };
+const plaidRequestTimeoutMs = 15_000;
 
 const safePlaidCode = (value: unknown, fallback: string) => typeof value === "string" && /^[A-Z0-9_]{1,100}$/u.test(value) ? value : fallback;
 const safePlaidRequestId = (value: unknown) => typeof value === "string" && /^[A-Za-z0-9_-]{1,100}$/u.test(value) ? value : null;
@@ -26,8 +27,11 @@ export class PlaidProviderError extends Error {
   ) { super(`PLAID_${code}`); this.name = "PlaidProviderError"; }
 }
 
+const isOutboundTimeout = (error: unknown) => error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name);
+
 function internalFailureCode(error: unknown) {
   if (!(error instanceof Error)) return "LINK_TOKEN_SETUP_FAILED";
+  if (isOutboundTimeout(error)) return "OUTBOUND_REQUEST_TIMEOUT";
   if (error instanceof TypeError) return "OUTBOUND_REQUEST_FAILED";
   if (error.message === "PLAID_TOKEN_ENCRYPTION_KEY is not configured.") return "ENCRYPTION_KEY_MISSING";
   if (error.message === "PLAID_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key.") return "ENCRYPTION_KEY_INVALID";
@@ -49,7 +53,7 @@ export function plaidLinkTokenFailureTelemetry(error: unknown) {
   };
   return {
     event: "PLAID_LINK_TOKEN_CREATE_FAILED",
-    failure_stage: error instanceof TypeError ? "outbound_request" : "local_setup",
+    failure_stage: error instanceof TypeError || isOutboundTimeout(error) ? "outbound_request" : "local_setup",
     http_status: null,
     error_type: null,
     error_code: internalFailureCode(error),
@@ -78,6 +82,7 @@ async function request<T>(path: string, input: Record<string, unknown>): Promise
     headers: { "content-type": "application/json", "Plaid-Version": "2020-09-14" },
     body: JSON.stringify({ client_id: config.clientId, secret: config.secret, ...input }),
     cache: "no-store",
+    signal: AbortSignal.timeout(plaidRequestTimeoutMs),
   });
   const payload = await response.json().catch(() => ({})) as T & PlaidErrorBody;
   if (!response.ok) {

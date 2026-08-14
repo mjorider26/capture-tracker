@@ -69,4 +69,19 @@ describe("Plaid typed HTTPS client", () => {
       request_id: null,
     });
   });
+
+  it("bounds stalled Plaid requests and reports only a sanitized outbound timeout", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError"));
+    let caught: unknown;
+    try { await plaidClient.createLinkToken({ clientUserId: "ct_user", webhookUrl: "https://example.com/api/plaid/webhook" }); } catch (error) { caught = error; }
+    expect(plaidLinkTokenFailureTelemetry(caught)).toEqual({
+      event: "PLAID_LINK_TOKEN_CREATE_FAILED",
+      failure_stage: "outbound_request",
+      http_status: null,
+      error_type: null,
+      error_code: "OUTBOUND_REQUEST_TIMEOUT",
+      error_message: null,
+      request_id: null,
+    });
+  });
 });
