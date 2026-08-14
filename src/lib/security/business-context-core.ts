@@ -110,3 +110,30 @@ export async function resolveBusinessContext({
     business: membership.business,
   };
 }
+
+/**
+ * Resolves the single owner workspace for the dedicated setup surface. This is
+ * intentionally separate from normal workspace access: incomplete setup may
+ * reach onboarding, but it does not unlock any regular application route.
+ */
+export async function resolveOnboardingContext({
+  sessionId,
+  userId,
+  loadMemberships,
+}: {
+  sessionId: string;
+  userId: string;
+  loadMemberships: LoadMembershipsForUser;
+}): Promise<BusinessContext> {
+  const memberships = await loadMemberships(userId);
+  if (memberships.length === 0) throw new AccessControlError(403, "BUSINESS_ACCESS_DENIED", "This account does not have an invited business workspace.");
+  if (memberships.length > 1) throw new AccessControlError(409, "AMBIGUOUS_BUSINESS_CONTEXT", "This account has more than one business assignment.");
+  const membership = memberships[0];
+  if (!membership.business.onboarding || membership.role !== "OWNER") throw new AccessControlError(403, "BUSINESS_ACCESS_DENIED", "Only the invited business owner can continue setup.");
+  return {
+    sessionId,
+    user: membership.user,
+    membership: { id: membership.id, role: membership.role, version: membership.version },
+    business: membership.business,
+  };
+}

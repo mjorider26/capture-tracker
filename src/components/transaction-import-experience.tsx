@@ -4,7 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 import { InlineAlert, PageHeader, StatusBadge } from "./ui";
 import { ImportHelp } from "./import-help";
-import { confirmImport, ignoreImportedTransaction, postImportedTransaction, previewImport } from "@/app/app/money/import/actions";
+import { confirmImport as defaultConfirmImport, ignoreImportedTransaction as defaultIgnoreImportedTransaction, postImportedTransaction as defaultPostImportedTransaction, previewImport as defaultPreviewImport } from "@/app/app/money/import/actions";
 
 type Props = {
   accounts: Array<{ id: string; name: string }>;
@@ -13,9 +13,11 @@ type Props = {
   items: Array<{ id: string; date: string; description: string; amount: string; direction: "INFLOW" | "OUTFLOW"; status: string; suggestionReason: string | null; suggestedLedgerAccountId: string | null; financialAccount: { name: string } }>;
   profiles: Array<{ id: string; name: string; financialAccountId: string; mappingJson: unknown }>;
 };
-type ActionState = Awaited<ReturnType<typeof previewImport>>;
+type ImportAction = typeof defaultPreviewImport;
+type PostAction = typeof defaultPostImportedTransaction;
+type ActionState = Awaited<ReturnType<ImportAction>>;
 const initial: ActionState = { ok: false };
-export function TransactionImportExperience({ accounts, categories, imports, items, profiles }: Props) {
+export function TransactionImportExperience({ accounts, categories, imports, items, profiles, previewAction: previewImport = defaultPreviewImport, confirmAction: confirmImport = defaultConfirmImport, postAction: postImportedTransaction = defaultPostImportedTransaction, ignoreAction: ignoreImportedTransaction = defaultIgnoreImportedTransaction }: Props & { previewAction?: ImportAction; confirmAction?: ImportAction; postAction?: PostAction; ignoreAction?: PostAction }) {
   const [csvText, setCsvText] = useState(""); const [filename, setFilename] = useState(""); const [accountId, setAccountId] = useState(accounts[0]?.id ?? ""); const [selectedProfile, setSelectedProfile] = useState("");
   const [previewState, previewAction] = useActionState(previewImport, initial); const [confirmState, confirmAction] = useActionState(confirmImport, initial); const [postState, postAction] = useActionState(postImportedTransaction, initial); const [ignoreState, ignoreAction] = useActionState(ignoreImportedTransaction, initial);
   const profile = useMemo(() => profiles.find((item) => item.id === selectedProfile && item.financialAccountId === accountId), [profiles, selectedProfile, accountId]);

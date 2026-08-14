@@ -43,7 +43,8 @@ export async function expireOperatorInvitation(actor: InvitationActor, invitatio
 export async function readInvitationByToken(token: string, client: Database = prisma) {
   const record = await client.operatorInvitation.findUnique({ where: { tokenHash: await invitationTokenHash(token) } });
   if (!record) return null;
-  return { id: record.id, email: record.invitedEmail, businessDisplayName: record.businessDisplayName, expiresAt: record.expiresAt, usable: invitationUsable(record) };
+  const reason = record.acceptedAt || record.status === "ACCEPTED" ? "ACCEPTED" : record.revokedAt || record.status === "REVOKED" ? "REVOKED" : record.expiresAt <= new Date() || record.status === "EXPIRED" ? "EXPIRED" : null;
+  return { id: record.id, email: record.invitedEmail, businessDisplayName: record.businessDisplayName, expiresAt: record.expiresAt, usable: invitationUsable(record), reason };
 }
 
 /**
@@ -74,7 +75,7 @@ export async function acceptOperatorInvitation({ token, userId, email, client = 
       await tx.businessSettings.create({ data: { businessId } });
       await tx.businessCutover.create({ data: { businessId, startDate: now, sourceReference: "Operator invitation provisioning" } });
       await Promise.all(workspaceAccountingFoundationOperations(tx, businessId, now));
-      await tx.auditEvent.create({ data: { actorType: "USER", businessId, actorMembershipId: userId, action: "CREATE", entityType: "OperatorInvitationProvisioning", entityId: invitation.id, afterJson: { soleOwner: true, accountingFoundation: "COMPLETED", onboarding: "IN_PROGRESS" }, metadataJson: { executionMode: "operator-one-time-invitation", operatorUserId: invitation.createdByUserId } } });
+      await tx.auditEvent.create({ data: { actorType: "USER", businessId, actorMembershipId: userId, action: "CREATE", entityType: "OperatorInvitationProvisioning", entityId: invitation.id, afterJson: { soleOwner: true, accountingFoundation: "COMPLETED", onboarding: "IN_PROGRESS" }, metadataJson: { event: "INVITATION_ACCEPTED", executionMode: "operator-one-time-invitation", operatorUserId: invitation.createdByUserId } } });
       return { businessId };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import {
   resolveBusinessContext,
+  resolveOnboardingContext,
   type BusinessMembershipRecord,
 } from "./business-context-core";
 
@@ -181,5 +182,17 @@ describe("resolveBusinessContext", () => {
       status: 409,
       code: "AMBIGUOUS_BUSINESS_CONTEXT",
     });
+  });
+});
+
+describe("resolveOnboardingContext", () => {
+  it("allows exactly one owner to resume an incomplete invited workspace", async () => {
+    const membership = createMembership({ business: { ...createMembership().business, onboarding: { status: "IN_PROGRESS" } } });
+    await expect(resolveOnboardingContext({ sessionId: "setup", userId: membership.user.id, loadMemberships: vi.fn().mockResolvedValue([membership]) })).resolves.toMatchObject({ business: { id: "business-one" }, membership: { role: "OWNER" } });
+  });
+
+  it("does not let read-only professionals enter owner setup", async () => {
+    const membership = createMembership({ role: "CPA_READ_ONLY", business: { ...createMembership().business, onboarding: { status: "IN_PROGRESS" } } });
+    await expect(resolveOnboardingContext({ sessionId: "setup", userId: membership.user.id, loadMemberships: vi.fn().mockResolvedValue([membership]) })).rejects.toMatchObject({ status: 403 });
   });
 });

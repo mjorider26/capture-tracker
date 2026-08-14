@@ -1,5 +1,24 @@
 # Capture Tracker Product Manual
 
+## Getting Started
+
+Capture Tracker begins with a private, email-bound invitation. Create an account with the invited email, sign in, and accept the one-time invitation. The guided setup then replaces normal navigation until the required starting facts are complete. Progress is saved after every step, so it is safe to sign out and return later.
+
+The setup sequence is:
+
+1. Read the welcome and expectations.
+2. Confirm the S-Corp name, owner, timezone, fiscal-year start, and the date Capture Tracker should begin keeping the books.
+3. Choose automatic Plaid activity or manual transaction CSV import for each business bank or card account. Different accounts may use different methods.
+4. Confirm every opening balance from a statement or other approved source. A confirmed zero creates no opening journal; non-zero balances are posted together in one balanced opening journal.
+5. Review Owner Money, payroll context, major assets, and any Unknown / Needs review / CPA review items.
+6. Review the first activity, or confirm there is no activity yet.
+7. Reconcile the first statement to an exact $0.00 difference.
+8. Complete the readiness check and five-screen tour, then start on Today.
+
+The manual file choices are deliberately different. A **transaction CSV** can add dated bank or card activity to the review queue. A **statement PDF/image** is private reconciliation evidence and never creates transactions. A **receipt PDF/image** supports a purchase and never becomes bank activity by itself. Every document remains private and unavailable until security validation succeeds.
+
+If Plaid is unavailable, choose manual import without losing earlier setup. Plaid authentication happens only inside Plaid Link. Capture Tracker requests read-only Transactions access and never collects a bank password or enables payments, transfers, Auth, or money movement.
+
 ## Bank activity: automatic or manual
 
 The owner chooses an activity method for each business financial account. **Automatic sync** uses an optional read-only Plaid connection. **Manual import** uses transaction CSV files downloaded from the bank or card provider. Both choices are supported equally and can coexist across different accounts.
@@ -10,19 +29,19 @@ To connect, open **Money → Bank**, choose **Connect bank** for the intended Ca
 
 To work manually, download a **transaction CSV**, open **Money → Import**, preview it, confirm it, review exceptions, and reconcile it against the statement. Upload a statement PDF/image through Documents if you want retained statement evidence; that document does not create transactions.
 
-> **Current product note:** Money imports bank and credit-card CSV exports through **Import transactions**; imports are previewed and duplicate-safe, and bank evidence does not post accounting automatically. Bank Connections is provider-ready and displays **Plaid is not configured** until separately authorized provider activation. Manual CSV remains fully available in that state. **Money → Invoices** and **Bills** record owner-confirmed receivables and payables; public invoices are read-only professional documents. **Taxes → Owner money** distinguishes salary, distributions, reimbursements, contributions, and shareholder loans. Payroll results support bank-evidence review and an immutable owner-confirmed reversal. **Taxes → Fixed assets** records possible assets and owner-confirmed in-service facts; depreciation and tax treatment remain CPA review items.
+> **Current product note:** Plaid Transactions and manual CSV are both available per business account. Both sources use duplicate checks and the same owner review boundary. Invoices and Bills record owner-confirmed receivables and payables. Owner Money keeps salary, distributions, reimbursements, contributions, and shareholder loans distinct. Payroll and fixed-asset tax treatment remain review items where evidence is incomplete.
 
 **SPENDING TRACKED. BUSINESS GROWN.**
 
-Private-pilot client guide · V2.4 guided financial routine
+Private customer guide - Customer Onboarding 2.0
 
-> **Private-pilot boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, manage inventory, or offer public self-service onboarding. It can prepare service invoices and record payment evidence, but never initiates a customer or vendor payment. Uploaded PDF, JPEG, and PNG files stay private and are security-scanned before they become available in Capture Tracker.
+> **Private customer boundary.** Capture Tracker organizes recorded financial facts. It is not a CPA, does not file taxes or send payments, does not run payroll, manage inventory, or offer public self-service signup. New workspaces require an operator-created invitation. Uploaded PDF, JPEG, and PNG files stay private and are security-scanned before they become available.
 
 ## Start here — how to run your books
 
 Use Capture Tracker by time horizon, not by memorizing features: capture receipts, invoices, bills, and mileage as they happen; open **Run My Books** once a week; reconcile and close once a month; keep occasional Owner & S-Corp workpapers current; and use **Year-End Flight Check** for CPA handoff. Today always surfaces the current next action.
 
-Use the private workspace URL supplied by your owner. Sign in with your existing email and password. New client owners receive a one-time, email-bound invitation link from the platform operator; the operator sends that link manually and it expires after 72 hours. There is no public signup. The original first-owner setup closes automatically after the workspace is initialized. There is no self-service password-reset flow today—contact the workspace owner if you cannot sign in. Sign out from the workspace when you finish on a shared device.
+Use the private workspace URL supplied by the operator. New owners receive a one-time, email-bound invitation that expires after 72 hours. There is no public signup. Create or sign into the invited account, accept the link, and follow the saved setup checkpoint. Contact support if account recovery is unavailable. Sign out when using a shared device.
 
 ## Navigation
 
@@ -136,3 +155,20 @@ The workspace is private and authenticated. Passwords are not displayed in the p
 ## Documentation provenance
 
 Any retained documentation images use repository-provided fictional demo data or unauthenticated public pages only; no production workspace, credential, client data, object key, or internal identifier is used.
+
+## Customer setup checklist
+
+- Open only the private invitation intended for your email.
+- Use a password manager and never share the invitation or password.
+- Confirm the S-Corp name and the date Capture Tracker starts keeping the books.
+- Add only business bank and credit-card accounts.
+- Choose Plaid or manual CSV independently for each account.
+- Keep the statement or other source supporting every opening balance.
+- Leave uncertain Owner Money, payroll, asset, or basis facts in Needs review / CPA review.
+- Review imported activity before approving any category.
+- Reconcile the first statement to exactly $0.00 without a plug.
+- Finish the tour, then use Today and Run My Books for the normal routine.
+
+## Getting help safely
+
+Use the in-product feedback or support path for a blocked setup step. Describe the step and the visible, non-sensitive error. Never send a password, bank credential, invitation token, Plaid token, account number, tax identifier, document contents, or production financial values through chat or ordinary email.

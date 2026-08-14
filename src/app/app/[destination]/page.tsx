@@ -24,12 +24,13 @@ export default async function ApplicationDestinationPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { destination } = await params;
+  const query = await searchParams;
   if (!isDestination(destination)) notFound();
   const context = await getApplicationContext();
   const money =
     destination === "money"
       ? await Promise.all([
-          loadMoneyDashboard(context.business.id, await searchParams),
+          loadMoneyDashboard(context.business.id, query),
           getMoneyOperationsSummary(context.business.id),
         ])
       : null;
@@ -38,6 +39,7 @@ export default async function ApplicationDestinationPage({
       <TodayExperience
         dashboard={await loadTodayDashboard(context.business.id)}
         basePath="/app"
+        welcome={query.welcome === "1"}
       />
     ) : destination === "money" ? (
       <MoneyExperience

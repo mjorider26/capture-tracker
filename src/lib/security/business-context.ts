@@ -9,6 +9,7 @@ import { workspaceFailureMetadata } from "@/lib/observability/workspace-failure"
 import {
   AccessControlError,
   resolveBusinessContext,
+  resolveOnboardingContext,
 } from "./business-context-core";
 
 export {
@@ -91,6 +92,27 @@ export async function requireBusinessContext() {
     if (!(error instanceof AccessControlError)) console.error(JSON.stringify(workspaceFailureMetadata("business_context", error)));
     throw error;
   }
+}
+
+/** Narrow authentication boundary for /app/onboarding and its server actions. */
+export async function requireOnboardingContext() {
+  let session;
+  try { session = await auth.api.getSession({ headers: await headers() }); }
+  catch (error) { console.error(JSON.stringify(workspaceFailureMetadata("session", error))); throw error; }
+  if (!session) throw new AccessControlError(401, "AUTHENTICATION_REQUIRED", "Sign in is required.");
+  return resolveOnboardingContext({
+    sessionId: session.session.id,
+    userId: session.user.id,
+    loadMemberships: async (userId) => prisma.businessMember.findMany({
+      where: { userId },
+      select: {
+        id: true, role: true, version: true,
+        user: { select: { id: true, email: true, displayName: true, version: true } },
+        business: { select: { id: true, legalName: true, displayName: true, timezone: true, currency: true, version: true, onboarding: { select: { status: true } } } },
+      },
+      take: 2,
+    }),
+  });
 }
 
 /** Server-action boundary for consequential workspace writes. */

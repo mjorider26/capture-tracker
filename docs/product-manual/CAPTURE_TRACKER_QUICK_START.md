@@ -1,6 +1,19 @@
-# How to Run Your Books
+# Getting Started
 
-## Keep bank activity current
+Open the private invitation, create or sign into the invited account, and accept the one-time link. Capture Tracker then keeps normal navigation out of the way and guides you through:
+
+1. Accept the invitation.
+2. Create your account or sign in with the invited email.
+3. Choose how bank activity gets into Capture Tracker for each business account.
+4. Confirm starting books from statements or another approved source.
+5. Reconcile the first statement to an exact $0.00 difference.
+6. Learn Run My Books in the 60-second tour.
+
+Along the way, Capture Tracker also asks for the S-Corp start date, Owner Money, payroll, major-asset, CPA-review context, and a first-activity review. Progress saves after each step. On return, choose **Continue setup**. Use approved source facts; unknown or uncertain facts remain **UNKNOWN**, **NEEDS REVIEW**, or **CPA REVIEW** rather than becoming invented accounting history.
+
+Manual files have separate jobs: a **transaction CSV** adds activity for review; a **statement PDF/image** is reconciliation evidence; a **receipt PDF/image** supports a purchase. Statements and receipts never create transactions. Every document is private and security-scanned.
+
+## Choose how bank activity gets in
 
 For each business checking, savings, or card account, choose either **Connect automatically** in **Money → Bank** or **Import manually** in **Money → Import**. Automatic sync uses the optional Plaid connection; manual import uses a transaction CSV from the bank/card provider. Different accounts can use different methods, and the choice can change later.
 
@@ -9,20 +22,6 @@ Either way, Capture Tracker brings activity into the same owner review process b
 **SPENDING TRACKED. BUSINESS GROWN.** · Private pilot · V2.4
 
 Capture Tracker tells you what needs attention and takes you to the protected workflow that resolves it. You do not need to learn the navigation before keeping the S-Corp’s books current.
-
-## First setup
-
-Follow the visible roadmap:
-
-1. Confirm the business.
-2. Add the business bank or credit-card account.
-3. Tell Capture Tracker where the books start.
-4. Confirm applicable owner and payroll context.
-5. Import and review the first activity.
-6. Complete the initial exact reconciliation.
-7. Begin the normal routine.
-
-Use approved source facts. Unknown or uncertain opening facts remain **UNKNOWN**, **NEEDS REVIEW**, or **CPA REVIEW** rather than becoming invented accounting history.
 
 ## As things happen
 
@@ -35,7 +34,7 @@ Use **+ New** or Today’s four frequent actions:
 
 Owner-paid expenses, owner transfers, and transaction imports remain grouped in **+ New** without competing on Today.
 
-## Once a week
+## Weekly
 
 Open **Today → Run My Books**.
 
@@ -43,7 +42,7 @@ Capture Tracker assembles only relevant owner-action sections: transactions, rec
 
 Completing Run My Books records acknowledgement. It does not post transactions, hide unresolved records, or change accounting history.
 
-## Once a month
+## Monthly
 
 Open the month-end prompt or **More → Monthly routine → Reconciliation**:
 
@@ -60,7 +59,7 @@ Closing locks the period. Corrections use controlled reversal or adjustment work
 
 Use **More → Owner & S-Corp** for occasional payroll context, estimated-tax history, distribution readiness, reasonable-compensation evidence, basis status, and shareholder benefits. These are review/workpaper tasks, not everyday tax preparation. Capture Tracker does not file taxes or make tax conclusions.
 
-## At year-end
+## Year-End
 
 Open **Year-End Flight Check** and follow the sequence: Books, Owner Money, Payroll, Basis, Benefits, Fixed Assets, CPA Review Items, and CPA Package. Each section says **DONE**, **NEEDS YOU**, or **CPA REVIEW**.
 

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
 
-import { uploadDocument, type DocumentUploadState } from "@/app/app/documents/actions";
+import { uploadDocument as defaultUploadDocument, type DocumentUploadState } from "@/app/app/documents/actions";
 import { normalizeReceiptImage } from "@/lib/documents/receipt-image-normalizer";
 
 const initialState: DocumentUploadState = { ok: false };
@@ -14,8 +14,8 @@ type SelectedDocument = {
   normalized: boolean;
 };
 
-export function DocumentUploadForm() {
-  const [state, action, pending] = useActionState(uploadDocument, initialState);
+export function DocumentUploadForm({ uploadAction = defaultUploadDocument, title = "Upload a private document", description = "Use your phone camera or select a PDF, PNG, or JPEG already on your device. Files are strictly validated, kept private, and scanned before they become available in Capture Tracker.", cameraLabel = "Take photo of receipt" }: { uploadAction?: typeof defaultUploadDocument; title?: string; description?: string; cameraLabel?: string } = {}) {
+  const [state, action, pending] = useActionState(uploadAction, initialState);
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const previewUrl = useRef<string | null>(null);
@@ -72,13 +72,13 @@ export function DocumentUploadForm() {
   const busy = pending || preparing;
 
   return <section id="document-upload" className="ui-card scroll-mt-6 overflow-hidden p-5 sm:p-6">
-    <h2 className="text-lg font-bold">Upload a private document</h2>
-    <p className="mt-1 text-sm text-text-muted">Use your phone camera or select a PDF, PNG, or JPEG already on your device. Files are strictly validated, kept private, and scanned before they become available in Capture Tracker.</p>
+    <h2 className="text-lg font-bold">{title}</h2>
+    <p className="mt-1 text-sm text-text-muted">{description}</p>
     <form action={submitUpload} className="mt-4 space-y-3">
-      <input ref={cameraInput} id="receipt-camera" name="cameraDocument" type="file" accept="image/jpeg,image/png,image/*" capture="environment" disabled={busy} className="sr-only" aria-label="Take photo of receipt" onChange={(event) => void selectFile(event, "camera")} />
+      <input ref={cameraInput} id="receipt-camera" name="cameraDocument" type="file" accept="image/jpeg,image/png,image/*" capture="environment" disabled={busy} className="sr-only" aria-label={cameraLabel} onChange={(event) => void selectFile(event, "camera")} />
       <input ref={fileInput} id="document" name="document" type="file" accept="application/pdf,image/jpeg,image/png" disabled={busy} className="sr-only" aria-label="Choose existing document file" onChange={(event) => void selectFile(event, "file")} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <button type="button" disabled={busy} onClick={() => cameraInput.current?.click()} className="order-1 min-h-12 rounded-[var(--radius-sm)] bg-brand-teal px-4 text-sm font-bold text-white transition hover:bg-brand-teal/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal disabled:opacity-60 sm:order-2">Take photo of receipt</button>
+        <button type="button" disabled={busy} onClick={() => cameraInput.current?.click()} className="order-1 min-h-12 rounded-[var(--radius-sm)] bg-brand-teal px-4 text-sm font-bold text-white transition hover:bg-brand-teal/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal disabled:opacity-60 sm:order-2">{cameraLabel}</button>
         <button type="button" disabled={busy} onClick={() => fileInput.current?.click()} className="order-2 min-h-12 rounded-[var(--radius-sm)] border border-border-strong bg-surface-primary px-4 text-sm font-bold text-text-primary transition hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal disabled:opacity-60 sm:order-1">Choose existing file</button>
       </div>
       {selected ? <div className="rounded-[var(--radius-sm)] border border-border-subtle bg-surface-secondary p-3" aria-live="polite">

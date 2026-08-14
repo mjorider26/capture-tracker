@@ -5,7 +5,7 @@ import { routineScale } from "@/lib/navigation/guided-financial-routine";
 
 import { ButtonLink, PageHeader, StatusBadge } from "./ui";
 
-export function TodayExperience({ dashboard, basePath }: { dashboard: TodayDashboard; basePath: "/app" | "/demo" }) {
+export function TodayExperience({ dashboard, basePath, welcome = false }: { dashboard: TodayDashboard; basePath: "/app" | "/demo"; welcome?: boolean }) {
   const needsNow = dashboard.attention.filter((item) => ["transactions", "documents", "matches", "reconciliations", "bankConnections"].includes(item.id));
   const comingUp = dashboard.attention.filter((item) => ["tax", "payroll", "reviewTasks"].includes(item.id));
   const attentionCount = needsNow.reduce((sum, item) => sum + item.count, 0) + comingUp.reduce((sum, item) => sum + item.count, 0);
@@ -14,6 +14,7 @@ export function TodayExperience({ dashboard, basePath }: { dashboard: TodayDashb
   const setupHref = basePath === "/app" ? "/app/onboarding" : "/demo/money/reconciliations";
 
   return <section className="space-y-7">
+    {welcome && <section className="ui-card overflow-hidden border border-brand-teal/30" aria-labelledby="ready-heading"><div className="bg-brand-navy p-5 text-white sm:p-7"><p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-teal">You’re ready</p><h1 id="ready-heading" className="mt-2 text-2xl font-bold">Your Capture Tracker routine starts here.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">Today shows what needs you without requiring you to learn the rest of the app first.</p></div><div className="grid gap-px bg-border-subtle sm:grid-cols-2 lg:grid-cols-4">{[["Daily", "Add receipts, invoices, bills, and mileage as they happen."], ["Weekly", "Run My Books and decide the exceptions that need you."], ["Monthly", "Reconcile every bank and card account to exactly $0.00."], ["Year-end", "Review readiness and share controlled records with your CPA."]].map(([label, detail]) => <div key={label} className="bg-white p-4"><h2 className="font-bold text-brand-navy">{label}</h2><p className="mt-1 text-xs leading-5 text-text-muted">{detail}</p></div>)}</div></section>}
     <PageHeader eyebrow="Today" title="What needs you today" description={`${dashboard.businessName}. Capture Tracker brings forward the next owner decision and keeps accounting detail available only when you need it.`} action={<StatusBadge tone={calm ? "success" : "info"}>{calm ? "You’re caught up" : `${attentionCount} ${attentionCount === 1 ? "thing needs" : "things need"} attention`}</StatusBadge>} />
 
     <BookStatus dashboard={dashboard} basePath={basePath} />

@@ -2127,6 +2127,19 @@ textarea {
   backdrop-filter: var(--glass-blur-desktop);
 }
 
+/* Customer setup uses the dark product palette without navy-on-navy headings. */
+.onboarding-shell .text-brand-navy {
+  color: var(--text) !important;
+}
+
+.onboarding-shell > .bg-white .text-brand-navy {
+  color: var(--brand-navy) !important;
+}
+
+.onboarding-shell main .bg-white {
+  background: var(--surface) !important;
+}
+
 .money-operations {
   border-top: 1px solid rgba(140, 230, 225, 0.18);
   padding-top: 1.5rem;

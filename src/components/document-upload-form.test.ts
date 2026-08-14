@@ -15,13 +15,15 @@ describe("mobile receipt camera upload form", () => {
 
   it("keeps camera selection, preview, retake, removal, and the existing server action accessible", async () => {
     const source = await readFile(new URL("./document-upload-form.tsx", import.meta.url), "utf8");
-    expect(source).toContain("useActionState(uploadDocument, initialState)");
+    expect(source).toContain("useActionState(uploadAction, initialState)");
+    expect(source).toContain("uploadAction = defaultUploadDocument");
     expect(source).toContain("Preview of");
     expect(source).toContain("Retake photo");
     expect(source).toContain("Remove file");
     expect(source).toContain('source === "camera" && fileInput.current');
     expect(source).toContain('source === "file" && cameraInput.current');
-    expect(source).toContain("aria-label=\"Take photo of receipt\"");
+    expect(source).toContain('cameraLabel = "Take photo of receipt"');
+    expect(source).toContain("aria-label={cameraLabel}");
     expect(source).toContain("min-h-12");
     expect(source).toContain("overflow-hidden");
   });
