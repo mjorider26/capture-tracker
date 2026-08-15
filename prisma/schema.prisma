@@ -690,8 +690,28 @@ model OperatorInvitation {
   emailDeliveryError       String?                  @db.VarChar(200)
   version                  Int                      @default(1)
 
+  events OperatorInvitationEvent[]
+
   @@index([invitedEmail, status, expiresAt])
   @@index([createdByUserId, status, createdAt])
+}
+
+/// Sanitized, append-only operator audit history for invitation lifecycle and email delivery.
+model OperatorInvitationEvent {
+  id                  String   @id @default(cuid())
+  invitationId        String
+  actorUserId         String?
+  event               String   @db.VarChar(64)
+  provider            String?  @db.VarChar(32)
+  providerMessageId   String?  @db.VarChar(200)
+  failureCode         String?  @db.VarChar(64)
+  relatedInvitationId String?
+  occurredAt          DateTime @default(now())
+
+  invitation OperatorInvitation @relation(fields: [invitationId], references: [id], onDelete: Restrict)
+
+  @@index([invitationId, occurredAt])
+  @@index([actorUserId, occurredAt])
 }
 
 model ProductionBootstrap {

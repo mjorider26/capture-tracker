@@ -2,7 +2,7 @@
 
 ## Decision and release baseline
 
-**Do not cut over a new client until the named invitation is explicitly authorized.** V2 now uses a private operator-controlled, email-bound one-time invitation; it does not provide public signup, a tenant admin console, or manual database provisioning. The operator copies the invitation URL for manual delivery. The invitation expires after 72 hours, can be revoked, stores only a token hash, and creates the client business only after authenticated, email-matched acceptance.
+**Do not cut over a new client until the named invitation is explicitly authorized.** V2 uses a private operator-controlled, email-bound one-time invitation; it does not provide public signup, a tenant admin console, or manual database provisioning. The normal path sends a branded HTML and plain-text email through the restricted Cloudflare binding. Manual secure-link copy remains the recovery path. The invitation expires after 72 hours, can be revoked, stores only a token hash, and creates the client business only after authenticated, email-matched acceptance.
 
 This document is a preparation checklist, not authority to enter client data. Use it only after explicit written authorization for the named client.
 
@@ -30,7 +30,7 @@ Use a controlled opening-balance cutover with current-year detail when the clien
 
 ## Cutover checklist
 
-- [ ] Authorized platform operator creates the email-bound one-time invitation and owner authorizes the named-client cutover.
+- [ ] Authorized platform operator verifies the exact legal and workspace names, creates the email-bound one-time invitation, and owner authorizes the named-client cutover. If replacing an unused invitation, revoke it before creating the replacement.
 - [ ] Production health/readiness, V2 tag, CI, migrations, and fresh encrypted backup receipt are verified.
 - [ ] Tenant created only through invitation acceptance; first login and tenant isolation verified. The platform operator is not a business member.
 - [ ] Business configuration and accounting foundation reviewed with the client/CPA.

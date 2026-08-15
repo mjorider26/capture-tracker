@@ -6,7 +6,9 @@
 
 Public signup remains closed. Customers are created only through `/operator/onboarding` by an authenticated account whose normalized email appears in the private `CAPTURE_TRACKER_OPERATOR_EMAILS` allowlist. Business ownership never grants operator authority, and an operator never becomes a member of the client business.
 
-The operator creates one email-bound invitation and sends its private link through an owner-approved channel. Invitations use a cryptographically random token; only its SHA-256 hash is stored. An invitation expires after 72 hours, can be revoked or explicitly expired, is single-use, and is accepted only by an authenticated account with the invited email.
+The operator creates one email-bound invitation. When transactional email is configured, Capture Tracker sends the branded HTML and plain-text invitation through its restricted Cloudflare Email Service binding; the operator may still copy the secure link for manual recovery. Invitations use a cryptographically random token; only its SHA-256 hash is stored. An invitation expires after 72 hours, can be revoked or explicitly expired, is single-use, and is accepted only by an authenticated account with the invited email.
+
+The email service records only truthful operational state: `SENT` means Cloudflare accepted the message for delivery, not that the recipient opened it. A failed send preserves the invitation and exposes its one-time link only to the authenticated operator through the deliberate copy action. **Send again** revokes the pending invitation and creates a fresh token before sending, so old and new links are never valid simultaneously. Cloudflare message-body preview is not required and must remain disabled; delivery metadata contains no raw link or token.
 
 ## Acceptance and provisioning
 
@@ -36,7 +38,7 @@ After the tour, Today opens with the daily, weekly, monthly, and year-end routin
 
 ## Recovery and support
 
-The invitation surfaces plain recovery for invalid, expired, revoked, already-used, existing-account, wrong-email, and temporary failure states without revealing secrets. A signed-in incomplete owner who visits `/app` is returned to the saved setup phase. Completed journals and reconciliations cannot be silently rewritten by revisiting an earlier screen; use a controlled correction or support-assisted restart.
+The invitation surfaces plain recovery for invalid, expired, revoked, already-used, existing-account, wrong-email, and temporary failure states without revealing secrets. If email delivery fails, use **Send again** to issue one replacement or use the current action's **Copy secure link** fallback. A signed-in incomplete owner who visits `/app` is returned to the saved setup phase. Completed journals and reconciliations cannot be silently rewritten by revisiting an earlier screen; use a controlled correction or support-assisted restart.
 
 Never use database inserts, a backdoor user, a transferred invitation, public signup, or tenant-context changes as an onboarding workaround. Never request passwords, bank credentials, invitation tokens, or financial source data in chat or logs.
 

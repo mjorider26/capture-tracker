@@ -8,7 +8,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 function assertRequiredSecrets(configuration, expected, label) {
-  const match = configuration.match(/"secrets"\s*:\s*\{\s*"required"\s*:\s*\[([\s\S]*?)\]\s*\}/);
+  const match = configuration.match(/"secrets"\s*:\s*\{\s*"required"\s*:\s*\[([\s\S]*?)\]\s*,?\s*\}/);
   const names = match ? [...match[1].matchAll(/"([A-Z0-9_]+)"/g)].map((entry) => entry[1]).sort() : [];
   assert(JSON.stringify(names) === JSON.stringify([...expected].sort()), `${label} must declare exactly the approved secret binding names, never values.`);
 }
@@ -29,6 +29,7 @@ assert(wrangler.includes('"nodejs_compat"'), "Cloudflare Node compatibility flag
 assert(wrangler.includes('"global_fetch_strictly_public"') && wrangler.includes('"no_handle_cross_request_promise_resolution"') && wrangler.includes('"compatibility_date": "2026-07-23"'), "Pinned Worker compatibility date and required request-lifecycle flags are required.");
 assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\//i.test(wrangler), "Wrangler configuration must remain account-free and contain no secret values.");
 assertRequiredSecrets(wrangler, ["BETTER_AUTH_SECRET", "DOCUMENT_READ_GRANT_SECRET", "CAPTURE_TRACKER_DOCUMENT_SCANNER_INTERNAL_TOKEN"], "Staging Worker");
+assert(!wrangler.includes('"send_email"'), "Fictional staging must not receive the production transactional email binding.");
 assert(wrangler.includes('"r2_buckets"') && wrangler.includes('"CAPTURE_TRACKER_DOCUMENTS"') && wrangler.includes('"capture-tracker-staging-documents"'), "Fictional staging must bind its dedicated private document bucket.");
 assert(!/r2\.dev|custom_domains|public[_ -]?access/i.test(wrangler), "Fictional staging must not expose document storage.");
 assert(wrangler.includes('"CAPTURE_TRACKER_DOCUMENT_SCAN_QUEUE"') && wrangler.includes('"capture-tracker-staging-document-scan"'), "Fictional staging must use only its dedicated document scan Queue producer.");
@@ -37,6 +38,7 @@ assert(wrangler.includes('"CAPTURE_TRACKER_REAL_DATA_APPROVED": "false"'), "Free
 assert(wrangler.includes('"CAPTURE_TRACKER_CUSTOMER_ONBOARDING_ENABLED": "false"'), "Free preview must block customer onboarding.");
 assert(!/account_id|api[_-]?token|postgres(?:ql)?:\/\//i.test(productionWrangler), "Production Wrangler configuration must remain account-free and contain no secret values.");
 assertRequiredSecrets(productionWrangler, ["BETTER_AUTH_SECRET", "DOCUMENT_READ_GRANT_SECRET", "CAPTURE_TRACKER_DOCUMENT_SCANNER_INTERNAL_TOKEN", "PLAID_CLIENT_ID", "PLAID_SECRET", "PLAID_TOKEN_ENCRYPTION_KEY"], "Production Worker");
+assert((productionWrangler.match(/"send_email"/g) ?? []).length === 1 && productionWrangler.includes('"name": "CAPTURE_TRACKER_TRANSACTIONAL_EMAIL"') && productionWrangler.includes('"allowed_sender_addresses": ["welcome@capturetracker.app"]') && !productionWrangler.includes('"destination_address"') && !productionWrangler.includes('"allowed_destination_addresses"'), "Production must declare exactly one arbitrary-recipient email binding restricted to the approved sender.");
 assert(productionWrangler.includes('"PLAID_ENV": "production"') && productionWrangler.includes('"PLAID_TOKEN_KEY_VERSION": "1"') && productionWrangler.includes('"PLAID_WEBHOOK_URL": "https://capture-tracker-production.mjorider.workers.dev/api/plaid/webhook"') && productionWrangler.includes('"PLAID_REDIRECT_URI": "https://capture-tracker-production.mjorider.workers.dev/app/money/bank"'), "Production Plaid variables must be pinned to the approved production environment and exact HTTPS routes.");
 assert(productionWrangler.includes('"name": "capture-tracker-production"') && productionWrangler.includes('"capture-tracker-production-documents"'), "Production must target only its dedicated Worker and private document bucket.");
 assert(productionWrangler.includes('"CAPTURE_TRACKER_ENVIRONMENT": "production"') && productionWrangler.includes('"CAPTURE_TRACKER_DEPLOYMENT_PROFILE": "production-cloudflare-neon"'), "Production must declare its Cloudflare/Neon deployment profile.");

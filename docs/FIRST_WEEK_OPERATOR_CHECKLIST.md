@@ -6,7 +6,7 @@ Use the operator status page and production operations records. Do not copy cust
 
 - Confirm live and ready health checks, current release, migration state, and last verified backup.
 - Review failed authenticated requests, import failures, posting failures, reconciliation blockers, document scan failures, and any safely available queue/DLQ signal.
-- Confirm invitation delivery status through the approved manual-link process while transactional email is not configured.
+- Confirm invitation state through `/operator/onboarding`. Treat **Sent** as provider acceptance, not proof of opening. If email fails, reissue once or use the deliberate manual secure-link fallback; never copy tokens into logs or this checklist.
 
 ## Day 1
 

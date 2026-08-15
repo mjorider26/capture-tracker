@@ -2,9 +2,17 @@ import { notFound } from "next/navigation";
 
 import { OperatorOnboardingPanel } from "@/components/operator-onboarding-panel";
 import { listOperatorInvitations } from "@/lib/auth/operator-invitations";
-import { OperatorAuthorizationError, requireOperatorSession } from "@/lib/auth/operator-authorization";
+import {
+  OperatorAuthorizationError,
+  requireOperatorSession,
+} from "@/lib/auth/operator-authorization";
 
-import { createInvitationAction, expireInvitationAction, revokeInvitationAction } from "./actions";
+import {
+  createInvitationAction,
+  expireInvitationAction,
+  reissueInvitationAction,
+  revokeInvitationAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,7 +20,15 @@ export const metadata = { robots: { index: false, follow: false } };
 
 export default async function OperatorOnboardingPage() {
   const { invitations } = await loadOperatorOnboarding();
-  return <OperatorOnboardingPanel invitations={invitations} createAction={createInvitationAction} revokeAction={revokeInvitationAction} expireAction={expireInvitationAction} />;
+  return (
+    <OperatorOnboardingPanel
+      invitations={invitations}
+      createAction={createInvitationAction}
+      reissueAction={reissueInvitationAction}
+      revokeAction={revokeInvitationAction}
+      expireAction={expireInvitationAction}
+    />
+  );
 }
 
 async function loadOperatorOnboarding() {

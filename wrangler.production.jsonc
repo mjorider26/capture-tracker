@@ -7,6 +7,7 @@
   "secrets": { "required": ["BETTER_AUTH_SECRET", "DOCUMENT_READ_GRANT_SECRET", "CAPTURE_TRACKER_DOCUMENT_SCANNER_INTERNAL_TOKEN", "PLAID_CLIENT_ID", "PLAID_SECRET", "PLAID_TOKEN_ENCRYPTION_KEY"] },
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "capture-tracker-production" }],
+  "send_email": [{ "name": "CAPTURE_TRACKER_TRANSACTIONAL_EMAIL", "remote": true, "allowed_sender_addresses": ["welcome@capturetracker.app"] }],
   "r2_buckets": [{ "binding": "CAPTURE_TRACKER_DOCUMENTS", "bucket_name": "capture-tracker-production-documents" }],
   "queues": { "producers": [{ "binding": "CAPTURE_TRACKER_DOCUMENT_SCAN_QUEUE", "queue": "capture-tracker-production-document-scan" }] },
   "vars": {

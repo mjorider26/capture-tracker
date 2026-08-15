@@ -12,17 +12,26 @@ Do not place credentials, passphrases, connection strings, object keys, or finan
 
 ## Environment topology
 
-| Environment | Worker and URL | Data and storage | Operating boundary |
-| --- | --- | --- | --- |
-| Production | `capture-tracker-production` at `https://capture-tracker-production.mjorider.workers.dev` | Separate Neon production PostgreSQL database; `capture-tracker-production-documents`; `capture-tracker-production-backups` | Live private pilot with real-data approval enabled. |
-| Staging | `capture-tracker-staging` | Separate fictional staging database and `capture-tracker-staging-documents` | Live, fictional-only. Do not introduce production or customer data. |
-| Unrelated | `quoteready-api` | Not Capture Tracker infrastructure | Never deploy Capture Tracker to it or modify it during Capture Tracker work. |
+| Environment | Worker and URL                                                                            | Data and storage                                                                                                           | Operating boundary                                                           |
+| ----------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Production  | `capture-tracker-production` at `https://capture-tracker-production.mjorider.workers.dev` | Separate Neon production PostgreSQL database; `capture-tracker-production-documents`; `capture-tracker-production-backups` | Live private pilot with real-data approval enabled.                          |
+| Staging     | `capture-tracker-staging`                                                                 | Separate fictional staging database and `capture-tracker-staging-documents`                                                | Live, fictional-only. Do not introduce production or customer data.          |
+| Unrelated   | `quoteready-api`                                                                          | Not Capture Tracker infrastructure                                                                                         | Never deploy Capture Tracker to it or modify it during Capture Tracker work. |
 
 ## Production safety model and account creation
 
 Production is an authenticated private workspace with server-derived tenant/business scope. Financial and document reads are authorized server-side; accounting writes are controlled; journals are immutable; and corrections or reversals preserve history rather than rewriting it.
 
-The initial owner used the production first-owner bootstrap. That bootstrap is available only while no user and no business exist, then closes automatically after workspace initialization. The active production workspace is initialized. Create account is no longer normal public onboarding. Additional clients use the protected `/operator/onboarding` one-time invitation workflow only: an authenticated allowlisted platform operator creates an email-bound invitation, manually copies its link, and the matching authenticated recipient accepts it. The private `CAPTURE_TRACKER_OPERATOR_EMAILS` secret is the only operator boundary; business membership never grants it. Do not manually insert users, memberships, or businesses.
+The initial owner used the production first-owner bootstrap. That bootstrap is available only while no user and no business exist, then closes automatically after workspace initialization. The active production workspace is initialized. Create account is no longer normal public onboarding. Additional clients use the protected `/operator/onboarding` one-time invitation workflow only: an authenticated allowlisted platform operator creates an email-bound invitation, Capture Tracker sends it when the restricted email binding is available, and the matching authenticated recipient accepts it. Manual secure-link copy remains an explicit fallback. The private `CAPTURE_TRACKER_OPERATOR_EMAILS` secret is the only operator boundary; business membership never grants it. Do not manually insert users, memberships, or businesses.
+
+### Transactional invitation email
+
+- Cloudflare Email Service is the only approved provider. Production uses the `CAPTURE_TRACKER_TRANSACTIONAL_EMAIL` Worker binding, restricted to `welcome@capturetracker.app`; no API secret is required or stored by the app.
+- The sending domain must remain enabled with its Cloudflare-managed bounce MX, SPF, and DKIM records plus the existing DMARC policy. Do not alter Email Routing or replace mail records during an application release.
+- Cloudflare message preview stores rendered message bodies for about seven days and is not required for operations. Keep preview disabled. Use sanitized provider IDs and delivery classifications rather than message bodies for diagnosis.
+- `SENT` means the binding accepted the message. It is not an open/read receipt. `FAILED` preserves the invitation and manual fallback.
+- **Send again** is a secure reissue: authorize the operator, revoke the prior pending record, create a fresh one-time token, send once, and retain sanitized audit events. Never recover or reversibly store an old token.
+- Before a named customer send, verify the exact persisted email, legal name, workspace name, unused state, and expiration. Do not use provider testing to send to a real customer.
 
 The earlier invitation-based first-owner production flow is superseded. Legacy or staging invitation-related implementation details do not mean that production currently requires an invitation.
 
@@ -89,7 +98,6 @@ The primary mobile navigation is: Today, Money, Documents, Reports, and More. Mo
 - **Reports:** financial statements and exports.
 - **More:** secondary operational workflows.
 
-
 ### Bank activity: current production and Plaid release boundary
 
 The active production Worker supports both optional Plaid synchronization and first-class manual transaction CSV import. Provider availability is derived from sanitized server configuration rather than customer connection count, so zero Items is a valid state with automatic connection and manual import choices. The operator migration status derives its expected inventory canonically and reports the exact 30/30/0 production state. Production has zero real Items or Plaid-mapped accounts.
@@ -120,7 +128,7 @@ V2 automated acceptance uses fictional fixtures and protected application/servic
 4. In native WSL/Linux, use NVM 0.40.3 with Node 22.23.2 and npm 10.9.8.
 5. Before `prisma migrate deploy`, create and verify an encrypted `PRE_MIGRATION_RELEASE` backup from the exact clean release checkout. Stop if the completed production history is not a checksum-matching ordered source prefix or if any backup safeguard fails.
 6. Run the approved production migration, then create and verify a strict `POST_RELEASE` backup with exact production/source migration alignment.
-7. Run `npm ci`, Prisma generation, the OpenNext/Workerd build, artifact and secret scans, and a production Wrangler dry run.
+7. Run `npm ci`, Prisma generation, the OpenNext/Workerd build, artifact and secret scans, and a production Wrangler dry run. For a transactional-email release, confirm the candidate has exactly one restricted send-email binding and no email API secret.
 8. Deploy the exact verified SHA to `capture-tracker-production` only.
 9. Record both the Worker entry-shim size and the complete Wrangler upload size; they are different measurements.
 10. Verify liveness and readiness without reading private financial data.

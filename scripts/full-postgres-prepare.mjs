@@ -41,6 +41,7 @@ const expectedTables = new Set([
   "MileageTrip",
   "OwnerMoneyTransfer",
   "OperatorInvitation",
+  "OperatorInvitationEvent",
   "Transaction",
   "TransactionSplit",
   "Document",
