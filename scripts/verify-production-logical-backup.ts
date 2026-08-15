@@ -60,26 +60,26 @@ async function verifyCatalog(url: URL, manifest: AnyLogicalBackupManifest) {
     const expected = deriveSourceSchemaInventory();
     const migrations = await client.query('SELECT migration_name AS name, checksum, finished_at AS "finishedAt", rolled_back_at AS "rolledBackAt", logs FROM "_prisma_migrations" ORDER BY migration_name');
     const exactSourceBackup = isExactSourceBackup(manifest);
-    const tables = exactSourceBackup ? await client.query<{ name: string }>("SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'") : undefined;
-    const functions = exactSourceBackup ? await client.query<{ name: string }>("SELECT routine_name AS name FROM information_schema.routines WHERE routine_schema='public'") : undefined;
-    const triggers = exactSourceBackup ? await client.query<{ name: string }>("SELECT DISTINCT trigger_name AS name FROM information_schema.triggers WHERE trigger_schema='public'") : undefined;
-    const constraints = exactSourceBackup ? await client.query<{ name: string }>("SELECT constraint_name AS name FROM information_schema.table_constraints WHERE constraint_schema='public'") : undefined;
+    const tables = await client.query<{ name: string }>("SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
+    const functions = await client.query<{ name: string }>("SELECT routine_name AS name FROM information_schema.routines WHERE routine_schema='public'");
+    const triggers = await client.query<{ name: string }>("SELECT DISTINCT trigger_name AS name FROM information_schema.triggers WHERE trigger_schema='public'");
+    const constraints = await client.query<{ name: string }>("SELECT constraint_name AS name FROM information_schema.table_constraints WHERE constraint_schema='public'");
     const counts = await client.query<SanitizedDataCounts>('SELECT (SELECT count(*)::int FROM "User") AS users, (SELECT count(*)::int FROM "Business") AS businesses, (SELECT count(*)::int FROM "Transaction") AS transactions, (SELECT count(*)::int FROM "Document") AS documents, (SELECT count(*)::int FROM "JournalEntry") AS "journalEntries", (SELECT count(*)::int FROM "JournalLine") AS "journalLines"');
     const integrity = await client.query('SELECT (SELECT count(*)::int FROM "BusinessMember" bm JOIN "Business" b ON b.id=bm."businessId" LEFT JOIN "User" u ON u.id=bm."userId" WHERE b.id IS NULL OR u.id IS NULL) AS orphan_memberships, (SELECT coalesce(sum("debitAmount"),0)=coalesce(sum("creditAmount"),0) FROM "JournalLine") AS ledger_balanced');
     const actual = (rows: Array<{ name: string }>) => new Set(rows.map((row) => row.name));
     const missing = (required: string[], received: Set<string>) => required.filter((name) => !received.has(name));
     const missingStructure = exactSourceBackup ? [
-      ...missing(expected.tables, actual(tables!.rows)),
-      ...missing(expected.functions, actual(functions!.rows)),
-      ...missing(expected.triggers, actual(triggers!.rows)),
-      ...missing(expected.constraints, actual(constraints!.rows)),
+      ...missing(expected.tables, actual(tables.rows)),
+      ...missing(expected.functions, actual(functions.rows)),
+      ...missing(expected.triggers, actual(triggers.rows)),
+      ...missing(expected.constraints, actual(constraints.rows)),
     ] : [];
     const dataCounts = counts.rows[0];
     const integrityRow = integrity.rows[0];
     if (!dataCounts || missingStructure.length || integrityRow?.orphan_memberships !== 0 || integrityRow?.ledger_balanced !== true) throw new Error("RESTORE_CATALOG_VERIFICATION_FAILED");
     assertRestoredBackupState({ expected, manifest, records: migrations.rows, counts: dataCounts });
     const restoredMigrations = manifest.schemaVersion === 3 ? manifest.productionMigrationInventory.names.length : expected.names.length;
-    return { migrations: restoredMigrations, tables: exactSourceBackup ? expected.tables.length : 0, functions: exactSourceBackup ? expected.functions.length : 0, triggers: exactSourceBackup ? expected.triggers.length : 0, constraints: exactSourceBackup ? expected.constraints.length : 0, dataCounts };
+    return { migrations: restoredMigrations, tables: tables.rows.length, functions: functions.rows.length, triggers: triggers.rows.length, constraints: constraints.rows.length, dataCounts };
   } finally { await client.end(); }
 }
 
