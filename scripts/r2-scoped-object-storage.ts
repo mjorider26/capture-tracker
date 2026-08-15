@@ -9,6 +9,17 @@ type R2Credentials = {
   secretAccessKey: string;
 };
 
+export class ScopedR2OperationError extends Error {
+  readonly httpStatus: number;
+  readonly providerCode?: string;
+
+  constructor(httpStatus: number, providerCode?: string) {
+    super("R2_OBJECT_OPERATION_FAILED");
+    this.httpStatus = httpStatus;
+    this.providerCode = providerCode;
+  }
+}
+
 function required(name: string) {
   const value = process.env[name];
   if (!value) throw new Error("R2_CREDENTIAL_REQUIRED");
@@ -70,7 +81,11 @@ async function request(method: "GET" | "PUT", objectKey: string, body: Buffer<Ar
     },
     body: body.length ? body as unknown as BodyInit : undefined,
   });
-  if (method === "PUT" ? response.status !== 200 : response.status !== 200) throw new Error("R2_OBJECT_OPERATION_FAILED");
+  if (response.status !== 200) {
+    const responseBody = await response.text();
+    const providerCode = responseBody.match(/<Code>([A-Za-z][A-Za-z0-9]{0,63})<\/Code>/)?.[1];
+    throw new ScopedR2OperationError(response.status, providerCode);
+  }
   return Buffer.from(await response.arrayBuffer());
 }
 
